@@ -29,6 +29,13 @@ Full provenance: `feedback-register.md` entry **W-R26**.
   governance files are explicitly allowed back in. Tracking scope is defined by
   configuration, not by discipline: even `git add -A` at the root stages
   nothing, and polluting the repo requires an explicit `git add -f`.
+- **Pre-commit guard closes the `git add -f` hole** — `hooks/pre-commit`
+  rejects any staged path that the ignore rules would match (only force-adds
+  can produce one). The verdict derives from `.gitignore` via
+  `check-ignore --no-index` (the `--no-index` matters: plain `check-ignore`
+  skips index-resident paths, exactly where force-added files sit), so there
+  is no second list to drift. Deletions are exempt — removing a bad file must
+  always work. Enable per machine: `git config core.hooksPath hooks`.
 - **Nested project repos are safe** — git always resolves the *nearest*
   `.git`, so commands inside any project see only that project's repo. The one
   side effect: running git in a *non-repo* subdirectory (scratch dirs) now
@@ -48,6 +55,18 @@ Full provenance: `feedback-register.md` entry **W-R26**.
 - **After editing** `CLAUDE.md` or `feedback-register.md`: commit + push this
   repo **in the same round** (rule in `CLAUDE.md` section 6).
 - **When resuming work on any machine**: `git -C ~/workspace pull` first.
+  A Claude Code SessionStart hook (per-host, in `~/.claude/settings.json`)
+  automates the reminder: it fetches and emits a systemMessage when the local
+  rule layer is behind `origin/main`. Fetch-only by design — pulling stays a
+  deliberate act so conflicts never happen unattended. Hook snippet for new
+  machines:
+
+  ```json
+  "hooks": { "SessionStart": [ { "hooks": [ {
+    "type": "command", "timeout": 15,
+    "command": "behind=$(git -C \"$HOME/workspace\" fetch origin --quiet 2>/dev/null && git -C \"$HOME/workspace\" rev-list --count HEAD..origin/main 2>/dev/null); if [ -n \"$behind\" ] && [ \"$behind\" -gt 0 ]; then printf '{\"systemMessage\":\"workspace-meta: governance rule layer is %s commit(s) behind origin/main — run: git -C ~/workspace pull\"}' \"$behind\"; fi"
+  } ] } ] }
+  ```
 - **Commits follow W-R25**: Conventional Commits (`<type>(<scope>): <subject>`,
   subject = what, body = why); identity gate before committing
   (`git config --show-origin user.name user.email` must resolve from the
@@ -74,7 +93,14 @@ otherwise git would create a `workspace-meta/` directory:
 git clone https://github.com/taoziyoyo2566/workspace-meta.git ~/workspace
 ```
 
-Either way, also set the machine's own identity once
+Either way, two one-time activations per machine:
+
+- `git config core.hooksPath hooks` — enables the pre-commit whitelist guard
+  (hooks sync with the repo; activation does not).
+- Add the SessionStart freshness hook to `~/.claude/settings.json` (snippet
+  above) so stale-rule-layer sessions warn themselves.
+
+Also set the machine's own identity once
 (`git config --global user.name / user.email`) — the W-R25 identity gate will
 otherwise stop the first commit attempt, by design.
 
@@ -95,10 +121,6 @@ otherwise stop the first commit attempt, by design.
 
 ## Future improvements
 
-- **Whitelist guard hook** — a pre-commit hook rejecting any staged path
-  outside the whitelist (defense against `git add -f` accidents).
-- **Automated pull on session start** — a Claude Code SessionStart hook
-  running the freshness check instead of relying on per-session discipline.
 - **Register scaling** — `feedback-register.md` grows monotonically; when it
   becomes unwieldy, split it by domain (keeping W-R numbering global) and
   leave an index, mirroring how project rules are split under
