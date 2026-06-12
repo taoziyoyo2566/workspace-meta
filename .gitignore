@@ -1,7 +1,10 @@
 *
 !.gitignore
 !README.md
+!Makefile
 !CLAUDE.md
 !feedback-register.md
 !hooks/
 !hooks/pre-commit
+!scripts/
+!scripts/bootstrap-local.sh

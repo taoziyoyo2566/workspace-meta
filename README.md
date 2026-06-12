@@ -58,7 +58,13 @@ Full provenance: `feedback-register.md` entry **W-R26**.
   Per-host SessionStart hooks automate the reminder: they fetch and emit a
   warning when the local rule layer is behind `origin/main`. Fetch-only by
   design — pulling stays a deliberate act so conflicts never happen unattended.
-  Claude Code hook snippet for new machines (`~/.claude/settings.json`):
+  `make bootstrap` installs/checks the local integration. Claude Code is merged
+  into `~/.claude/settings.json` with `jq`; Codex is detected and printed as a
+  TOML snippet by default because programmatic TOML edits are easier to get
+  wrong. Codex auto-append is available only with
+  `./scripts/bootstrap-local.sh --write-codex`.
+
+  Claude Code hook snippet (`~/.claude/settings.json`):
 
   ```json
   "hooks": { "SessionStart": [ { "hooks": [ {
@@ -67,7 +73,7 @@ Full provenance: `feedback-register.md` entry **W-R26**.
   } ] } ] }
   ```
 
-  Codex hook snippet for new machines (`~/.codex/config.toml`):
+  Codex hook snippet (`~/.codex/config.toml`):
 
   ```toml
   [[hooks.SessionStart]]
@@ -105,20 +111,26 @@ otherwise git would create a `workspace-meta/` directory:
 git clone https://github.com/taoziyoyo2566/workspace-meta.git ~/workspace
 ```
 
-Either way, one repo activation plus one or two tool-specific freshness hooks
-per machine:
+Either way, run the host-local bootstrap from the repo root:
 
-- `git config core.hooksPath hooks` — enables the pre-commit whitelist guard
-  (hooks sync with the repo; activation does not).
-- Add the Claude Code SessionStart freshness hook to `~/.claude/settings.json`
-  if that tool is used on the machine.
-- Add the Codex SessionStart freshness hook to `~/.codex/config.toml` if Codex
-  is used on the machine. Codex will require reviewing/trusting new or changed
-  non-managed hooks via `/hooks` before they run.
+```bash
+make bootstrap
+```
 
-Also set the machine's own identity once
-(`git config --global user.name / user.email`) — the W-R25 identity gate will
-otherwise stop the first commit attempt, by design.
+The bootstrap is idempotent and host-local. It:
+
+- sets `git config core.hooksPath hooks` for this repo;
+- checks `git config --global user.name` and `user.email`, but never writes
+  identity values (W-R25/W-R14: those live only in each host's `~/.gitconfig`);
+- merges the Claude Code SessionStart freshness hook into
+  `~/.claude/settings.json` using `jq`, preserving existing keys;
+- checks whether `~/.codex/config.toml` already has the Codex freshness hook.
+  Missing Codex TOML is printed for manual paste by default; use
+  `./scripts/bootstrap-local.sh --write-codex` only if you explicitly want the
+  script to append the snippet.
+
+Codex will require reviewing/trusting new or changed non-managed hooks via
+`/hooks` before they run.
 
 ## Caveats
 
@@ -144,7 +156,3 @@ otherwise stop the first commit attempt, by design.
 - **Cross-machine W-R allocation** — if concurrent rule-writing on multiple
   machines becomes routine, replace the single-writer assumption (e.g.
   machine-suffixed or date-based entry IDs).
-- **Per-host file template** — optionally track a *template* documenting what
-  each host must define locally (`~/.gitconfig` identity, `~/.claude/`
-  sections) without the values, so onboarding doesn't depend on this README
-  alone.
