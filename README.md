@@ -120,8 +120,9 @@ make bootstrap
 The bootstrap is idempotent and host-local. It:
 
 - sets `git config core.hooksPath hooks` for this repo;
-- checks `git config --global user.name` and `user.email`, but never writes
-  identity values (W-R25/W-R14: those live only in each host's `~/.gitconfig`);
+- checks `git config --global user.name` and whether `user.email` has a
+  plausible email shape, but never writes identity values (W-R25/W-R14: those
+  live only in each host's `~/.gitconfig`);
 - merges the Claude Code SessionStart freshness hook into
   `~/.claude/settings.json` using `jq`, preserving existing keys;
 - checks whether `~/.codex/config.toml` already has the Codex freshness hook.

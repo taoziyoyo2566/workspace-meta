@@ -40,17 +40,28 @@ warn() {
   printf '[workspace-meta] WARNING: %s\n' "$*" >&2
 }
 
+valid_git_email() {
+  case "$1" in
+    *@*.*) ;;
+    *) return 1 ;;
+  esac
+
+  case "$1" in
+    *[[:space:]]*|*@|@*|*..*) return 1 ;;
+  esac
+}
+
 git -C "$repo_root" config core.hooksPath hooks
 info "Git pre-commit hook path set: core.hooksPath=hooks"
 
 global_name="$(git config --global --get user.name || true)"
 global_email="$(git config --global --get user.email || true)"
-if [ -n "$global_name" ] && [ -n "$global_email" ]; then
-  info "Global git identity present: user.name and user.email are set"
+if [ -n "$global_name" ] && valid_git_email "$global_email"; then
+  info "Global git identity present: user.name and plausible user.email are set"
 else
-  warn "Global git identity incomplete; set it manually before committing:"
+  warn "Global git identity missing or invalid; set it manually before committing:"
   [ -n "$global_name" ] || warn "  git config --global user.name '<your name>'"
-  [ -n "$global_email" ] || warn "  git config --global user.email '<your email>'"
+  valid_git_email "$global_email" || warn "  git config --global user.email '<your email>'"
 fi
 
 claude_cmd='behind=$(git -C "$HOME/workspace" fetch origin --quiet 2>/dev/null && git -C "$HOME/workspace" rev-list --count HEAD..origin/main 2>/dev/null); if [ -n "$behind" ] && [ "$behind" -gt 0 ]; then printf '\''{"systemMessage":"workspace-meta: governance rule layer is %s commit(s) behind origin/main — run: git -C ~/workspace pull"}'\'' "$behind"; fi'
