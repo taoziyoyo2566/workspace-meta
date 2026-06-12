@@ -3,3 +3,5 @@
 !README.md
 !CLAUDE.md
 !feedback-register.md
+!hooks/
+!hooks/pre-commit

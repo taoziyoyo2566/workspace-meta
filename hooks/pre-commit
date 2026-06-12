@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Whitelist guard for the workspace-meta repo.
+#
+# .gitignore's reverse whitelist stops `git add -A`, but `git add -f` bypasses
+# ignore rules entirely. This hook closes that hole: any staged path that the
+# ignore rules would reject can only have been force-added, so the commit is
+# refused. The whitelist itself stays single-sourced in .gitignore — this hook
+# derives the verdict from it instead of keeping its own list.
+#
+# Enable per machine (hooks are not synced by git itself):
+#   git config core.hooksPath hooks
+set -euo pipefail
+
+violations=()
+while IFS= read -r path; do
+  # --no-index: plain check-ignore skips paths already in the index, which is
+  # exactly where a force-added file sits. --diff-filter=d: removing a
+  # wrongly-added file must always stay possible.
+  if git check-ignore -q --no-index -- "$path"; then
+    violations+=("$path")
+  fi
+done < <(git diff --cached --name-only --diff-filter=d)
+
+if [ "${#violations[@]}" -gt 0 ]; then
+  {
+    echo "workspace-meta whitelist guard: refusing commit — staged paths are outside the .gitignore whitelist (force-added?):"
+    printf '  %s\n' "${violations[@]}"
+    echo "Unstage with: git restore --staged <path>"
+    echo "If a new workspace-level governance file is intended, whitelist it in .gitignore first (one '!<file>' line), then stage normally."
+  } >&2
+  exit 1
+fi
