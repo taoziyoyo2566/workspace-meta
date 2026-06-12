@@ -55,17 +55,29 @@ Full provenance: `feedback-register.md` entry **W-R26**.
 - **After editing** `CLAUDE.md` or `feedback-register.md`: commit + push this
   repo **in the same round** (rule in `CLAUDE.md` section 6).
 - **When resuming work on any machine**: `git -C ~/workspace pull` first.
-  A Claude Code SessionStart hook (per-host, in `~/.claude/settings.json`)
-  automates the reminder: it fetches and emits a systemMessage when the local
-  rule layer is behind `origin/main`. Fetch-only by design — pulling stays a
-  deliberate act so conflicts never happen unattended. Hook snippet for new
-  machines:
+  Per-host SessionStart hooks automate the reminder: they fetch and emit a
+  warning when the local rule layer is behind `origin/main`. Fetch-only by
+  design — pulling stays a deliberate act so conflicts never happen unattended.
+  Claude Code hook snippet for new machines (`~/.claude/settings.json`):
 
   ```json
   "hooks": { "SessionStart": [ { "hooks": [ {
     "type": "command", "timeout": 15,
     "command": "behind=$(git -C \"$HOME/workspace\" fetch origin --quiet 2>/dev/null && git -C \"$HOME/workspace\" rev-list --count HEAD..origin/main 2>/dev/null); if [ -n \"$behind\" ] && [ \"$behind\" -gt 0 ]; then printf '{\"systemMessage\":\"workspace-meta: governance rule layer is %s commit(s) behind origin/main — run: git -C ~/workspace pull\"}' \"$behind\"; fi"
   } ] } ] }
+  ```
+
+  Codex hook snippet for new machines (`~/.codex/config.toml`):
+
+  ```toml
+  [[hooks.SessionStart]]
+  matcher = "startup|resume"
+
+  [[hooks.SessionStart.hooks]]
+  type = "command"
+  command = 'behind=$(git -C "$HOME/workspace" fetch origin --quiet 2>/dev/null && git -C "$HOME/workspace" rev-list --count HEAD..origin/main 2>/dev/null); if [ -n "$behind" ] && [ "$behind" -gt 0 ]; then printf "workspace-meta: governance rule layer is %s commit(s) behind origin/main. Run: git -C ~/workspace pull\n" "$behind"; fi'
+  timeout = 15
+  statusMessage = "Checking workspace-meta freshness"
   ```
 - **Commits follow W-R25**: Conventional Commits (`<type>(<scope>): <subject>`,
   subject = what, body = why); identity gate before committing
@@ -93,12 +105,16 @@ otherwise git would create a `workspace-meta/` directory:
 git clone https://github.com/taoziyoyo2566/workspace-meta.git ~/workspace
 ```
 
-Either way, two one-time activations per machine:
+Either way, one repo activation plus one or two tool-specific freshness hooks
+per machine:
 
 - `git config core.hooksPath hooks` — enables the pre-commit whitelist guard
   (hooks sync with the repo; activation does not).
-- Add the SessionStart freshness hook to `~/.claude/settings.json` (snippet
-  above) so stale-rule-layer sessions warn themselves.
+- Add the Claude Code SessionStart freshness hook to `~/.claude/settings.json`
+  if that tool is used on the machine.
+- Add the Codex SessionStart freshness hook to `~/.codex/config.toml` if Codex
+  is used on the machine. Codex will require reviewing/trusting new or changed
+  non-managed hooks via `/hooks` before they run.
 
 Also set the machine's own identity once
 (`git config --global user.name / user.email`) — the W-R25 identity gate will
