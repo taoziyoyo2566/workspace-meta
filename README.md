@@ -149,10 +149,13 @@ Codex will require reviewing/trusting new or changed non-managed hooks via
 
 ## Future improvements
 
-- **Register scaling** — `feedback-register.md` grows monotonically; when it
-  becomes unwieldy, split it by domain (keeping W-R numbering global) and
-  leave an index, mirroring how project rules are split under
-  `.agents/rules/`.
-- **Cross-machine W-R allocation** — if concurrent rule-writing on multiple
-  machines becomes routine, replace the single-writer assumption (e.g.
-  machine-suffixed or date-based entry IDs).
+- **Register scaling** — deferred until there is real pressure. Trigger when
+  `feedback-register.md` becomes hard to scan (rough guide: 300-500 lines),
+  merge conflicts become frequent, or domain-based lookup starts costing time.
+  Likely shape: split by domain while keeping W-R numbering global, then leave
+  this file or a small index as the navigation entry point.
+- **Cross-machine W-R allocation** — deferred until concurrent rule-writing on
+  multiple machines becomes routine. First next step should be a lightweight
+  process rule (fetch before minting, inspect latest W-R, write, push
+  immediately, renumber on collision) before considering heavier ID schemes
+  such as machine suffixes, date-based IDs, or reserved ranges.
