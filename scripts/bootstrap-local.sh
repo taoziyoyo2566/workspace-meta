@@ -51,8 +51,19 @@ valid_git_email() {
   esac
 }
 
-git -C "$repo_root" config core.hooksPath .githooks
-info "Git pre-commit hook path set: core.hooksPath=.githooks"
+hooks_path=".githooks"
+prev_hooks_path="$(git -C "$repo_root" config --local --get core.hooksPath || true)"
+if [ -n "$prev_hooks_path" ] && [ "$prev_hooks_path" != "$hooks_path" ]; then
+  warn "core.hooksPath was '$prev_hooks_path' (stale); correcting to '$hooks_path'"
+fi
+git -C "$repo_root" config core.hooksPath "$hooks_path"
+hook_file="$repo_root/$hooks_path/pre-commit"
+if [ -x "$hook_file" ]; then
+  info "Git pre-commit guard active: core.hooksPath=$hooks_path"
+else
+  warn "core.hooksPath=$hooks_path set, but $hook_file is missing or not executable —"
+  warn "  the whitelist guard will NOT run until it is restored (chmod +x / git checkout)."
+fi
 
 global_name="$(git config --global --get user.name || true)"
 global_email="$(git config --global --get user.email || true)"

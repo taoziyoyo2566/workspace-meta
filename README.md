@@ -121,7 +121,9 @@ make bootstrap
 
 The bootstrap is idempotent and host-local. It:
 
-- sets `git config core.hooksPath .githooks` for this repo;
+- sets `git config core.hooksPath .githooks` for this repo, warns if the
+  previous value was stale, and verifies the `pre-commit` guard is actually
+  present and executable at that path;
 - checks `git config --global user.name` and whether `user.email` has a
   plausible email shape, but never writes identity values (W-R25/W-R14: those
   live only in each host's `~/.gitconfig`);
