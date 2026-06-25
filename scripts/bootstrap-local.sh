@@ -15,7 +15,7 @@ case "${1:-}" in
 Usage: ./scripts/bootstrap-local.sh [--write-codex]
 
 Configures host-local workspace-meta integration:
-  - sets this repo's core.hooksPath to hooks
+  - sets this repo's core.hooksPath to .githooks
   - checks global git identity without writing identity values
   - merges the Claude Code freshness hook with jq
   - checks Codex freshness hook; prints the TOML snippet by default
@@ -51,8 +51,8 @@ valid_git_email() {
   esac
 }
 
-git -C "$repo_root" config core.hooksPath hooks
-info "Git pre-commit hook path set: core.hooksPath=hooks"
+git -C "$repo_root" config core.hooksPath .githooks
+info "Git pre-commit hook path set: core.hooksPath=.githooks"
 
 global_name="$(git config --global --get user.name || true)"
 global_email="$(git config --global --get user.email || true)"

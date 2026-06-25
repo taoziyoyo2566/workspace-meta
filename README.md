@@ -29,13 +29,15 @@ Full provenance: `feedback-register.md` entry **W-R26**.
   governance files are explicitly allowed back in. Tracking scope is defined by
   configuration, not by discipline: even `git add -A` at the root stages
   nothing, and polluting the repo requires an explicit `git add -f`.
-- **Pre-commit guard closes the `git add -f` hole** — `hooks/pre-commit`
+- **Pre-commit guard closes the `git add -f` hole** — `.githooks/pre-commit`
   rejects any staged path that the ignore rules would match (only force-adds
   can produce one). The verdict derives from `.gitignore` via
   `check-ignore --no-index` (the `--no-index` matters: plain `check-ignore`
   skips index-resident paths, exactly where force-added files sit), so there
   is no second list to drift. Deletions are exempt — removing a bad file must
-  always work. Enable per machine: `git config core.hooksPath hooks`.
+  always work. Enable per machine: `git config core.hooksPath .githooks`
+  (dot-prefixed so the dir stays out of the way and is unmistakably a *git*
+  hook, not a Claude Code/Codex `hooks` block).
 - **Nested project repos are safe** — git always resolves the *nearest*
   `.git`, so commands inside any project see only that project's repo. The one
   side effect: running git in a *non-repo* subdirectory (scratch dirs) now
@@ -119,7 +121,7 @@ make bootstrap
 
 The bootstrap is idempotent and host-local. It:
 
-- sets `git config core.hooksPath hooks` for this repo;
+- sets `git config core.hooksPath .githooks` for this repo;
 - checks `git config --global user.name` and whether `user.email` has a
   plausible email shape, but never writes identity values (W-R25/W-R14: those
   live only in each host's `~/.gitconfig`);
