@@ -127,10 +127,14 @@ The bootstrap is idempotent and host-local. It:
 - checks `git config --global user.name` and whether `user.email` has a
   plausible email shape, but never writes identity values (W-R25/W-R14: those
   live only in each host's `~/.gitconfig`);
-- installs two SessionStart hooks for **both** Claude Code (`~/.claude/settings.json`
+- installs three SessionStart hooks for **both** Claude Code (`~/.claude/settings.json`
   via `jq`, preserving existing keys) and Codex (`~/.codex/config.toml`):
-  - **workspace-meta freshness** — warns when the governance rule layer is behind
-    `origin/main`;
+  - **workspace-meta freshness** (read side) — warns when the governance rule layer
+    is behind `origin/main` (fetch-only; pulling stays deliberate);
+  - **workspace-meta unsaved work** (write side) — warns when this repo has
+    uncommitted governance changes or unpushed commits, so distilled experience
+    actually reaches other machines (the symmetric counterpart to the freshness
+    nudge; W-R26);
   - **env capability registry freshness** — runs `env_probe.sh --check` and, when
     the per-host registry (`~/workspace/.agents/env/<host>.yml`) is missing/stale,
     nudges `make -C ~/workspace env-probe`;

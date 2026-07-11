@@ -89,6 +89,12 @@ codex_fresh_cmd='behind=$(git -C "$HOME/workspace" fetch origin --quiet 2>/dev/n
 # env capability registry freshness: nudge when the per-host registry is stale/missing.
 claude_env_cmd='out=$(bash "$HOME/workspace/scripts/env_probe.sh" --check 2>&1) || printf '\''{"systemMessage":%s,"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":%s}}'\'' "$(printf '\''%s'\'' "$out" | jq -Rs .)" "$(printf '\''%s — run: make -C ~/workspace env-probe (rule: ~/workspace/.agents/rules/environment-truth.md)'\'' "$out" | jq -Rs .)"'
 codex_env_cmd='out=$(bash "$HOME/workspace/scripts/env_probe.sh" --check 2>&1) || printf "%s — run: make -C ~/workspace env-probe (rule: ~/workspace/.agents/rules/environment-truth.md)\n" "$out"'
+# workspace-meta unsaved work: the WRITE-side counterpart to the freshness nudge —
+# warn when governance edits are uncommitted (dirty tree) or committed-but-unpushed
+# (ahead of origin/main), so distilled experience actually reaches other machines
+# (W-R26). No fetch: dirty is exact, and pushing updates the local origin/main ref.
+claude_write_cmd='wm="$HOME/workspace"; d=$(git -C "$wm" status --porcelain 2>/dev/null); a=$(git -C "$wm" rev-list --count origin/main..HEAD 2>/dev/null); m=""; [ -n "$d" ] && m="uncommitted governance changes"; if [ -n "$a" ] && [ "$a" -gt 0 ]; then [ -n "$m" ] && m="$m + "; m="${m}${a} unpushed commit(s)"; fi; if [ -n "$m" ]; then printf '\''{"systemMessage":"workspace-meta: %s — commit+push to sync (git -C ~/workspace status)"}'\'' "$m"; fi'
+codex_write_cmd='wm="$HOME/workspace"; d=$(git -C "$wm" status --porcelain 2>/dev/null); a=$(git -C "$wm" rev-list --count origin/main..HEAD 2>/dev/null); m=""; [ -n "$d" ] && m="uncommitted governance changes"; if [ -n "$a" ] && [ "$a" -gt 0 ]; then [ -n "$m" ] && m="$m + "; m="${m}${a} unpushed commit(s)"; fi; [ -n "$m" ] && printf "workspace-meta: %s. Commit+push to sync (git -C ~/workspace status)\n" "$m"'
 
 # ── Claude Code hooks (~/.claude/settings.json via jq) ───────────────────────
 claude_settings="$HOME/.claude/settings.json"
@@ -123,6 +129,7 @@ if command -v jq >/dev/null 2>&1; then
   [ -f "$claude_settings" ] || printf '{}\n' > "$claude_settings"
   merge_claude_hook "workspace-meta" "$claude_fresh_cmd" "Checking workspace-meta freshness"
   merge_claude_hook "env_probe" "$claude_env_cmd" "Checking host capability registry freshness"
+  merge_claude_hook "unpushed commit" "$claude_write_cmd" "Checking workspace-meta unsaved work"
 else
   warn "jq is not installed; skipped Claude Code settings merge"
   warn "Install jq or add the README hook snippets to ~/.claude/settings.json manually."
@@ -160,6 +167,7 @@ EOF
 
 install_codex_hook "workspace-meta: governance rule layer" "$codex_fresh_cmd" "Checking workspace-meta freshness"
 install_codex_hook "env_probe.sh" "$codex_env_cmd" "Checking host capability registry freshness"
+install_codex_hook "unpushed commit" "$codex_write_cmd" "Checking workspace-meta unsaved work"
 
 # ── host templates (env-sync skill + Codex global routing) ───────────────────
 install_template() {
