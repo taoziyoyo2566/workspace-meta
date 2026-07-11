@@ -8,3 +8,10 @@
 !.githooks/pre-commit
 !scripts/
 !scripts/bootstrap-local.sh
+!scripts/env_probe.sh
+!.agents/
+!.agents/rules/
+!.agents/rules/environment-truth.md
+!.agents/env/
+!.agents/env/README.md
+!.agents/env/*.yml
