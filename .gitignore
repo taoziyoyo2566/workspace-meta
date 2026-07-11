@@ -15,3 +15,5 @@
 !.agents/env/
 !.agents/env/README.md
 !.agents/env/*.yml
+!.agents/host-templates/
+!.agents/host-templates/*.md
