@@ -127,15 +127,25 @@ The bootstrap is idempotent and host-local. It:
 - checks `git config --global user.name` and whether `user.email` has a
   plausible email shape, but never writes identity values (W-R25/W-R14: those
   live only in each host's `~/.gitconfig`);
-- merges the Claude Code SessionStart freshness hook into
-  `~/.claude/settings.json` using `jq`, preserving existing keys;
-- checks whether `~/.codex/config.toml` already has the Codex freshness hook.
-  Missing Codex TOML is printed for manual paste by default; use
-  `./scripts/bootstrap-local.sh --write-codex` only if you explicitly want the
-  script to append the snippet.
+- installs two SessionStart hooks for **both** Claude Code (`~/.claude/settings.json`
+  via `jq`, preserving existing keys) and Codex (`~/.codex/config.toml`):
+  - **workspace-meta freshness** — warns when the governance rule layer is behind
+    `origin/main`;
+  - **env capability registry freshness** — runs `env_probe.sh --check` and, when
+    the per-host registry (`~/workspace/.agents/env/<host>.yml`) is missing/stale,
+    nudges `make -C ~/workspace env-probe`;
+- installs the **env-sync skill** (`~/.claude/skills/env-sync/`) and the **Codex
+  global routing** (`~/.codex/AGENTS.md`) from templates under
+  `.agents/host-templates/`, so both agents know to consult the shared registry.
 
-Codex will require reviewing/trusting new or changed non-managed hooks via
-`/hooks` before they run.
+All hook/template installs are idempotent (re-runs add nothing). Codex TOML is
+only appended with `./scripts/bootstrap-local.sh --write-codex`; without it the
+missing snippets are printed for manual paste. Codex requires reviewing/trusting
+new or changed non-managed hooks via `/hooks` before they run.
+
+Nothing under `~/.claude` or `~/.codex` is committed to this repo (they are
+outside `~/workspace` and per-host by design — W-R26). The installer is the
+versioned carrier; the generated host files are not.
 
 ## Caveats
 
