@@ -1,0 +1,10 @@
+# BEGIN workspace-meta managed Codex hooks
+[[hooks.SessionStart]]
+matcher = "startup|resume"
+
+[[hooks.SessionStart.hooks]]
+type = "command"
+command = '''__WORKSPACE_META_STATUS_COMMAND__'''
+timeout = 20
+statusMessage = "Checking workspace-meta status"
+# END workspace-meta managed Codex hooks

@@ -3,12 +3,11 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-codex_write=false
 case "${1:-}" in
   "")
     ;;
   "--write-codex")
-    codex_write=true
+    warn_deprecated_codex_flag=true
     ;;
   "-h"|"--help")
     cat <<'USAGE'
@@ -18,15 +17,17 @@ Configures host-local workspace-meta integration (per-host; nothing here is
 committed — the installer lives in the repo, the generated host files do not):
   - sets this repo's core.hooksPath to .githooks
   - checks global git identity without writing identity values
-  - installs SessionStart hooks into ~/.claude/settings.json (jq) and prints/
-    appends them for ~/.codex/config.toml:
-      * workspace-meta freshness (governance rule layer behind origin/main)
+  - synchronizes workspace-meta-owned hooks into ~/.claude/settings.json
+  - synchronizes managed blocks into Codex AGENTS.md and config.toml while
+    preserving host-local settings:
+      * one shared, ordered status evaluator for Claude and Codex
+      * workspace-meta freshness and uncommitted/unpushed work
       * env capability registry freshness (~/workspace/.agents/env/<host>.yml)
   - installs the env-sync skill (~/.claude/skills/) and the Codex global routing
     (~/.codex/AGENTS.md) from templates under .agents/host-templates/
 
-Use --write-codex to append Codex TOML snippets when the corresponding hook is
-not detected. Review/trust new hooks in Codex with /hooks afterwards.
+--write-codex is retained as a compatibility alias; Codex managed blocks are now
+synchronized safely by default. Review/trust new or changed hooks with /hooks.
 USAGE
     exit 0
     ;;
@@ -36,6 +37,8 @@ USAGE
     exit 2
     ;;
 esac
+
+warn_deprecated_codex_flag="${warn_deprecated_codex_flag:-false}"
 
 info() {
   printf '[workspace-meta] %s\n' "$*"
@@ -82,94 +85,22 @@ else
   valid_git_email "$global_email" || warn "  git config --global user.email '<your email>'"
 fi
 
-# ── SessionStart hook commands ───────────────────────────────────────────────
-# workspace-meta freshness: nudge when the governance rule layer is behind origin.
-claude_fresh_cmd='behind=$(git -C "$HOME/workspace" fetch origin --quiet 2>/dev/null && git -C "$HOME/workspace" rev-list --count HEAD..origin/main 2>/dev/null); if [ -n "$behind" ] && [ "$behind" -gt 0 ]; then printf '\''{"systemMessage":"workspace-meta: governance rule layer is %s commit(s) behind origin/main — run: git -C ~/workspace pull"}'\'' "$behind"; fi'
-codex_fresh_cmd='behind=$(git -C "$HOME/workspace" fetch origin --quiet 2>/dev/null && git -C "$HOME/workspace" rev-list --count HEAD..origin/main 2>/dev/null); if [ -n "$behind" ] && [ "$behind" -gt 0 ]; then printf "workspace-meta: governance rule layer is %s commit(s) behind origin/main. Run: git -C ~/workspace pull\n" "$behind"; fi'
-# env capability registry freshness: nudge when the per-host registry is stale/missing.
-claude_env_cmd='out=$(bash "$HOME/workspace/scripts/env_probe.sh" --check 2>&1) || printf '\''{"systemMessage":%s,"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":%s}}'\'' "$(printf '\''%s'\'' "$out" | jq -Rs .)" "$(printf '\''%s — run: make -C ~/workspace env-probe (rule: ~/workspace/.agents/rules/environment-truth.md)'\'' "$out" | jq -Rs .)"'
-codex_env_cmd='out=$(bash "$HOME/workspace/scripts/env_probe.sh" --check 2>&1) || printf "%s — run: make -C ~/workspace env-probe (rule: ~/workspace/.agents/rules/environment-truth.md)\n" "$out"'
-# workspace-meta unsaved work: the WRITE-side counterpart to the freshness nudge —
-# warn when governance edits are uncommitted (dirty tree) or committed-but-unpushed
-# (ahead of origin/main), so distilled experience actually reaches other machines
-# (W-R26). No fetch: dirty is exact, and pushing updates the local origin/main ref.
-claude_write_cmd='wm="$HOME/workspace"; d=$(git -C "$wm" status --porcelain 2>/dev/null); a=$(git -C "$wm" rev-list --count origin/main..HEAD 2>/dev/null); m=""; [ -n "$d" ] && m="uncommitted governance changes"; if [ -n "$a" ] && [ "$a" -gt 0 ]; then [ -n "$m" ] && m="$m + "; m="${m}${a} unpushed commit(s)"; fi; if [ -n "$m" ]; then printf '\''{"systemMessage":"workspace-meta: %s — commit+push to sync (git -C ~/workspace status)"}'\'' "$m"; fi'
-codex_write_cmd='wm="$HOME/workspace"; d=$(git -C "$wm" status --porcelain 2>/dev/null); a=$(git -C "$wm" rev-list --count origin/main..HEAD 2>/dev/null); m=""; [ -n "$d" ] && m="uncommitted governance changes"; if [ -n "$a" ] && [ "$a" -gt 0 ]; then [ -n "$m" ] && m="$m + "; m="${m}${a} unpushed commit(s)"; fi; [ -n "$m" ] && printf "workspace-meta: %s. Commit+push to sync (git -C ~/workspace status)\n" "$m"'
-
-# ── Claude Code hooks (~/.claude/settings.json via jq) ───────────────────────
+# ── Agent managed config (Claude settings + Codex AGENTS/config) ─────────────
+codex_home="${CODEX_HOME:-$HOME/.codex}"
 claude_settings="$HOME/.claude/settings.json"
-
-merge_claude_hook() {
-  # $1 = unique marker substring (idempotency), $2 = command, $3 = statusMessage
-  local marker="$1" command="$2" status="$3" tmp
-  tmp="$(mktemp)"
-  jq --arg command "$command" --arg status "$status" --arg marker "$marker" '
-    if ((.hooks.SessionStart // []) | any(.[]?; ((.hooks // []) | any(.[]?; ((.command? // "") | contains($marker)))))) then
-      .
-    else
-      .hooks = ((.hooks // {}) as $hooks | $hooks + {
-        "SessionStart": (($hooks.SessionStart // []) + [{
-          "hooks": [{
-            "type": "command",
-            "command": $command,
-            "timeout": 15,
-            "statusMessage": $status
-          }]
-        }])
-      })
-    end
-  ' "$claude_settings" > "$tmp"
-  jq -e . "$tmp" >/dev/null
-  mv "$tmp" "$claude_settings"
-  info "Claude hook ensured: $status"
-}
-
-if command -v jq >/dev/null 2>&1; then
-  mkdir -p "$(dirname "$claude_settings")"
-  [ -f "$claude_settings" ] || printf '{}\n' > "$claude_settings"
-  merge_claude_hook "workspace-meta" "$claude_fresh_cmd" "Checking workspace-meta freshness"
-  merge_claude_hook "env_probe" "$claude_env_cmd" "Checking host capability registry freshness"
-  merge_claude_hook "unpushed commit" "$claude_write_cmd" "Checking workspace-meta unsaved work"
+[ "$warn_deprecated_codex_flag" = false ] || warn "--write-codex is deprecated; managed agent sync now runs by default."
+if command -v python3 >/dev/null 2>&1 && python3 -c 'import tomllib' >/dev/null 2>&1; then
+  python3 "$repo_root/scripts/sync_codex_config.py" \
+    --agents-template "$repo_root/.agents/host-templates/codex-AGENTS.md" \
+    --hooks-template "$repo_root/.agents/host-templates/codex-hooks.toml" \
+    --status-script "$repo_root/scripts/workspace_status.py" \
+    --codex-home "$codex_home" \
+    --claude-settings "$claude_settings"
 else
-  warn "jq is not installed; skipped Claude Code settings merge"
-  warn "Install jq or add the README hook snippets to ~/.claude/settings.json manually."
+  warn "Python 3.11+ with tomllib is unavailable; skipped safe agent configuration synchronization"
 fi
 
-# ── Codex hooks (~/.codex/config.toml, TOML append) ──────────────────────────
-codex_config="$HOME/.codex/config.toml"
-
-install_codex_hook() {
-  # $1 = grep marker (idempotency), $2 = command, $3 = statusMessage
-  local marker="$1" command="$2" status="$3" snippet
-  snippet="$(cat <<EOF
-[[hooks.SessionStart]]
-matcher = "startup|resume"
-
-[[hooks.SessionStart.hooks]]
-type = "command"
-command = '$command'
-timeout = 15
-statusMessage = "$status"
-EOF
-)"
-  if [ -f "$codex_config" ] && grep -Fq "$marker" "$codex_config"; then
-    info "Codex hook present: $status"
-  elif [ "$codex_write" = true ]; then
-    mkdir -p "$(dirname "$codex_config")"
-    { [ ! -s "$codex_config" ] || printf '\n'; printf '%s\n' "$snippet"; } >> "$codex_config"
-    info "Codex hook appended: $status"
-    warn "Open Codex /hooks and review/trust the new non-managed hook."
-  else
-    warn "Codex hook missing ($status); rerun with --write-codex or add manually:"
-    printf '%s\n' "$snippet"
-  fi
-}
-
-install_codex_hook "workspace-meta: governance rule layer" "$codex_fresh_cmd" "Checking workspace-meta freshness"
-install_codex_hook "env_probe.sh" "$codex_env_cmd" "Checking host capability registry freshness"
-install_codex_hook "unpushed commit" "$codex_write_cmd" "Checking workspace-meta unsaved work"
-
-# ── host templates (env-sync skill + Codex global routing) ───────────────────
+# ── Claude host template (env-sync skill) ────────────────────────────────────
 install_template() {
   # $1 = template path relative to repo_root, $2 = destination
   local src="$repo_root/$1" dest="$2"
@@ -185,6 +116,4 @@ install_template() {
 }
 
 install_template ".agents/host-templates/env-sync-SKILL.md" "$HOME/.claude/skills/env-sync/SKILL.md"
-install_template ".agents/host-templates/codex-AGENTS.md" "$HOME/.codex/AGENTS.md"
-
 info "Bootstrap complete"

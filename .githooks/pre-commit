@@ -8,7 +8,7 @@
 # derives the verdict from it instead of keeping its own list.
 #
 # Enable per machine (hooks are not synced by git itself):
-#   git config core.hooksPath hooks
+#   git config core.hooksPath .githooks
 set -euo pipefail
 
 violations=()

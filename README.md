@@ -1,9 +1,9 @@
 # workspace-meta
 
 This repository **is** the `~/workspace` directory root. It exists to sync the
-**cross-project governance layer** — the rule files that govern every Claude
-session across all projects on all of this user's machines — and deliberately
-tracks nothing else.
+**cross-project governance layer** — shared rules and their Claude/Codex adapters
+across all projects on this user's machines — plus the small bootstrap needed to
+install them safely. Runtime state and project contents remain outside its scope.
 
 The GitHub repo is named `workspace-meta`; the local directory is `~/workspace`.
 The names are independent — the binding is only the remote URL (`git remote -v`).
@@ -14,9 +14,9 @@ Rules live in three layers, each with its own sync channel:
 
 | Layer | Holds | Sync channel |
 |---|---|---|
-| `~/.claude/` | per-host facts (identity, credentials, host authorization) | **none — each machine maintains its own** |
-| `~/workspace/` root | cross-project methodology (`CLAUDE.md`) + rule provenance (`feedback-register.md`) | **this repo** |
-| each project dir | project-specific rules (`CLAUDE.md`, `.agents/rules/*`, governance docs) | the project's own repo |
+| `~/.claude/`, `~/.codex/` | credentials, authorization, trust, caches, history, host preferences | **none — each machine maintains its own** |
+| `~/workspace/` root | cross-project methodology, provenance, host templates, bootstrap | **this repo** |
+| each project dir | project-specific `CLAUDE.md`, `AGENTS.md`, `.agents/`, `.codex/`, governance docs | the project's own repo |
 
 Before this repo, the middle layer belonged to no repository: an edit on one
 machine was invisible everywhere else, while the existing "multi-machine sync"
@@ -43,50 +43,38 @@ Full provenance: `feedback-register.md` entry **W-R26**.
   side effect: running git in a *non-repo* subdirectory (scratch dirs) now
   resolves to this repo instead of erroring; the whitelist keeps its status
   clean, so this is cosmetic.
-- **Per-host facts stay out by design** — a synced carrier must hold shared
-  rules, never single-machine values (identity names/emails, credential
-  snapshots). That principle came from a concrete failure: hardcoding one
-  operator's git identity into a synced rule file would have made every
-  machine commit as that person (see W-R25's Why).
+- **Per-host secrets and authorization stay out by design** — identity values,
+  credentials, Codex trust state, approval rules, caches, and histories are never
+  synced. The generated `.agents/env/<host>.yml` capability registry is the narrow,
+  explicit exception: it carries dated operational facts for cross-machine task
+  routing, never credential values.
+- **Agent configuration uses narrow managed surfaces, not home-directory
+  mirrors** — the versioned templates converge only marked Codex sections and
+  one dedicated Claude SessionStart group. Both agents call the same ordered
+  status evaluator. Model choice, project trust, hook trust hashes, local
+  guidance outside the managed surfaces, `default.rules`, auth, plugins, skills,
+  databases, history, logs, and caches remain host-local. Full design:
+  `docs/architecture/codex-config-management.md`; ownership matrix:
+  `.agents/host-templates/README-codex.md`; provenance: W-R28.
 - **Rejected alternatives**: file-sync tools (syncthing/rsync) — no history,
   no merge, concurrent register edits would overwrite each other; symlinking
   from another repo — indirection plus mixing concerns with unrelated repos.
 
 ## Daily workflow
 
-- **After editing** `CLAUDE.md` or `feedback-register.md`: commit + push this
-  repo **in the same round** (rule in `CLAUDE.md` section 6).
+- **After editing** governance files or host templates: review the workspace-meta
+  diff, then commit + push this repo in the same round when synchronization is
+  intended (rule in `CLAUDE.md` section 6).
 - **When resuming work on any machine**: `git -C ~/workspace pull` first.
   Per-host SessionStart hooks automate the reminder: they fetch and emit a
   warning when the local rule layer is behind `origin/main`. Fetch-only by
   design — pulling stays a deliberate act so conflicts never happen unattended.
-  `make bootstrap` installs/checks the local integration. Claude Code is merged
-  into `~/.claude/settings.json` with `jq`; Codex is detected and printed as a
-  TOML snippet by default because programmatic TOML edits are easier to get
-  wrong. Codex auto-append is available only with
-  `./scripts/bootstrap-local.sh --write-codex`.
-
-  Claude Code hook snippet (`~/.claude/settings.json`):
-
-  ```json
-  "hooks": { "SessionStart": [ { "hooks": [ {
-    "type": "command", "timeout": 15,
-    "command": "behind=$(git -C \"$HOME/workspace\" fetch origin --quiet 2>/dev/null && git -C \"$HOME/workspace\" rev-list --count HEAD..origin/main 2>/dev/null); if [ -n \"$behind\" ] && [ \"$behind\" -gt 0 ]; then printf '{\"systemMessage\":\"workspace-meta: governance rule layer is %s commit(s) behind origin/main — run: git -C ~/workspace pull\"}' \"$behind\"; fi"
-  } ] } ] }
-  ```
-
-  Codex hook snippet (`~/.codex/config.toml`):
-
-  ```toml
-  [[hooks.SessionStart]]
-  matcher = "startup|resume"
-
-  [[hooks.SessionStart.hooks]]
-  type = "command"
-  command = 'behind=$(git -C "$HOME/workspace" fetch origin --quiet 2>/dev/null && git -C "$HOME/workspace" rev-list --count HEAD..origin/main 2>/dev/null); if [ -n "$behind" ] && [ "$behind" -gt 0 ]; then printf "workspace-meta: governance rule layer is %s commit(s) behind origin/main. Run: git -C ~/workspace pull\n" "$behind"; fi'
-  timeout = 15
-  statusMessage = "Checking workspace-meta freshness"
-  ```
+  `make bootstrap` installs or upgrades the local integration. One synchronizer
+  prevalidates Claude JSON and Codex TOML, migrates legacy workspace-meta hook
+  groups, then atomically converges all three managed targets. Run
+  `make agent-sync-check` to report drift without writing host files. It requires
+  Python 3.11+ (`tomllib`). Changed Codex hooks must be reviewed again with
+  `/hooks`.
 - **Commits follow W-R25**: Conventional Commits (`<type>(<scope>): <subject>`,
   subject = what, body = why); identity gate before committing
   (`git config --show-origin user.name user.email` must resolve from the
@@ -127,25 +115,28 @@ The bootstrap is idempotent and host-local. It:
 - checks `git config --global user.name` and whether `user.email` has a
   plausible email shape, but never writes identity values (W-R25/W-R14: those
   live only in each host's `~/.gitconfig`);
-- installs three SessionStart hooks for **both** Claude Code (`~/.claude/settings.json`
-  via `jq`, preserving existing keys) and Codex (`~/.codex/config.toml`):
-  - **workspace-meta freshness** (read side) — warns when the governance rule layer
-    is behind `origin/main` (fetch-only; pulling stays deliberate);
-  - **workspace-meta unsaved work** (write side) — warns when this repo has
-    uncommitted governance changes or unpushed commits, so distilled experience
-    actually reaches other machines (the symmetric counterpart to the freshness
-    nudge; W-R26);
-  - **env capability registry freshness** — runs `env_probe.sh --check` and, when
-    the per-host registry (`~/workspace/.agents/env/<host>.yml`) is missing/stale,
-    nudges `make -C ~/workspace env-probe`;
-- installs the **env-sync skill** (`~/.claude/skills/env-sync/`) and the **Codex
-  global routing** (`~/.codex/AGENTS.md`) from templates under
-  `.agents/host-templates/`, so both agents know to consult the shared registry.
+- installs one SessionStart handler for **each** of Claude Code and Codex. Both
+  handlers invoke `scripts/workspace_status.py`, which evaluates in a stable order:
+  repository availability and dirty state, bounded remote fetch, one post-fetch
+  ahead/behind snapshot, then environment-registry freshness;
+- emits no hook output when healthy and otherwise emits one JSON
+  `systemMessage`. Remote-unavailable warnings are rate-limited through
+  `~/.cache/workspace-meta/status.json`; behind, dirty/unpushed, and stale-registry
+  states remain visible;
+- pins the evaluator SHA-256 in each installed command. An evaluator change is
+  therefore an auditable hook-command change instead of silently changing the
+  meaning of an already trusted command;
+- installs the **env-sync skill** (`~/.claude/skills/env-sync/`) and synchronizes
+  the workspace-wide Codex baseline into a managed block in
+  `~/.codex/AGENTS.md`. Existing content outside that block is preserved;
+  bootstrap warns if `AGENTS.override.md` would shadow it.
 
-All hook/template installs are idempotent (re-runs add nothing). Codex TOML is
-only appended with `./scripts/bootstrap-local.sh --write-codex`; without it the
-missing snippets are printed for manual paste. Codex requires reviewing/trusting
-new or changed non-managed hooks via `/hooks` before they run.
+Managed installs are idempotent and convergent for both agents. The legacy
+`--write-codex` option remains accepted as a compatibility alias, but synchronization
+runs safely by default. All targets are rendered and parsed before the first write;
+ambiguous groups containing both workspace-meta and user handlers are rejected.
+Codex requires reviewing/trusting new or changed hooks via `/hooks` before they
+run. Claude settings outside the dedicated workspace-meta group are preserved.
 
 Nothing under `~/.claude` or `~/.codex` is committed to this repo (they are
 outside `~/workspace` and per-host by design — W-R26). The installer is the
@@ -158,9 +149,11 @@ versioned carrier; the generated host files are not.
 - **Never widen the whitelist toward project content.** A new
   *workspace-level* rule file gets one `!<file>` line in `.gitignore`;
   anything project-specific belongs in that project's repo.
-- **Never add per-host values** (names, emails, credential states, host
-  capability snapshots) to the tracked files — generic rules and verification
-  gates only.
+- **Never add secrets or authorization state** — names/emails, credential values,
+  `auth.json`, Codex approval rules and trust hashes remain host-local. The
+  generated capability registry is the only documented per-host snapshot.
+- **Never mirror `~/.codex` wholesale.** Add a field to the managed surface only
+  after classifying its ownership in `.agents/host-templates/README-codex.md`.
 - **Register merge conflicts**: entries are append-style and usually
   auto-merge. The real hazard is a **W-R number collision** when two machines
   mint entries concurrently — current model assumes a single writer at a time;
