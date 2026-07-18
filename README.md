@@ -56,6 +56,17 @@ Full provenance: `feedback-register.md` entry **W-R26**.
   databases, history, logs, and caches remain host-local. Full design:
   `docs/architecture/codex-config-management.md`; ownership matrix:
   `.agents/host-templates/README-codex.md`; provenance: W-R28.
+- **Permission intent is portable; executable authorization is host-local** —
+  the managed Codex guidance says that native search, URL retrieval, remote read
+  queries, and ordinary inspection need no conversational confirmation. Concrete
+  outside-sandbox allow/prompt decisions live in the operator's
+  `~/.codex/rules/*.rules` and are never copied into this repository. This keeps
+  credentials, paths, and accumulated approvals out of Git while avoiding
+  repeated per-site prompts. Provenance: W-R29.
+- **Commit and push are two-stage transactions** — a request starts preparation,
+  not execution. Codex must show the exact commit or push manifest and wait for
+  a later confirmation; a technical permission prompt is never that
+  confirmation. Provenance: W-R30.
 - **Rejected alternatives**: file-sync tools (syncthing/rsync) — no history,
   no merge, concurrent register edits would overwrite each other; symlinking
   from another repo — indirection plus mixing concerns with unrelated repos.

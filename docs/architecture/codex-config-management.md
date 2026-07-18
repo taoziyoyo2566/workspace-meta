@@ -22,6 +22,59 @@ workspace-meta 所有的配置面；用户目录中其余内容始终由当前�
 “混合所有权”不是复制整个文件。它表示 workspace-meta 只拥有文件中一个可
 识别的区域，安装器必须保留区域外的内容。
 
+## 权限策略
+
+权限分为两层，不能用一个文件解决：
+
+1. `.agents/host-templates/codex-AGENTS.md` 保存可跨机器同步的行为意图：原生
+   Web Search、网页读取、远端只读查询和本地检查无需先询问；安全操作因技术
+   边界被阻止时，只申请一次范围明确的分类授权。
+2. `~/.codex/rules/*.rules` 保存当前主机可执行的命令决策。它只决定命令是否
+   可以在 sandbox 外运行，不管理原生 Web Search，也不能判断任意脚本是否
+   “无副作用”。
+
+`~/.codex/rules/` 本身就是类似 `config.d` 的 drop-in 目录。Codex 启动时同时
+加载其中所有 `.rules` 文件；文件名和加载顺序不表示优先级，多个规则匹配时
+使用最严格结果。当前主机使用独立的 `permissions.rules` 补充 Codex 自动生成
+的 `default.rules`：前者表达人工维护的 allow/prompt 边界，后者继续积累历史
+批准。因此 `permissions.rules` 中的 `prompt` 可以覆盖 `default.rules` 里旧的
+`git commit` 或 `git push` allow。
+
+人工维护的规则只为边界明确的检查操作提供 `allow`，例如本地状态读取、有限的
+Git 状态查询和高层只读 GitHub 查询。`rg`、`sed`、工作区内 `cp`、Git
+`diff/log/show`、解释器和构建工具通常保持 unmatched，让现有 sandbox 根据实际
+目标执行；不能因为可执行文件存在可变更模式就整体 prompt。
+
+需要保持 prompt 的操作包括 Git commit/push/merge/rebase/reset、shell 网络客户
+端、远程执行/传输、远端 API 写、部署、提权、容器/集群控制、主机包/服务变更，
+以及真正启动第二个 Codex agent/session 的子命令。`codex execpolicy`、help、
+version、doctor、feature/MCP/plugin 的只读列表不应被“nested Codex”通配规则
+拦截。不要用 `bash`、Python、Node 等解释器的通配 allow 来模拟“所有安全命令”，
+因为前缀规则无法审查其 payload。
+
+本地规则可这样验证，不需要真正执行目标命令：
+
+```bash
+codex execpolicy check --pretty \
+  --rules ~/.codex/rules/default.rules \
+  --rules ~/.codex/rules/permissions.rules \
+  -- git push origin main
+```
+
+原生搜索不会经过 execpolicy；它应按托管指导直接使用，不做逐网站确认。
+
+### Commit / push 语义门禁
+
+execpolicy 的 `prompt` 只能表达“此命令越过技术边界前要提示”，无法判断聊天中
+是否已经授权。全局 AGENTS 指导因此另设两阶段门禁：
+
+1. 用户直接要求准备 commit/push 后，Codex 只能准备 exact-path commit manifest
+   或 remote/ref/range push manifest。
+2. Codex 展示完整 manifest 后停止；只有用户后续确认该 manifest 才能执行一次。
+
+执行环境的 Yes/Allow 不属于第二步。commit 与 push 相互独立；manifest 内容、
+校验状态、路径、message、ref 或 range 改变后，旧确认立即失效。
+
 ## 仓库地图
 
 | 路径 | 作用 |
@@ -184,6 +237,8 @@ Codex 0.144.1 上的实测中，`/hooks` 正确显示一个待审查 SessionStar
 ## 明确不做的事
 
 - 不同步 `~/.codex/rules/default.rules`、`auth.json`、数据库、日志或历史。
+- 不同步 `~/.codex/rules/permissions.rules`；它和 `default.rules` 一样属于
+  主机授权状态。
 - 不同步模型选择、project trust、hook trust hash 或 Claude/Codex 凭据。
 - 不自动 pull、commit、push、解决冲突或信任 hook。
 - 不把项目专用规则提升到全局；它们应留在项目自己的治理文件中。

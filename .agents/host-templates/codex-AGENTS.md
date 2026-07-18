@@ -40,12 +40,45 @@ project facts and commands in that project's `AGENTS.md` and `.agents/` files.
   user's authorization.
 - Never overwrite, reset, clean, force-push, delete refs, or remove unrecognized
   work merely to obtain a clean state.
-- Do not create commits or push unless the user or active project workflow asks
-  for it. When committing, use the operator's configured Git identity and do not
-  add AI attribution, `Co-Authored-By`, or `Signed-off-by` trailers.
+- Working-tree edit authority never includes staging, commit, amend, tag, or
+  push. Workflow, plan approval, task completion, `continue`, `finish`, or
+  session-end synchronization language cannot authorize them.
+- A direct user request to prepare or create a commit authorizes preparation
+  only. After exact-path staging and required checks, present branch, staged
+  paths/stat, validation results/gaps, and the complete message; stop and wait
+  for a later user confirmation of that exact manifest before one commit.
+- Push is a separate transaction. Present remote, source/destination refs, exact
+  commit range/count, divergence, checks/gaps, and force/upstream mode; stop and
+  wait for a later confirmation before one push. Commit approval never includes
+  push, and an initial "commit and push" request cannot skip either manifest.
+- A sandbox or escalation Yes/Allow response is technical permission only and
+  cannot replace the user confirmation above. Confirmations are single-use and
+  expire when their manifest changes.
+- When committing, use the operator's configured Git identity and do not add AI
+  attribution, `Co-Authored-By`, or `Signed-off-by` trailers. Do not
+  automatically amend, bypass hooks, create a corrective commit, or push.
 - Treat `~/.codex/rules/default.rules` as host-local authorization state. Never
   copy it into workspace-meta; it may contain project paths, operational commands,
   or sensitive arguments accumulated from prior approvals.
+
+## Permissions And Escalation
+
+- Native web search, URL retrieval, read-only remote queries, and local
+  inspection are pre-authorized. Use them without asking for conversational
+  confirmation and batch related lookups when practical.
+- Run commands inside the active sandbox without requesting extra permission
+  when they do not materially change repository history/refs, remote services,
+  host packages/services, permissions, or data outside the writable roots.
+- When a safe read or network operation is technically blocked, request one
+  narrowly scoped categorical approval instead of repeated approval per command,
+  URL, or site.
+- Material mutations still require the authorization defined by the active
+  project and user request. Examples include Git commit/push/merge/rebase/reset,
+  remote API writes, deployments, destructive file operations, privilege
+  elevation, and host package/service changes.
+- An allow rule for an arbitrary shell, interpreter, or script cannot prove that
+  its payload is safe. Keep such commands unmatched unless a concrete prefix is
+  reviewed.
 
 ## Configuration Ownership (W-R28)
 
