@@ -63,10 +63,13 @@ Full provenance: `feedback-register.md` entry **W-R26**.
   `~/.codex/rules/*.rules` and are never copied into this repository. This keeps
   credentials, paths, and accumulated approvals out of Git while avoiding
   repeated per-site prompts. Provenance: W-R29.
-- **Commit and push are two-stage transactions** — a request starts preparation,
-  not execution. Codex must show the exact commit or push manifest and wait for
-  a later confirmation; a technical permission prompt is never that
-  confirmation. Provenance: W-R30.
+- **Git publication uses result review plus one command bundle** — Codex first
+  presents the validated change result, then one exact, copyable bundle
+  containing applicable add/commit/push/PR commands. The operator may authorize
+  Codex to run that unchanged bundle once or run it personally and have Codex
+  verify the result read-only. Natural-language confirmation is sufficient; a
+  technical permission prompt is never semantic authorization. W-R31 refines
+  W-R30 without weakening its content-review boundary.
 - **Rejected alternatives**: file-sync tools (syncthing/rsync) — no history,
   no merge, concurrent register edits would overwrite each other; symlinking
   from another repo — indirection plus mixing concerns with unrelated repos.

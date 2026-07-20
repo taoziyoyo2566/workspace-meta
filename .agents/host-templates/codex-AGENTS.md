@@ -40,20 +40,49 @@ project facts and commands in that project's `AGENTS.md` and `.agents/` files.
   user's authorization.
 - Never overwrite, reset, clean, force-push, delete refs, or remove unrecognized
   work merely to obtain a clean state.
+- Before mutating branches or worktrees, inspect the current branch, dirty
+  state, and complete worktree map. A scoped task may use a new additive
+  isolated branch/worktree after announcing its branch name, base ref/OID, and
+  path. This never authorizes moving existing changes, switching or resetting
+  an existing worktree, reusing a path, or removing existing state.
+- Never auto-stash or use `--autostash`. Stash push/apply/pop/drop/clear require
+  a direct request or a separately reviewed action that identifies affected
+  paths, tracked/untracked/ignored inclusion, message or stash identity, and
+  expected restore/removal effect.
 - Working-tree edit authority never includes staging, commit, amend, tag, or
-  push. Workflow, plan approval, task completion, `continue`, `finish`, or
-  session-end synchronization language cannot authorize them.
-- A direct user request to prepare or create a commit authorizes preparation
-  only. After exact-path staging and required checks, present branch, staged
-  paths/stat, validation results/gaps, and the complete message; stop and wait
-  for a later user confirmation of that exact manifest before one commit.
-- Push is a separate transaction. Present remote, source/destination refs, exact
-  commit range/count, divergence, checks/gaps, and force/upstream mode; stop and
-  wait for a later confirmation before one push. Commit approval never includes
-  push, and an initial "commit and push" request cannot skip either manifest.
+  push, merge, integration, or remote PR creation unless the user has reviewed
+  and authorized the applicable mutation transaction below.
+- For an ordinary publication workflow, use two checkpoints:
+  1. After completing edits and validation, present a concise result list:
+     changed paths/outcomes, checks/gaps, exclusions, branch, and dirty state.
+     Wait for content acceptance before preparing publication.
+  2. Then present one exact, copyable command bundle in execution order,
+     containing every applicable exact-path `git add`, one `git commit`, one
+     `git push`, and `gh pr create` command, plus branch, paths/stat, full
+     message, remote/ref/range, force/upstream mode, checks/gaps, and PR
+     base/head. Do not hide a publication step outside the displayed bundle.
+- The user may accept either checkpoint in ordinary natural language; never
+  require a generated phrase to be repeated. At the command checkpoint, the
+  user may either authorize Codex to execute the unchanged bundle once or run
+  some/all commands personally and report completion.
+- For Codex execution, one confirmation authorizes the displayed bundle
+  sequentially. Expected state transitions caused by its earlier commands
+  (such as the displayed commit creating the commit then pushed) do not
+  invalidate its later commands. Stop if paths/content/message/refs/range/
+  checks/PR target/commands drift, a hook changes or rejects content, remote
+  state blocks the push, or a step needs a different command.
+- For operator execution, treat the completion report as evidence to verify,
+  not authority to rerun mutations. Inspect the resulting commit, remote ref,
+  and PR read-only; report missing or divergent state and prepare a new command
+  bundle for any corrective mutation.
+- Merge/integration execution remains a separate reviewed transaction. Present
+  target/source refs and tips, merge base, exact commits/diff, mode,
+  dirty/worktree state, checks/gaps, conflict assessment, and excluded
+  follow-ups. One integration authorization never includes conflict resolution,
+  push, tag, ref deletion, branch/worktree cleanup, or downstream integration.
 - A sandbox or escalation Yes/Allow response is technical permission only and
-  cannot replace the user confirmation above. Confirmations are single-use and
-  expire when their manifest changes.
+  cannot replace content or command-bundle review. Authorizations are
+  single-use and expire when the reviewed result or commands materially change.
 - When committing, use the operator's configured Git identity and do not add AI
   attribution, `Co-Authored-By`, or `Signed-off-by` trailers. Do not
   automatically amend, bypass hooks, create a corrective commit, or push.
