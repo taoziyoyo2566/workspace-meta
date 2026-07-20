@@ -44,13 +44,16 @@ registry under `~/workspace/.agents/env/` serves every project. Behavior rule:
      automatically. Propose the exact install command to the user and record the
      gap + fallback in your report.
 
-4. If any flipped capability contradicts an agent memory file or an active plan's
-   pre-conditions, update that record in the same round
-   (`~/workspace/.agents/rules/environment-truth.md` same-round correction).
+4. If any flipped capability contradicts an agent memory file or an active
+   plan's pre-conditions, update the currently governing record before it
+   directs later execution. Preserve completed historical evidence and annotate
+   it only when a reader needs a pointer to the current replacement.
 
-5. Commit + push the registry change to the **workspace-meta** repo in the same
-   round (W-R26): `git -C ~/workspace add .agents/env && git -C ~/workspace commit
-   && git -C ~/workspace push`. It is tracked precisely so other machines see it.
+5. Report the registry path, delta, probe date, and whether the evidence is
+   still local-only. If another machine or later phase depends on the update,
+   take it through the normal content-review and publication workflow in
+   `~/workspace/.agents/rules/git-publication.md`; probing never grants
+   commit/push authority.
 
 ## Notes
 

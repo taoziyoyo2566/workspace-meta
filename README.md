@@ -55,11 +55,20 @@ Full provenance: `feedback-register.md` entry **W-R26**.
   guidance outside the managed surfaces, `default.rules`, auth, plugins, skills,
   databases, history, logs, and caches remain host-local. Full design:
   `docs/architecture/codex-config-management.md`; ownership matrix:
-  `.agents/host-templates/README-codex.md`; provenance: W-R28.
+  `.agents/host-templates/README-agents.md`; provenance: W-R28.
+- **Portable agent rules are modular and have one owner** — the workspace
+  `CLAUDE.md` and installed Codex AGENTS block are compact adapters. Shared
+  authorization, task-shaped Git, planning/handoff, verification, review,
+  capability selection, secret/environment safety, and rule authoring live
+  under `.agents/rules/`; agent runtime mechanics are explicit, and projects
+  keep only topology, commands, schemas, operational constraints, and stricter
+  deltas. Ownership matrix: `.agents/host-templates/README-agents.md`;
+  provenance: W-R32.
 - **Permission intent is portable; executable authorization is host-local** —
-  the managed Codex guidance says that native search, URL retrieval, remote read
-  queries, and ordinary inspection need no conversational confirmation. Concrete
-  outside-sandbox allow/prompt decisions live in the operator's
+  the shared authorization owner says that native search, URL retrieval, remote
+  read queries, and ordinary inspection need no conversational confirmation;
+  both resident adapters route to it. Concrete outside-sandbox allow/prompt
+  decisions live in the operator's
   `~/.codex/rules/*.rules` and are never copied into this repository. This keeps
   credentials, paths, and accumulated approvals out of Git while avoiding
   repeated per-site prompts. Provenance: W-R29.
@@ -76,13 +85,13 @@ Full provenance: `feedback-register.md` entry **W-R26**.
 
 ## Daily workflow
 
-- **After editing** governance files or host templates: review the workspace-meta
-  diff, then commit + push this repo in the same round when synchronization is
-  intended (rule in `CLAUDE.md` section 6).
-- **When resuming work on any machine**: `git -C ~/workspace pull` first.
-  Per-host SessionStart hooks automate the reminder: they fetch and emit a
-  warning when the local rule layer is behind `origin/main`. Fetch-only by
-  design — pulling stays a deliberate act so conflicts never happen unattended.
+- **After editing** governance files or host templates: review/verify the
+  workspace-meta result, report whether it is local-only/unpublished, then use
+  `.agents/rules/git-publication.md` when synchronization is intended.
+- **When resuming work on any machine**: let the SessionStart evaluator fetch
+  and report behind/ahead/dirty state. If the workspace rule layer is behind,
+  review the exact update before changing the checkout; pulling stays deliberate
+  so conflicts never happen unattended.
   `make bootstrap` installs or upgrades the local integration. One synchronizer
   prevalidates Claude JSON and Codex TOML, migrates legacy workspace-meta hook
   groups, then atomically converges all three managed targets. Run
@@ -141,8 +150,10 @@ The bootstrap is idempotent and host-local. It:
   therefore an auditable hook-command change instead of silently changing the
   meaning of an already trusted command;
 - installs the **env-sync skill** (`~/.claude/skills/env-sync/`) and synchronizes
-  the workspace-wide Codex baseline into a managed block in
-  `~/.codex/AGENTS.md`. Existing content outside that block is preserved;
+  the workspace-wide Codex router/safety floor into a managed block in
+  `~/.codex/AGENTS.md`. The versioned root `CLAUDE.md` is Claude's thin adapter;
+  both route to the same portable modules. Existing Codex content outside the
+  managed block is preserved;
   bootstrap warns if `AGENTS.override.md` would shadow it.
 
 Managed installs are idempotent and convergent for both agents. The legacy
@@ -153,8 +164,9 @@ Codex requires reviewing/trusting new or changed hooks via `/hooks` before they
 run. Claude settings outside the dedicated workspace-meta group are preserved.
 
 Nothing under `~/.claude` or `~/.codex` is committed to this repo (they are
-outside `~/workspace` and per-host by design — W-R26). The installer is the
-versioned carrier; the generated host files are not.
+outside `~/workspace` and per-host by design — W-R26). The root `CLAUDE.md`,
+shared rules, templates, and installer are the versioned carriers; generated
+host files are not.
 
 ## Caveats
 
@@ -166,8 +178,8 @@ versioned carrier; the generated host files are not.
 - **Never add secrets or authorization state** — names/emails, credential values,
   `auth.json`, Codex approval rules and trust hashes remain host-local. The
   generated capability registry is the only documented per-host snapshot.
-- **Never mirror `~/.codex` wholesale.** Add a field to the managed surface only
-  after classifying its ownership in `.agents/host-templates/README-codex.md`.
+- **Never mirror an agent home wholesale.** Add a managed field only after
+  classifying its ownership in `.agents/host-templates/README-agents.md`.
 - **Register merge conflicts**: entries are append-style and usually
   auto-merge. The real hazard is a **W-R number collision** when two machines
   mint entries concurrently — current model assumes a single writer at a time;
