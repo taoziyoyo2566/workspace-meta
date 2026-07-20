@@ -81,6 +81,28 @@ class CodexConfigSyncTests(unittest.TestCase):
         self.assertNotIn("\nold\n", result)
         self.assertEqual(result.count(SYNC.AGENTS_BEGIN), 1)
 
+    def test_managed_agents_carries_git_publication_transaction_contract(self) -> None:
+        agents = self.codex_home / "AGENTS.md"
+
+        SYNC.sync_agents(self.agents_template, agents)
+        result = agents.read_text()
+        normalized = " ".join(result.split())
+
+        self.assertIn("two checkpoints", normalized)
+        self.assertIn("exact, copyable command bundle", normalized)
+        self.assertIn("exact-path `git add`", normalized)
+        self.assertIn("`git commit`", normalized)
+        self.assertIn("`git push`", normalized)
+        self.assertIn("`gh pr create`", normalized)
+        self.assertIn("ordinary natural language", normalized)
+        self.assertIn("run some/all commands personally", normalized)
+        self.assertIn("report completion", normalized)
+        self.assertIn(
+            "treat the completion report as evidence to verify", normalized
+        )
+        self.assertIn("Merge/integration execution remains a separate", normalized)
+        self.assertNotIn("Commit and push are separate transactions", normalized)
+
     def test_migrates_only_exact_legacy_agents_file(self) -> None:
         agents = self.codex_home / "AGENTS.md"
         agents.parent.mkdir(parents=True)

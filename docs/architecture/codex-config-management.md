@@ -63,17 +63,27 @@ codex execpolicy check --pretty \
 
 原生搜索不会经过 execpolicy；它应按托管指导直接使用，不做逐网站确认。
 
-### Commit / push 语义门禁
+### Git 发布语义门禁
 
 execpolicy 的 `prompt` 只能表达“此命令越过技术边界前要提示”，无法判断聊天中
-是否已经授权。全局 AGENTS 指导因此另设两阶段门禁：
+是否已经授权。全局 AGENTS 指导因此另设两个审核检查点：
 
-1. 用户直接要求准备 commit/push 后，Codex 只能准备 exact-path commit manifest
-   或 remote/ref/range push manifest。
-2. Codex 展示完整 manifest 后停止；只有用户后续确认该 manifest 才能执行一次。
+1. Codex 完成已授权的修改和校验后，先给出修改路径、结果、校验/缺口、排除项和
+   分支/脏状态；用户先验收内容。
+2. 内容验收后，Codex 给出一个完整、可复制、按执行顺序排列的命令包，按适用范围
+   包含 exact-path `git add`、一次 `git commit`、一次 `git push` 和
+   `gh pr create`，并附带完整 message、remote/ref/range、检查结果和 PR
+   base/head。
 
-执行环境的 Yes/Allow 不属于第二步。commit 与 push 相互独立；manifest 内容、
-校验状态、路径、message、ref 或 range 改变后，旧确认立即失效。
+用户可用普通自然语言确认由 Codex 顺序执行一次未变化的命令包，也可自行执行其中
+部分或全部命令并回复完成。后一种情况下，Codex 只读核验实际 commit、远端 ref 和
+PR；完成报告不是让 Codex 重复执行的授权。路径/内容/message/ref/range/检查状态/
+PR 目标或命令改变后，旧授权失效，需要新的命令包。命令包中前一步引起的预期状态
+变化（例如 commit 产生随后要 push 的 commit）不算漂移。
+
+merge/PR merge、冲突解决、强推、ref 删除、分支/worktree 清理、部署和 live
+operation 仍是独立事务。执行环境的 Yes/Allow 只解决技术权限，不能替代上述内容
+验收或命令包审核。
 
 ## 仓库地图
 
