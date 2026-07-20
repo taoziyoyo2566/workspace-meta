@@ -1,7 +1,8 @@
-# Claude/Codex 配置管理架构
+# Claude/Codex 配置与共享规则架构
 
-本文说明 workspace-meta 如何把跨项目治理规则安装到本机 Claude Code 和
-Codex，同时避免把凭据、授权、信任状态和运行时数据同步到其他机器。
+本文说明 workspace-meta 如何让 Claude Code 和 Codex 共用一套跨项目规则，
+同时把 agent 运行机制留在各自适配器中，并避免把凭据、可执行授权、信任状态
+和运行时数据同步到其他机器。
 
 ## 一句话模型
 
@@ -12,8 +13,9 @@ workspace-meta 所有的配置面；用户目录中其余内容始终由当前�
 
 | 层级 | 内容 | 所有者 | 同步方式 |
 |---|---|---|---|
-| workspace-meta | 跨项目方法、模板、安装器、状态评估器、规则来源 | 本仓库 | Git 私有远端 |
-| Codex 全局指导 | `~/.codex/AGENTS.md` 中的标记块 | workspace-meta + 主机 | `make bootstrap` 只替换标记块 |
+| workspace-meta | `.agents/rules/` 中的跨项目方法、模板、安装器、状态评估器 | 本仓库 | Git 私有远端 |
+| Claude 工作区适配器 | `~/workspace/CLAUDE.md` 中的紧凑路由与安全底线 | workspace-meta | 本仓库 Git |
+| Codex 全局指导 | `~/.codex/AGENTS.md` 中的路由与安全底线标记块 | workspace-meta + 主机 | `make bootstrap` 只替换标记块 |
 | Codex 全局配置 | `~/.codex/config.toml` 中的标记 hook 块 | workspace-meta + 主机 | `make bootstrap` 只替换标记块 |
 | Claude 全局配置 | `~/.claude/settings.json` 中一个专用 SessionStart 组 | workspace-meta + 主机 | `make bootstrap` 收敛该组，保留其他键和组 |
 | 项目配置 | 项目的 `AGENTS.md`、`.agents/`、`.codex/` | 项目仓库 | 项目自己的 Git |
@@ -22,13 +24,60 @@ workspace-meta 所有的配置面；用户目录中其余内容始终由当前�
 “混合所有权”不是复制整个文件。它表示 workspace-meta 只拥有文件中一个可
 识别的区域，安装器必须保留区域外的内容。
 
+## 规则所有权
+
+两个 agent 都采用“紧凑常驻适配器 + 按任务读取共享模块”。共享行为使用
+agent-neutral 文件名；只有 sandbox、工具发现和配置表面等运行机制留在
+agent-specific 适配器中：
+
+| 规则域 | 工作区级唯一所有者 | 项目级只允许补充 |
+|---|---|---|
+| 请求与权限 | `.agents/rules/authorization.md` | live/external 风险与项目字段 |
+| Git 检查 | `.agents/rules/git.md` | trunk 名称、CI/检查映射 |
+| 分支与 worktree | `.agents/rules/git-branches.md` | 分支拓扑、契约存放位置、归档工具 |
+| 发布 | `.agents/rules/git-publication.md` | 提交格式、PR 模板、项目检查 |
+| 集成 | `.agents/rules/git-integration.md` | 合并策略、受保护分支和 CI 门禁 |
+| 恢复与改写 | `.agents/rules/git-recovery.md` | 更严格的项目恢复限制 |
+| 计划与证据 | `.agents/rules/planning.md` | 文件结构、项目来源、命令 |
+| 验证 | `.agents/rules/verification.md` | 项目测试矩阵和功能入口 |
+| 审查 | `.agents/rules/review.md` | 领域场景和架构基线 |
+| 能力选择 | `.agents/rules/capabilities.md` | 项目工具链 |
+| secrets | `.agents/rules/secrets.md` | 存放位置、消费者、轮换与校验 |
+| 环境事实 | `.agents/rules/environment-truth.md` | 项目命令映射与环境覆盖 |
+| 规则编写 | `.agents/rules/rule-authoring.md` | 项目反馈与本地路由 |
+
+`CLAUDE.md` 与 `.agents/host-templates/codex-AGENTS.md` 是对称的薄适配器。
+Codex 独有的 sandbox、escalation、execpolicy、延迟工具发现和配置所有权放在
+`.agents/rules/codex-runtime.md`；Claude 的工具机制只在实际可用的会话能力中
+处理，不另建一套共享行为副本。
+
+项目 `AGENTS.md`、`CLAUDE.md`、嵌套路由和 agent-specific 文件只保存更窄的
+事实、约束和入口。引用共享规则不算重复，但重新定义同一授权、事务或方法会
+形成第二个所有者。
+
+### Git 按任务加载
+
+Git 不再由一个大文件承担所有场景。任务只加载基础检查模块和一个动作模块：
+
+| 任务 | 加载 |
+|---|---|
+| 只读检查/新鲜度 | `git.md` |
+| 分支、worktree 或 stash | `git.md` + `git-branches.md` |
+| stage、commit、push 或创建 PR | `git.md` + `git-publication.md` |
+| merge、集成或集成后核验 | `git.md` + `git-integration.md` |
+| rewrite、discard、force、delete、amend 或恢复 | `git.md` + `git-recovery.md` |
+
+这种拆分按触发条件直接路由，不依赖执行者先读一个总目录再追索引用。各模块的
+实际行数和词数由 Phase 1 验证记录量化；若某个任务画像仍超预算，再按可观察
+触发条件拆分。
+
 ## 权限策略
 
 权限分为两层，不能用一个文件解决：
 
-1. `.agents/host-templates/codex-AGENTS.md` 保存可跨机器同步的行为意图：原生
-   Web Search、网页读取、远端只读查询和本地检查无需先询问；安全操作因技术
-   边界被阻止时，只申请一次范围明确的分类授权。
+1. `.agents/host-templates/codex-AGENTS.md` 保存 Codex 常驻路由和安全底线；
+   `.agents/rules/authorization.md` 保存两个 agent 共用的完整行为意图，
+   `.agents/rules/codex-runtime.md` 保存 Codex 的技术执行边界。
 2. `~/.codex/rules/*.rules` 保存当前主机可执行的命令决策。它只决定命令是否
    可以在 sandbox 外运行，不管理原生 Web Search，也不能判断任意脚本是否
    “无副作用”。
@@ -66,7 +115,8 @@ codex execpolicy check --pretty \
 ### Git 发布语义门禁
 
 execpolicy 的 `prompt` 只能表达“此命令越过技术边界前要提示”，无法判断聊天中
-是否已经授权。全局 AGENTS 指导因此另设两个审核检查点：
+是否已经授权。`.agents/rules/git-publication.md` 因此定义两个审核检查点，常驻
+AGENTS 只负责把任何 Git 任务路由到该文件：
 
 1. Codex 完成已授权的修改和校验后，先给出修改路径、结果、校验/缺口、排除项和
    分支/脏状态；用户先验收内容。
@@ -90,9 +140,12 @@ operation 仍是独立事务。执行环境的 Yes/Allow 只解决技术权限�
 | 路径 | 作用 |
 |---|---|
 | `AGENTS.md` | 本仓库自己的 Codex 开发与交付约束 |
+| `CLAUDE.md` | Claude 的工作区级薄适配器 |
 | `.agents/host-templates/codex-AGENTS.md` | 安装到 Codex 全局 `AGENTS.md` 的标记块 |
+| `.agents/rules/*.md` | agent-neutral 的跨项目按任务读取模块 |
+| `.agents/rules/codex-runtime.md` | Codex-specific 运行机制 |
 | `.agents/host-templates/codex-hooks.toml` | Codex SessionStart 标记块模板 |
-| `.agents/host-templates/README-codex.md` | 精简的所有权矩阵 |
+| `.agents/host-templates/README-agents.md` | 共享核心、适配器和主机状态所有权矩阵 |
 | `scripts/workspace_status.py` | Claude/Codex 共用的状态评估策略 |
 | `scripts/sync_codex_config.py` | 渲染、迁移、校验并写入三个主机目标 |
 | `scripts/bootstrap-local.sh` | 一台机器的安装入口 |
@@ -188,11 +241,13 @@ make -C ~/workspace bootstrap
 ### 日常升级
 
 ```bash
-git -C ~/workspace pull
+git -C ~/workspace fetch origin
 make -C ~/workspace agent-sync-check
 make -C ~/workspace bootstrap
 ```
 
+先检查 ahead/behind、dirty state 和待引入提交；确认更新方向后才用项目允许的
+方式更新工作区。SessionStart 和日常入口都不自动 pull、merge 或 rebase。
 `agent-sync-check` 只报告漂移，返回 0 表示三个托管目标均已收敛；非零表示
 存在漂移或输入无效。`bootstrap` 才会写主机配置。
 
@@ -252,6 +307,8 @@ Codex 0.144.1 上的实测中，`/hooks` 正确显示一个待审查 SessionStar
 - 不同步模型选择、project trust、hook trust hash 或 Claude/Codex 凭据。
 - 不自动 pull、commit、push、解决冲突或信任 hook。
 - 不把项目专用规则提升到全局；它们应留在项目自己的治理文件中。
+- 不允许 agent 适配器或项目通过复制共享授权、Git、计划或审查流程来建立
+  第二个规则所有者。
 - 不保证所有 agent 版本都具有相同 hook stdout 协议；升级 Codex 后应重新核对
   官方 hooks 文档或对应版本实现并做一次真实 SessionStart UI smoke test。
 

@@ -32,6 +32,7 @@ class CodexConfigSyncTests(unittest.TestCase):
             ROOT / ".agents" / "host-templates" / "codex-hooks.toml"
         )
         self.status_script = ROOT / "scripts" / "workspace_status.py"
+        self.rules_dir = ROOT / ".agents" / "rules"
 
     def tearDown(self) -> None:
         self.temp_dir.cleanup()
@@ -77,19 +78,46 @@ class CodexConfigSyncTests(unittest.TestCase):
         result = agents.read_text()
         self.assertIn("# Host preference", result)
         self.assertIn("# Local footer", result)
-        self.assertIn("# Workspace-Wide Codex Guidance", result)
+        self.assertIn("# Workspace-Wide Codex Adapter", result)
         self.assertNotIn("\nold\n", result)
         self.assertEqual(result.count(SYNC.AGENTS_BEGIN), 1)
 
-    def test_managed_agents_carries_git_publication_transaction_contract(self) -> None:
+    def test_managed_agents_routes_canonical_workspace_rules(self) -> None:
         agents = self.codex_home / "AGENTS.md"
 
         SYNC.sync_agents(self.agents_template, agents)
         result = agents.read_text()
         normalized = " ".join(result.split())
 
-        self.assertIn("two checkpoints", normalized)
-        self.assertIn("exact, copyable command bundle", normalized)
+        for name in (
+            "authorization.md",
+            "capabilities.md",
+            "codex-runtime.md",
+            "environment-truth.md",
+            "git.md",
+            "git-branches.md",
+            "git-integration.md",
+            "git-publication.md",
+            "git-recovery.md",
+            "planning.md",
+            "review.md",
+            "rule-authoring.md",
+            "secrets.md",
+            "verification.md",
+        ):
+            self.assertIn(f"~/workspace/.agents/rules/{name}", result)
+
+        self.assertIn("Project rules provide topology", normalized)
+        self.assertIn("technical permission only", normalized)
+        self.assertNotIn("Saberu", result)
+
+    def test_canonical_git_rule_carries_publication_transaction_contract(self) -> None:
+        result = (self.rules_dir / "git-publication.md").read_text()
+        normalized = " ".join(result.split())
+
+        self.assertIn("Checkpoint A", normalized)
+        self.assertIn("Checkpoint B", normalized)
+        self.assertIn("exact, copyable bundle", normalized)
         self.assertIn("exact-path `git add`", normalized)
         self.assertIn("`git commit`", normalized)
         self.assertIn("`git push`", normalized)
@@ -98,10 +126,82 @@ class CodexConfigSyncTests(unittest.TestCase):
         self.assertIn("run some/all commands personally", normalized)
         self.assertIn("report completion", normalized)
         self.assertIn(
-            "treat the completion report as evidence to verify", normalized
+            "completion report authorizes only read-only verification", normalized
         )
-        self.assertIn("Merge/integration execution remains a separate", normalized)
+        self.assertIn("Integration and cleanup are separate", normalized)
         self.assertNotIn("Commit and push are separate transactions", normalized)
+
+    def test_workspace_rule_modules_declare_unique_ownership(self) -> None:
+        for name in (
+            "authorization.md",
+            "capabilities.md",
+            "codex-runtime.md",
+            "environment-truth.md",
+            "git.md",
+            "git-branches.md",
+            "git-integration.md",
+            "git-publication.md",
+            "git-recovery.md",
+            "planning.md",
+            "review.md",
+            "rule-authoring.md",
+            "secrets.md",
+            "verification.md",
+        ):
+            content = (self.rules_dir / name).read_text()
+            self.assertIn("## Ownership", content)
+            self.assertNotIn("Saberu", content)
+
+    def test_agent_adapters_route_the_same_portable_core(self) -> None:
+        codex = self.agents_template.read_text()
+        claude = (ROOT / "CLAUDE.md").read_text()
+        portable = (
+            "authorization.md",
+            "capabilities.md",
+            "environment-truth.md",
+            "git.md",
+            "git-branches.md",
+            "git-integration.md",
+            "git-publication.md",
+            "git-recovery.md",
+            "planning.md",
+            "review.md",
+            "rule-authoring.md",
+            "secrets.md",
+            "verification.md",
+        )
+
+        for name in portable:
+            self.assertIn(name, codex)
+            self.assertIn(name, claude)
+
+        self.assertIn("codex-runtime.md", codex)
+        self.assertNotIn("codex-runtime.md", claude)
+        self.assertIn("no `~/.claude/CLAUDE.md` is required", claude)
+
+        codex_floor = codex.split("## Safety Floor", 1)[1].split(
+            "## Direct Task Routing", 1
+        )[0]
+        claude_floor = claude.split("## Safety Floor", 1)[1].split(
+            "## Direct Task Routing", 1
+        )[0]
+        self.assertEqual(codex_floor, claude_floor)
+
+    def test_git_modules_have_task_shaped_load_profiles(self) -> None:
+        inspection = (self.rules_dir / "git.md").read_text()
+        branches = (self.rules_dir / "git-branches.md").read_text()
+        publication = (self.rules_dir / "git-publication.md").read_text()
+        integration = (self.rules_dir / "git-integration.md").read_text()
+        recovery = (self.rules_dir / "git-recovery.md").read_text()
+
+        self.assertNotIn("gh pr create", inspection)
+        self.assertNotIn("force-with-lease", inspection)
+        self.assertIn("Required Branch Task Contract", branches)
+        self.assertNotIn("gh pr create", branches)
+        self.assertIn("gh pr create", publication)
+        self.assertIn("Terminal Evidence", integration)
+        self.assertNotIn("force-with-lease", integration)
+        self.assertIn("force-with-lease", recovery)
 
     def test_migrates_only_exact_legacy_agents_file(self) -> None:
         agents = self.codex_home / "AGENTS.md"

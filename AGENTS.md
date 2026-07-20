@@ -37,6 +37,6 @@ repository-specific rules.
 ## Commit And Sync
 
 - Leave changes reviewable and report whether they are uncommitted or unpushed.
-- Do not commit or push unless the user explicitly requests it. This is the
-  Codex authorization rule for this repository even though the Claude workflow
-  may recommend same-round synchronization.
+- Do not stage, commit, push, or create a PR unless the applicable shared
+  publication transaction has been reviewed and authorized. No agent workflow
+  requires automatic same-round synchronization.
