@@ -15,7 +15,9 @@ under `authorization.md`, but not Git publication or external/live writes.
 
 ## Review Shape
 
-1. Freeze the comparison base and scope.
+1. Freeze the comparison base, nearest Git root, and scope. Explicitly classify
+   nested repositories and host-local state as in-scope or supplemental before
+   inspecting them.
 2. Identify intended outcome, non-goals, and acceptance evidence.
 3. Choose one dominant review type: feature, bugfix, refactor, operations,
    maintenance, or documentation/governance.
@@ -26,9 +28,27 @@ under `authorization.md`, but not Git publication or external/live writes.
 7. Lead with findings ordered by severity and grounded in file/line or
    observable evidence; then report checks, gaps, and residual risk.
 
+At review start, record a compact scope snapshot:
+
+- **Target repository**: nearest Git root and requested task.
+- **Comparison base**: commit, branch, or other frozen reference.
+- **In scope**: files, behavior, and checks covered by this review.
+- **Supplemental only**: related repositories or host state that may be
+  consulted, with the reason and exact path/root.
+- **Excluded**: related state that must not affect the current verdict.
+
 Do not expand every review into every scenario. Review a plan by the behavior
 it proposes; metadata/location is a bounded artifact check, not automatically
 the primary review type.
+
+When a workspace contains nested Git roots, do not silently combine their
+status/diffs or host-local configuration with the current repository review.
+Inspect related state only when the user names that boundary, the current
+request explicitly adopts a plan whose acceptance evidence requires it, or the
+current repository's documented acceptance check cannot run without it. A plan
+merely present in the repository, a directory name, or a related configuration
+path does not activate cross-boundary scope. Label any consulted state
+supplemental and report its exact path/root separately.
 
 ## Independent Review
 

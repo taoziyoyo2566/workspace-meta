@@ -16,7 +16,15 @@ Rules live in three layers, each with its own sync channel:
 |---|---|---|
 | `~/.claude/`, `~/.codex/` | credentials, authorization, trust, caches, history, host preferences | **none — each machine maintains its own** |
 | `~/workspace/` root | cross-project methodology, provenance, host templates, bootstrap | **this repo** |
-| each project dir | project-specific `CLAUDE.md`, `AGENTS.md`, `.agents/`, `.codex/`, governance docs | the project's own repo |
+| `~/workspace/projects/<project>/` | project-specific `CLAUDE.md`, `AGENTS.md`, `.agents/`, `.codex/`, governance docs | the project's own repo |
+
+### Workspace directory layout
+
+The `~/workspace` root is intentionally reserved for workspace-meta governance:
+shared rules, adapters, templates, bootstrap scripts, and review evidence.
+Independent project repositories live below `~/workspace/projects/<project>/`.
+Each project keeps its own nearest `.git` root, so project Git commands do not
+mix with workspace-meta history.
 
 Before this repo, the middle layer belonged to no repository: an edit on one
 machine was invisible everywhere else, while the existing "multi-machine sync"
@@ -71,7 +79,11 @@ Full provenance: `feedback-register.md` entry **W-R26**.
   decisions live in the operator's
   `~/.codex/rules/*.rules` and are never copied into this repository. This keeps
   credentials, paths, and accumulated approvals out of Git while avoiding
-  repeated per-site prompts. Provenance: W-R29.
+  repeated per-site prompts. Protected-action proposals, requests for the
+  operator to run them, and consent requests also use a portable action brief
+  covering purpose, target, effect, risk, exclusions, checks, and the exact
+  approval boundary; the host prompt remains technical permission only.
+  Provenance: W-R29 and W-R34–W-R35.
 - **Git publication uses result review plus one command bundle** — Codex first
   presents the validated change result, then one exact, copyable bundle
   containing applicable add/commit/push/PR commands. The operator may authorize
@@ -106,6 +118,10 @@ Full provenance: `feedback-register.md` entry **W-R26**.
 
 ## Onboarding a machine
 
+完整的新 VPS 安装顺序、主机私有配置边界、修改后的生效步骤和故障排查见
+[`docs/runbooks/new-vps.md`](docs/runbooks/new-vps.md)。下面保留最小入口，
+详细流程以 runbook 为准。
+
 `~/workspace` already exists and is non-empty (the normal case):
 
 ```bash
@@ -122,6 +138,13 @@ otherwise git would create a `workspace-meta/` directory:
 
 ```bash
 git clone https://github.com/taoziyoyo2566/workspace-meta.git ~/workspace
+```
+
+Place independent project checkouts below the workspace project boundary:
+
+```bash
+mkdir -p ~/workspace/projects
+git clone <project-remote> ~/workspace/projects/<project>
 ```
 
 Either way, run the host-local bootstrap from the repo root:

@@ -18,11 +18,14 @@ workspace-meta 所有的配置面；用户目录中其余内容始终由当前�
 | Codex 全局指导 | `~/.codex/AGENTS.md` 中的路由与安全底线标记块 | workspace-meta + 主机 | `make bootstrap` 只替换标记块 |
 | Codex 全局配置 | `~/.codex/config.toml` 中的标记 hook 块 | workspace-meta + 主机 | `make bootstrap` 只替换标记块 |
 | Claude 全局配置 | `~/.claude/settings.json` 中一个专用 SessionStart 组 | workspace-meta + 主机 | `make bootstrap` 收敛该组，保留其他键和组 |
-| 项目配置 | 项目的 `AGENTS.md`、`.agents/`、`.codex/` | 项目仓库 | 项目自己的 Git |
+| 项目配置 | `~/workspace/projects/<project>/` 中项目的 `AGENTS.md`、`.agents/`、`.codex/` | 项目仓库 | 项目自己的 Git |
 | 主机私有状态 | 凭据、模型偏好、信任 hash、审批规则、历史、缓存、数据库 | 当前主机 | 不同步 |
 
 “混合所有权”不是复制整个文件。它表示 workspace-meta 只拥有文件中一个可
 识别的区域，安装器必须保留区域外的内容。
+
+工作区根目录只承载 workspace-meta 治理文件；独立项目 checkout 放在
+`~/workspace/projects/<project>/`，并保留各自最近的 `.git` 根目录。
 
 ## 规则所有权
 
@@ -57,15 +60,16 @@ Codex 独有的 sandbox、escalation、execpolicy、延迟工具发现和配置�
 
 ### Git 按任务加载
 
-Git 不再由一个大文件承担所有场景。任务只加载基础检查模块和一个动作模块：
+Git 不再由一个大文件承担所有场景。只读任务加载基础检查模块；受保护任务
+额外加载通用授权模块和一个动作模块：
 
 | 任务 | 加载 |
 |---|---|
 | 只读检查/新鲜度 | `git.md` |
-| 分支、worktree 或 stash | `git.md` + `git-branches.md` |
-| stage、commit、push 或创建 PR | `git.md` + `git-publication.md` |
-| merge、集成或集成后核验 | `git.md` + `git-integration.md` |
-| rewrite、discard、force、delete、amend 或恢复 | `git.md` + `git-recovery.md` |
+| 分支、worktree 或 stash | `authorization.md` + `git.md` + `git-branches.md` |
+| stage、commit、push 或创建 PR | `authorization.md` + `git.md` + `git-publication.md` |
+| merge、集成或集成后核验 | `authorization.md` + `git.md` + `git-integration.md` |
+| rewrite、discard、force、delete、amend 或恢复 | `authorization.md` + `git.md` + `git-recovery.md` |
 
 这种拆分按触发条件直接路由，不依赖执行者先读一个总目录再追索引用。各模块的
 实际行数和词数由 Phase 1 验证记录量化；若某个任务画像仍超预算，再按可观察
@@ -112,15 +116,21 @@ codex execpolicy check --pretty \
 
 原生搜索不会经过 execpolicy；它应按托管指导直接使用，不做逐网站确认。
 
+语义授权和技术权限保持分离。凡是需要提出、要求用户执行或请求用户同意的受保护
+操作，通用授权 owner 要求先说明行动、原因、目标范围、预期效果、风险/恢复、排除
+项、检查缺口和本次同意的边界，再展示精确命令或请求。Codex 的 sandbox/execpolicy
+提示即使只显示命令，也不能替代这段语义说明；普通只读检查和已经授权范围内的
+工作树编辑不应因此重复询问。
+
 ### Git 发布语义门禁
 
 execpolicy 的 `prompt` 只能表达“此命令越过技术边界前要提示”，无法判断聊天中
-是否已经授权。`.agents/rules/git-publication.md` 因此定义两个审核检查点，常驻
-AGENTS 只负责把任何 Git 任务路由到该文件：
+是否已经授权。`authorization.md` 负责所有受保护操作的 action brief，Git
+模块负责各自的事务检查点；常驻 AGENTS 负责把 Git 任务路由到授权模块和对应动作模块：
 
 1. Codex 完成已授权的修改和校验后，先给出修改路径、结果、校验/缺口、排除项和
    分支/脏状态；用户先验收内容。
-2. 内容验收后，Codex 给出一个完整、可复制、按执行顺序排列的命令包，按适用范围
+2. 内容验收后，Codex 先给出 authorization brief，再给出一个完整、可复制、按执行顺序排列的命令包，按适用范围
    包含 exact-path `git add`、一次 `git commit`、一次 `git push` 和
    `gh pr create`，并附带完整 message、remote/ref/range、检查结果和 PR
    base/head。
@@ -152,6 +162,7 @@ operation 仍是独立事务。执行环境的 Yes/Allow 只解决技术权限�
 | `tests/test_workspace_status.py` | 状态顺序、离线降噪和输出契约测试 |
 | `tests/test_sync_codex_config.py` | 安装、迁移、保留、拒绝和幂等测试 |
 | `docs/reviews/` | 非小型变更的计划与每轮 changelog |
+| `projects/<project>/` | 独立项目仓库；不属于 workspace-meta 的跟踪范围 |
 
 ## 启动检查流程
 
@@ -196,6 +207,9 @@ Git。默认策略如下：
 这样，Git pull 带来的评估器逻辑变化不会在旧的已信任命令下静默运行。
 重新 bootstrap 会产生新命令，Codex 因命令 hash 变化而要求在 `/hooks` 中
 重新审查。workspace-meta 不自动写入或清理 Codex hook trust state。
+Codex 可能把 `[hooks.state]` 写入 inline managed block 的结束标记之前；同步器
+会把这段主机状态移到 managed marker 之外并保留它，避免每次检查都产生漂移或
+意外重置 hook trust。
 
 当前官方 hooks 文档明确说明：`SessionStart` 的 JSON `systemMessage` 会显示为
 UI 或事件流 warning，而纯文本 stdout 会进入额外 developer context。Codex
@@ -228,6 +242,10 @@ UI 或事件流 warning，而纯文本 stdout 会进入额外 developer context�
 索引可能成为孤立记录，但它属于主机状态且不影响运行，本项目不会删除。
 
 ## 操作手册
+
+新 VPS 的完整安装、主机策略选择、配置生效和恢复流程见
+[`docs/runbooks/new-vps.md`](../runbooks/new-vps.md)。本节只保留架构相关的
+最小操作入口。
 
 ### 新机器
 

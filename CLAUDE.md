@@ -24,10 +24,10 @@ constraints.
 |---|---|
 | first write, permission/scope question, external/host/live mutation | `.agents/rules/authorization.md` |
 | Git inspection or freshness | `.agents/rules/git.md` |
-| branch/worktree/stash action | `git.md` + `.agents/rules/git-branches.md` |
-| stage/commit/push/PR publication | `git.md` + `.agents/rules/git-publication.md` |
-| merge/integration or post-integration handling | `git.md` + `.agents/rules/git-integration.md` |
-| rewrite/discard/force/delete/amend/recovery | `git.md` + `.agents/rules/git-recovery.md` |
+| branch/worktree/stash action | `.agents/rules/authorization.md` + `.agents/rules/git.md` + `.agents/rules/git-branches.md` |
+| stage/commit/push/PR publication | `.agents/rules/authorization.md` + `.agents/rules/git.md` + `.agents/rules/git-publication.md` |
+| merge/integration or post-integration handling | `.agents/rules/authorization.md` + `.agents/rules/git.md` + `.agents/rules/git-integration.md` |
+| rewrite/discard/force/delete/amend/recovery | `.agents/rules/authorization.md` + `.agents/rules/git.md` + `.agents/rules/git-recovery.md` |
 | non-trivial planning, evidence, approval scope, deviation, handoff | `.agents/rules/planning.md` |
 | change verification or blocked check | `.agents/rules/verification.md` |
 | review, audit, diagnosis, remediation assessment | `.agents/rules/review.md` |

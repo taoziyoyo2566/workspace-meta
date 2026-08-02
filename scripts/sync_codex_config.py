@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from collections import namedtuple
 import hashlib
 import json
 import os
@@ -31,6 +32,12 @@ LEGACY_HOOK_MARKERS = (
 
 class SyncError(RuntimeError):
     pass
+
+
+HookRenderResult = namedtuple(
+    "HookRenderResult",
+    ("content", "action", "definition_changed", "state_normalized"),
+)
 
 
 def read_text(path: Path) -> str:
@@ -164,9 +171,44 @@ def insert_before_hook_state(content: str, managed: str) -> str:
     return "\n\n".join(pieces) + "\n"
 
 
+def replace_hook_managed_block(
+    current: str, managed: str
+) -> tuple[str, bool, bool]:
+    """Replace the workspace hook while preserving Codex-owned hook state.
+
+    Codex may insert ``[hooks.state]`` before the closing marker of an inline
+    managed block.  That state is host-owned and must survive synchronization;
+    normalize it after the marker so the managed boundary remains stable.
+    """
+
+    if current.count(HOOKS_BEGIN) != 1 or current.count(HOOKS_END) != 1:
+        raise SyncError("destination has incomplete or duplicate managed block markers")
+    start = current.index(HOOKS_BEGIN)
+    finish = current.index(HOOKS_END, start) + len(HOOKS_END)
+    block = current[start:finish]
+    state_match = re.search(r"(?m)^\[hooks\.state(?:\]|\.)", block)
+    preserved_state = ""
+    managed_definition = block
+    if state_match:
+        state_end = block.rfind(HOOKS_END)
+        preserved_state = block[state_match.start():state_end].strip()
+        managed_definition = (
+            block[: state_match.start()].rstrip() + "\n" + HOOKS_END
+        )
+
+    prefix = current[:start].rstrip()
+    suffix = current[finish:].strip()
+    pieces = [piece for piece in (prefix, managed.strip(), preserved_state, suffix) if piece]
+    return (
+        "\n\n".join(pieces) + "\n",
+        bool(preserved_state),
+        managed_definition.strip() != managed.strip(),
+    )
+
+
 def render_hooks(
     template_path: Path, destination: Path, status_script: Path
-) -> tuple[str, str]:
+) -> HookRenderResult:
     template = read_text(template_path)
     if template.count(COMMAND_PLACEHOLDER) != 1:
         raise SyncError("Codex hook template must contain one status-command placeholder")
@@ -175,12 +217,17 @@ def render_hooks(
     )
     managed = validate_marked_template(template, HOOKS_BEGIN, HOOKS_END, "hooks")
     current = read_text(destination)
+    normalized_state = False
+    definition_changed = False
     if HOOKS_BEGIN in current or HOOKS_END in current:
-        result = replace_marked_block(current, managed, HOOKS_BEGIN, HOOKS_END)
+        result, normalized_state, definition_changed = replace_hook_managed_block(
+            current, managed
+        )
         migrated = 0
     else:
         without_legacy, migrated = remove_legacy_hooks(current)
         result = insert_before_hook_state(without_legacy, managed)
+        definition_changed = result != current
 
     try:
         tomllib.loads(result)
@@ -188,10 +235,22 @@ def render_hooks(
         raise SyncError(f"refusing to write invalid Codex TOML: {exc}") from exc
 
     if result == current:
-        return result, "already current"
+        return HookRenderResult(result, "already current", False, False)
     if migrated:
-        return result, f"updated; migrated {migrated} legacy hook group(s)"
-    return result, "installed or updated"
+        return HookRenderResult(
+            result,
+            f"updated; migrated {migrated} legacy hook group(s)",
+            definition_changed,
+            normalized_state,
+        )
+    if normalized_state:
+        action = (
+            "updated; normalized Codex hook state"
+            if definition_changed
+            else "normalized Codex hook state"
+        )
+        return HookRenderResult(result, action, definition_changed, normalized_state)
+    return HookRenderResult(result, "installed or updated", definition_changed, False)
 
 
 def hook_commands(group: object) -> list[str]:
@@ -277,10 +336,10 @@ def sync_agents(template_path: Path, destination: Path) -> str:
 
 
 def sync_hooks(template_path: Path, destination: Path, status_script: Path) -> str:
-    result, action = render_hooks(template_path, destination, status_script)
-    if result != read_text(destination):
-        atomic_write(destination, result)
-    return action
+    rendered = render_hooks(template_path, destination, status_script)
+    if rendered.content != read_text(destination):
+        atomic_write(destination, rendered.content)
+    return rendered.action
 
 
 def sync_claude_settings(destination: Path, status_script: Path) -> str:
@@ -329,7 +388,7 @@ def main() -> int:
     codex_config_path = args.codex_home / "config.toml"
     try:
         agents_result, agents_action = render_agents(args.agents_template, agents_path)
-        hooks_result, hooks_action = render_hooks(
+        hooks_rendered = render_hooks(
             args.hooks_template, codex_config_path, args.status_script
         )
         claude_result, claude_action = render_claude_settings(
@@ -341,13 +400,13 @@ def main() -> int:
 
     updates = [
         (agents_path, agents_result),
-        (codex_config_path, hooks_result),
+        (codex_config_path, hooks_rendered.content),
         (args.claude_settings, claude_result),
     ]
     drifted = any(content != read_text(path) for path, content in updates)
     if args.check:
         print(f"Codex AGENTS.md: {agents_action}")
-        print(f"Codex hooks: {hooks_action}")
+        print(f"Codex hooks: {hooks_rendered.action}")
         print(f"Claude hooks: {claude_action}")
         return 1 if drifted else 0
 
@@ -358,9 +417,9 @@ def main() -> int:
         return 1
 
     print(f"Codex AGENTS.md: {agents_action}")
-    print(f"Codex hooks: {hooks_action}")
+    print(f"Codex hooks: {hooks_rendered.action}")
     print(f"Claude hooks: {claude_action}")
-    if hooks_action != "already current":
+    if hooks_rendered.definition_changed:
         print(
             "WARNING: Codex hook definition changed; review and trust it with /hooks",
             file=sys.stderr,

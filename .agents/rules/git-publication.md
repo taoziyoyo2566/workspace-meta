@@ -13,6 +13,12 @@ Read `git.md` for the current state snapshot before publication.
 Working-tree edit authority never includes staging, commit, push, tag, upstream
 changes, or remote PR creation.
 
+Before asking the user to authorize or execute a publication operation, read
+`authorization.md` and present its `Protected-Action Request Brief`. The brief
+must precede the exact command bundle; this module's result review and command
+bundle fields supplement the brief and do not replace it. A command-only
+confirmation is insufficient for publication.
+
 ## Checkpoint A — Result Review
 
 After edits and validation, present:

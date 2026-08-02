@@ -11,6 +11,11 @@ bypass, and recovery. Projects add archive tooling and stricter ref policy.
 
 Read `git.md` for the current state snapshot before using this module.
 
+Before asking the user to authorize or execute a recovery-sensitive operation,
+read `authorization.md` and present its `Protected-Action Request Brief` before
+the exact reviewed effect. The OID, loss, recovery, and post-check fields below
+supplement the brief; a command-only confirmation is insufficient for recovery.
+
 ## Exact Reviewed Effect
 
 Non-ordinary mutations require an exact reviewed action appropriate to their

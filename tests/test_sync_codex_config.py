@@ -1,13 +1,16 @@
 from __future__ import annotations
 
+from contextlib import redirect_stderr, redirect_stdout
 import hashlib
 import importlib.util
+from io import StringIO
 import json
 import os
 from pathlib import Path
 import subprocess
 import tempfile
 import tomllib
+from types import SimpleNamespace
 import unittest
 from unittest import mock
 
@@ -64,6 +67,70 @@ class CodexConfigSyncTests(unittest.TestCase):
         self.assertEqual(len(groups), 1)
         self.assertEqual(len(groups[0]["hooks"]), 1)
         self.assertIn(SYNC.MANAGED_HOOK_MARKER, groups[0]["hooks"][0]["command"])
+
+    def test_preserves_codex_hook_state_when_codex_puts_it_inside_marker(self) -> None:
+        config = self.codex_home / "config.toml"
+        SYNC.sync_hooks(self.hooks_template, config, self.status_script)
+        current = config.read_text()
+        state = (
+            '[hooks.state]\n'
+            '[hooks.state."host"]\n'
+            'trusted_hash = "sha256:test"\n'
+        )
+        config.write_text(current.replace(SYNC.HOOKS_END, f"{state}{SYNC.HOOKS_END}"))
+
+        rendered = SYNC.render_hooks(self.hooks_template, config, self.status_script)
+        self.assertFalse(rendered.definition_changed)
+        self.assertTrue(rendered.state_normalized)
+        action = SYNC.sync_hooks(self.hooks_template, config, self.status_script)
+        result = config.read_text()
+
+        self.assertEqual(action, "normalized Codex hook state")
+        self.assertLess(result.index(SYNC.HOOKS_END), result.index("[hooks.state]"))
+        parsed = tomllib.loads(result)
+        self.assertEqual(parsed["hooks"]["state"]["host"]["trusted_hash"], "sha256:test")
+        self.assertEqual(
+            SYNC.sync_hooks(self.hooks_template, config, self.status_script),
+            "already current",
+        )
+
+    def test_warns_when_hook_definition_changes_with_preserved_state(self) -> None:
+        config = self.codex_home / "config.toml"
+        SYNC.sync_hooks(self.hooks_template, config, self.status_script)
+        current = config.read_text()
+        state = (
+            '[hooks.state]\n'
+            '[hooks.state."host"]\n'
+            'trusted_hash = "sha256:test"\n'
+        )
+        config.write_text(current.replace(SYNC.HOOKS_END, f"{state}{SYNC.HOOKS_END}"))
+
+        changed_status = Path(self.temp_dir.name) / "workspace_status_changed.py"
+        changed_status.write_text(self.status_script.read_text() + "\n# changed\n")
+        rendered = SYNC.render_hooks(self.hooks_template, config, changed_status)
+
+        self.assertTrue(rendered.definition_changed)
+        self.assertTrue(rendered.state_normalized)
+        self.assertEqual(rendered.action, "updated; normalized Codex hook state")
+
+        agents = self.codex_home / "AGENTS.md"
+        settings = self.codex_home.parent / ".claude" / "settings.json"
+        settings.parent.mkdir(parents=True)
+        settings.write_text("{}")
+        args = SimpleNamespace(
+            agents_template=self.agents_template,
+            hooks_template=self.hooks_template,
+            status_script=changed_status,
+            codex_home=self.codex_home,
+            claude_settings=settings,
+            check=False,
+        )
+        stdout = StringIO()
+        stderr = StringIO()
+        with mock.patch.object(SYNC, "parse_args", return_value=args):
+            with redirect_stdout(stdout), redirect_stderr(stderr):
+                self.assertEqual(SYNC.main(), 0)
+        self.assertIn("review and trust it with /hooks", stderr.getvalue())
 
     def test_replaces_only_managed_agents_block(self) -> None:
         agents = self.codex_home / "AGENTS.md"
@@ -130,6 +197,64 @@ class CodexConfigSyncTests(unittest.TestCase):
         )
         self.assertIn("Integration and cleanup are separate", normalized)
         self.assertNotIn("Commit and push are separate transactions", normalized)
+
+    def test_protected_git_routes_require_action_brief(self) -> None:
+        module_names = (
+            "git-branches.md",
+            "git-publication.md",
+            "git-integration.md",
+            "git-recovery.md",
+        )
+        for name in module_names:
+            content = (self.rules_dir / name).read_text()
+            normalized = " ".join(content.split())
+            self.assertIn("authorization.md", normalized)
+            self.assertIn("Protected-Action Request Brief", normalized)
+            self.assertIn("command-only", normalized)
+
+        route_specs = (
+            ("branch/worktree/stash action", "git-branches.md"),
+            ("stage/commit/push/PR publication", "git-publication.md"),
+            ("merge/integration or post-integration handling", "git-integration.md"),
+            ("rewrite/discard/force/delete/amend/recovery", "git-recovery.md"),
+        )
+        for adapter in (
+            self.agents_template.read_text(),
+            (ROOT / "CLAUDE.md").read_text(),
+        ):
+            for trigger, module in route_specs:
+                line = next(
+                    line for line in adapter.splitlines() if line.startswith(f"| {trigger}")
+                )
+                self.assertIn("authorization.md", line)
+                self.assertIn("git.md", line)
+                self.assertIn(module, line)
+
+    def test_canonical_authorization_rule_requires_action_context(self) -> None:
+        result = (self.rules_dir / "authorization.md").read_text()
+        normalized = " ".join(result.split())
+
+        self.assertIn("Protected-Action Request Brief", result)
+        for field in (
+            "What will happen",
+            "Why now",
+            "Target and scope",
+            "Expected effect",
+            "Risks and recovery",
+            "Excluded actions",
+            "Checks and gaps",
+            "Approval boundary",
+            "Exact operation",
+        ):
+            self.assertIn(field, result)
+        self.assertIn("Before presenting a protected operation", result)
+        self.assertIn("asking the user to run it", normalized)
+        self.assertIn("word “approve”", normalized)
+        self.assertIn("direct user request", normalized)
+        self.assertIn("technical approval prompt does not itself authorize", normalized)
+        self.assertIn("material change", normalized)
+        self.assertIn("ordinary read-only work", normalized)
+        self.assertIn("already-authorized, in-scope working-tree edits", normalized)
 
     def test_workspace_rule_modules_declare_unique_ownership(self) -> None:
         for name in (

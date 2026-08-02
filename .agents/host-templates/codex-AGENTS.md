@@ -25,10 +25,10 @@ owners below.
 |---|---|
 | first write, permission/scope question, external/host/live mutation | `~/workspace/.agents/rules/authorization.md` |
 | Git inspection or freshness | `~/workspace/.agents/rules/git.md` |
-| branch/worktree/stash action | `git.md` + `~/workspace/.agents/rules/git-branches.md` |
-| stage/commit/push/PR publication | `git.md` + `~/workspace/.agents/rules/git-publication.md` |
-| merge/integration or post-integration handling | `git.md` + `~/workspace/.agents/rules/git-integration.md` |
-| rewrite/discard/force/delete/amend/recovery | `git.md` + `~/workspace/.agents/rules/git-recovery.md` |
+| branch/worktree/stash action | `~/workspace/.agents/rules/authorization.md` + `~/workspace/.agents/rules/git.md` + `~/workspace/.agents/rules/git-branches.md` |
+| stage/commit/push/PR publication | `~/workspace/.agents/rules/authorization.md` + `~/workspace/.agents/rules/git.md` + `~/workspace/.agents/rules/git-publication.md` |
+| merge/integration or post-integration handling | `~/workspace/.agents/rules/authorization.md` + `~/workspace/.agents/rules/git.md` + `~/workspace/.agents/rules/git-integration.md` |
+| rewrite/discard/force/delete/amend/recovery | `~/workspace/.agents/rules/authorization.md` + `~/workspace/.agents/rules/git.md` + `~/workspace/.agents/rules/git-recovery.md` |
 | non-trivial planning, evidence, approval scope, deviation, handoff | `~/workspace/.agents/rules/planning.md` |
 | change verification or blocked check | `~/workspace/.agents/rules/verification.md` |
 | review, audit, diagnosis, remediation assessment | `~/workspace/.agents/rules/review.md` |

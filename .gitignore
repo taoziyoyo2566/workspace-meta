@@ -8,6 +8,8 @@
 !docs/
 !docs/architecture/
 !docs/architecture/codex-config-management.md
+!docs/runbooks/
+!docs/runbooks/new-vps.md
 !docs/reviews/
 !docs/reviews/refactor-codex-sync/
 !docs/reviews/refactor-codex-sync/*.md
@@ -15,6 +17,8 @@
 !docs/reviews/refactor-codex-permissions/*.md
 !docs/reviews/refactor-codex-rules-mece/
 !docs/reviews/refactor-codex-rules-mece/*.md
+!docs/reviews/refactor-codex-best-practices/
+!docs/reviews/refactor-codex-best-practices/*.md
 !.githooks/
 !.githooks/pre-commit
 !scripts/

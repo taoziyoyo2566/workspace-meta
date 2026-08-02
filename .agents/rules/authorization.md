@@ -79,6 +79,65 @@ expires the authorization.
 Projects define the extra fields and per-run/standing model required for their
 own live targets. Plan approval alone never supplies those live fields.
 
+## Protected-Action Request Brief
+
+Before presenting a protected operation for execution, asking the user to run
+it, or asking the user to approve it, present a concise action brief followed by
+the exact operation. This applies to every protected action, including Git,
+host configuration, privilege changes, external API writes, deployments,
+service changes, and live infrastructure mutations. The trigger is the
+operation being proposed, not whether the request uses the word “approve”.
+
+The brief must state:
+
+- **What will happen** — the concrete action, command, API request, or tool
+  operation;
+- **Why now** — how the action advances the already authorized task;
+- **Target and scope** — exact files, host, service, remote, account, resource,
+  or other affected boundary;
+- **Expected effect** — the state change the user should expect after it runs;
+- **Risks and recovery** — material risk, reversibility, and recovery path when
+  applicable;
+- **Excluded actions** — what will not happen as part of this approval;
+- **Checks and gaps** — prerequisites, completed checks, and unresolved
+  uncertainty;
+- **Approval boundary** — whether approval covers one exact invocation, a
+  disclosed sequence, a bounded retry, or nothing beyond the named operation.
+
+Use this shape when requesting consent:
+
+```text
+Action summary
+What will happen: ...
+Why now: ...
+Target and scope: ...
+Expected effect: ...
+Risks and recovery: ...
+Excluded actions: ...
+Checks and gaps: ...
+
+Exact operation:
+<command, request, or tool operation>
+
+Approval boundary: ...
+Please confirm whether to proceed.
+```
+
+A command-only request is insufficient when the action is protected. If a
+runtime permission prompt displays only a command, the agent's preceding
+semantic request must still provide this context; a technical approval prompt
+does not itself authorize the operation. Redact secrets from the brief and
+the displayed operation. Any material change to the target, operation, effect,
+risk, checks, or approval boundary invalidates the prior consent and requires
+a new request.
+
+A direct user request can supply task or action intent, but it does not waive
+the brief before the agent executes the operation or asks the user to run it.
+
+This brief is not required for ordinary read-only work or already-authorized,
+in-scope working-tree edits; do not turn it into a repeated conversational
+prompt for routine safe operations.
+
 ## Technical Permission Is Not Semantic Authority
 
 A sandbox, execpolicy, or permission prompt asks whether the runtime may

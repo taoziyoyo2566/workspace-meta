@@ -11,6 +11,11 @@ children/dependents, release fields, required CI, and archive tooling.
 
 Read `git.md` for the current state snapshot before integration.
 
+Before asking the user to authorize or execute an integration operation, read
+`authorization.md` and present its `Protected-Action Request Brief` before the
+exact merge or integration operation. The review fields below supplement the
+brief; a command-only confirmation is insufficient for integration.
+
 ## Integration Review
 
 Integration is separate from publication. Before execution present:

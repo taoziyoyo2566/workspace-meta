@@ -4,6 +4,10 @@ This repository owns the cross-project governance carrier rooted at
 `~/workspace`. The global managed Codex guidance still applies; this file adds
 repository-specific rules.
 
+Independent project repositories belong under `~/workspace/projects/<project>/`.
+They remain separate Git roots; the workspace-meta root is reserved for shared
+governance and its own review artifacts.
+
 ## Before Editing
 
 - Read `README.md` and, for agent configuration work,

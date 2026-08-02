@@ -12,6 +12,12 @@ tooling. Publication/integration/recovery are separate modules.
 
 Read `git.md` for the current state snapshot before using this module.
 
+Before asking the user to authorize or execute a branch, worktree, or stash
+operation, read `authorization.md` and present its `Protected-Action Request
+Brief` before the exact action. The branch contract and state fields below
+supplement the brief; a command-only confirmation is insufficient for this
+transaction.
+
 ## Required Branch Task Contract
 
 Every branch that is actually created has a reviewed contract containing:
