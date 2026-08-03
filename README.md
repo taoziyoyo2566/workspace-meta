@@ -118,9 +118,10 @@ Full provenance: `feedback-register.md` entry **W-R26**.
 
 ## Onboarding a machine
 
-完整的新 VPS 安装顺序、主机私有配置边界、修改后的生效步骤和故障排查见
-[`docs/runbooks/new-vps.md`](docs/runbooks/new-vps.md)。下面保留最小入口，
-详细流程以 runbook 为准。
+The complete new-VPS installation sequence, host-private configuration
+boundaries, post-change activation steps, and troubleshooting are documented in
+[`docs/runbooks/new-vps.md`](docs/runbooks/new-vps.md). This README keeps only
+the minimal entry point; follow the runbook for the detailed procedure.
 
 `~/workspace` already exists and is non-empty (the normal case):
 
