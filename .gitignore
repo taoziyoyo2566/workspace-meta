@@ -19,6 +19,8 @@
 !docs/reviews/refactor-codex-rules-mece/*.md
 !docs/reviews/refactor-codex-best-practices/
 !docs/reviews/refactor-codex-best-practices/*.md
+!docs/reviews/project-memory-governance/
+!docs/reviews/project-memory-governance/*.md
 !.githooks/
 !.githooks/pre-commit
 !scripts/
