@@ -24,6 +24,22 @@ REGISTRY_DIR="${REPO_ROOT}/.agents/env"
 REGISTRY_FILE="${REGISTRY_DIR}/${HOST_MARKER}.yml"
 TTL_DAYS="${ENV_PROBE_TTL_DAYS:-7}"
 
+# Parse the ISO-8601 stamp this script writes, on either userland: GNU date
+# takes -d, BSD date (macOS) needs an explicit -j -f parse, and Homebrew
+# coreutils' gdate accepts the GNU form. Prints 0 when nothing can parse it, so
+# an unreadable stamp still reads as stale rather than aborting the check.
+iso_to_epoch() {
+  local iso="$1" s
+  s="$(date -d "$iso" +%s 2>/dev/null || true)"
+  if [[ -z "$s" ]] && command -v gdate >/dev/null 2>&1; then
+    s="$(gdate -d "$iso" +%s 2>/dev/null || true)"
+  fi
+  if [[ -z "$s" ]]; then
+    s="$(date -u -j -f '%Y-%m-%dT%H:%M:%SZ' "$iso" +%s 2>/dev/null || true)"
+  fi
+  printf '%s' "${s:-0}"
+}
+
 # ── --check mode ────────────────────────────────────────────────────────────
 if [[ "${1:-}" == "--check" ]]; then
   if [[ ! -f "$REGISTRY_FILE" ]]; then
@@ -36,7 +52,7 @@ if [[ "${1:-}" == "--check" ]]; then
     exit 1
   fi
   now_s="$(date +%s)"
-  probed_s="$(date -d "$probed_at" +%s 2>/dev/null || echo 0)"
+  probed_s="$(iso_to_epoch "$probed_at")"
   age_days=$(( (now_s - probed_s) / 86400 ))
   if (( age_days >= TTL_DAYS )); then
     echo "env-probe: registry for '${HOST_MARKER}' is ${age_days}d old (TTL ${TTL_DAYS}d) — re-run scripts/env_probe.sh" >&2
