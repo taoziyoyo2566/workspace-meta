@@ -32,16 +32,15 @@
 
 ```bash
 git --version
-python3 --version
-python3 -c 'import tomllib'
 make --version
 codex --version
 claude --version  # 不使用 Claude 时可跳过
 ```
 
-如果 Python 低于 3.11，先升级；同步器需要标准库 `tomllib`，不会在缺少
-它时退化为未经校验的文本拼接。Codex/Claude 的安装、登录和版本差异以各自
-当前官方文档为准；本仓库只负责接入，不负责安装它们或保存凭据。
+这里不要求系统命令 `python3` 本身就是 3.11+；克隆 workspace-meta 后，
+`scripts/find_python.sh` 会选择能导入标准库 `tomllib` 的解释器。Codex/Claude
+的安装、登录和版本差异以各自当前官方文档为准；本仓库只负责接入，不负责
+安装它们或保存凭据。
 
 ## 2. 获取 workspace-meta
 
@@ -66,6 +65,18 @@ git -C "$HOME/workspace" rev-parse --show-toplevel
 git -C "$HOME/workspace" remote -v
 git -C "$HOME/workspace" status --short --branch
 ```
+
+确认 workspace-meta 选中的 Python：
+
+```bash
+cd "$HOME/workspace"
+PYTHON_BIN="$(./scripts/find_python.sh)"
+"$PYTHON_BIN" --version
+"$PYTHON_BIN" -c 'import tomllib'
+```
+
+如果解析器返回失败，先安装或启用 Python 3.11+；同步器不会在缺少
+`tomllib` 时退化为未经校验的文本拼接。
 
 配置本机 Git 身份。`bootstrap` 只检查，不会替 operator 写入身份：
 

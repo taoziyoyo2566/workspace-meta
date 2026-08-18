@@ -31,7 +31,7 @@ governance and its own review artifacts.
 
 - Run `make test`.
 - Run `bash -n scripts/*.sh .githooks/pre-commit` and
-  `python3 -m py_compile scripts/*.py tests/*.py`.
+  `PYTHON_BIN="$(./scripts/find_python.sh)" && "$PYTHON_BIN" -m py_compile scripts/*.py tests/*.py`.
 - Parse generated TOML/JSON/YAML and run `git diff --check`.
 - Run bootstrap twice against an isolated temporary HOME and confirm managed
   file hashes are unchanged on the second run.

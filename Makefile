@@ -1,10 +1,16 @@
 .PHONY: bootstrap agent-sync-check env-probe env-probe-check test
 
+# Python 3.11+ (tomllib) is required to run the sync script and tests. Discover one
+# at parse time so a macOS system python3 (often 3.9 without tomllib) can't shadow a
+# newer Homebrew python that sits later on PATH.
+PYTHON ?= $(shell ./scripts/find_python.sh 2>/dev/null || printf python3)
+
 bootstrap:
 	./scripts/bootstrap-local.sh
 
 agent-sync-check: ## Report host Claude/Codex managed-config drift without writing files
-	@python3 scripts/sync_codex_config.py \
+	@"$(PYTHON)" scripts/sync_codex_config.py \
+		--python "$(PYTHON)" \
 		--agents-template .agents/host-templates/codex-AGENTS.md \
 		--hooks-template .agents/host-templates/codex-hooks.toml \
 		--status-script scripts/workspace_status.py \
@@ -19,4 +25,4 @@ env-probe-check: ## Fail if this host's capability registry is missing or stale 
 	@bash scripts/env_probe.sh --check
 
 test: ## Run workspace-meta regression tests
-	@python3 -m unittest discover -s tests -v
+	@"$(PYTHON)" -m unittest discover -s tests -v

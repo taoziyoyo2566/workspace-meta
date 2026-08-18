@@ -10,6 +10,7 @@ from pathlib import Path
 import subprocess
 import tempfile
 import tomllib
+import sys
 from types import SimpleNamespace
 import unittest
 from unittest import mock
@@ -123,6 +124,7 @@ class CodexConfigSyncTests(unittest.TestCase):
             status_script=changed_status,
             codex_home=self.codex_home,
             claude_settings=settings,
+            python="python3",
             check=False,
         )
         stdout = StringIO()
@@ -526,6 +528,61 @@ class CodexConfigSyncTests(unittest.TestCase):
             codex_command.replace("--agent codex", "--agent claude"), claude_command
         )
 
+    def test_embeds_resolved_python_in_generated_command(self) -> None:
+        config = self.codex_home / "config.toml"
+        settings = self.codex_home.parent / ".claude" / "settings.json"
+        custom_python = "/opt/homebrew/bin/python3"
+
+        SYNC.sync_hooks(self.hooks_template, config, self.status_script, custom_python)
+        SYNC.sync_claude_settings(settings, self.status_script, custom_python)
+
+        codex_command = tomllib.loads(config.read_text())["hooks"]["SessionStart"][0][
+            "hooks"
+        ][0]["command"]
+        claude_command = json.loads(settings.read_text())["hooks"]["SessionStart"][0][
+            "hooks"
+        ][0]["command"]
+        self.assertIn(f"{custom_python} -c", codex_command)
+        self.assertIn(f'{custom_python} "$p"', codex_command)
+        self.assertIn(custom_python, claude_command)
+
+    def test_quotes_python_path_in_generated_command(self) -> None:
+        config = self.codex_home / "config.toml"
+        python_with_spaces = "/tmp/Python Builds/python3"
+
+        SYNC.sync_hooks(
+            self.hooks_template, config, self.status_script, python_with_spaces
+        )
+
+        command = tomllib.loads(config.read_text())["hooks"]["SessionStart"][0][
+            "hooks"
+        ][0]["command"]
+        self.assertIn("'/tmp/Python Builds/python3' -c", command)
+        self.assertIn("else '/tmp/Python Builds/python3' \"$p\"", command)
+
+    def test_python_discovery_resolves_a_path_command(self) -> None:
+        bin_dir = Path(self.temp_dir.name) / "bin"
+        bin_dir.mkdir()
+        python_link = bin_dir / "python3"
+        try:
+            python_link.symlink_to(Path(sys.executable))
+        except (OSError, NotImplementedError) as exc:
+            self.skipTest(f"symlink unavailable: {exc}")
+
+        env = os.environ.copy()
+        env.pop("WORKSPACE_META_PYTHON", None)
+        env["PATH"] = f"{bin_dir}:/usr/bin:/bin"
+        completed = subprocess.run(
+            [str(ROOT / "scripts" / "find_python.sh")],
+            capture_output=True,
+            check=False,
+            text=True,
+            env=env,
+        )
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(completed.stdout.strip(), str(python_link))
+
     def test_invalid_claude_json_prevents_all_main_writes(self) -> None:
         agents = self.codex_home / "AGENTS.md"
         config = self.codex_home / "config.toml"
@@ -539,7 +596,7 @@ class CodexConfigSyncTests(unittest.TestCase):
 
         completed = subprocess.run(
             [
-                "python3",
+                sys.executable,
                 str(ROOT / "scripts" / "sync_codex_config.py"),
                 "--agents-template",
                 str(self.agents_template),

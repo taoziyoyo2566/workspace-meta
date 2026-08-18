@@ -89,8 +89,10 @@ fi
 codex_home="${CODEX_HOME:-$HOME/.codex}"
 claude_settings="$HOME/.claude/settings.json"
 [ "$warn_deprecated_codex_flag" = false ] || warn "--write-codex is deprecated; managed agent sync now runs by default."
-if command -v python3 >/dev/null 2>&1 && python3 -c 'import tomllib' >/dev/null 2>&1; then
-  python3 "$repo_root/scripts/sync_codex_config.py" \
+python_bin="$(bash "$repo_root/scripts/find_python.sh" || true)"
+if [ -n "$python_bin" ]; then
+  "$python_bin" "$repo_root/scripts/sync_codex_config.py" \
+    --python "$python_bin" \
     --agents-template "$repo_root/.agents/host-templates/codex-AGENTS.md" \
     --hooks-template "$repo_root/.agents/host-templates/codex-hooks.toml" \
     --status-script "$repo_root/scripts/workspace_status.py" \

@@ -10,6 +10,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shlex
 import stat
 import sys
 import tempfile
@@ -95,18 +96,19 @@ def render_agents(template_path: Path, destination: Path) -> tuple[str, str]:
     )
 
 
-def build_status_command(agent: str, status_script: Path) -> str:
+def build_status_command(agent: str, status_script: Path, python_bin: str = "python3") -> str:
     digest = hashlib.sha256(status_script.read_bytes()).hexdigest()
+    python_command = shlex.quote(python_bin)
     return (
         'p="$HOME/workspace/scripts/workspace_status.py"; '
         f'expected="{digest}"; '
-        "actual=$(python3 -c 'import hashlib,sys; "
+        f"actual=$({python_command} -c 'import hashlib,sys; "
         'print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())\' '
         '"$p" 2>/dev/null || printf unavailable); '
         'if [ "$actual" != "$expected" ]; then '
         "printf '{\"systemMessage\":\"workspace-meta status evaluator changed or "
         "is unavailable. Run: make -C ~/workspace bootstrap\"}\\n'; "
-        f'else python3 "$p" --agent {agent}; fi; : {MANAGED_HOOK_MARKER}'
+        f'else {python_command} "$p" --agent {agent}; fi; : {MANAGED_HOOK_MARKER}'
     )
 
 
@@ -207,13 +209,13 @@ def replace_hook_managed_block(
 
 
 def render_hooks(
-    template_path: Path, destination: Path, status_script: Path
+    template_path: Path, destination: Path, status_script: Path, python_bin: str = "python3"
 ) -> HookRenderResult:
     template = read_text(template_path)
     if template.count(COMMAND_PLACEHOLDER) != 1:
         raise SyncError("Codex hook template must contain one status-command placeholder")
     template = template.replace(
-        COMMAND_PLACEHOLDER, build_status_command("codex", status_script)
+        COMMAND_PLACEHOLDER, build_status_command("codex", status_script, python_bin)
     )
     managed = validate_marked_template(template, HOOKS_BEGIN, HOOKS_END, "hooks")
     current = read_text(destination)
@@ -271,7 +273,7 @@ def hook_commands(group: object) -> list[str]:
 
 
 def render_claude_settings(
-    destination: Path, status_script: Path
+    destination: Path, status_script: Path, python_bin: str = "python3"
 ) -> tuple[str, str]:
     current = read_text(destination)
     try:
@@ -311,7 +313,7 @@ def render_claude_settings(
         "hooks": [
             {
                 "type": "command",
-                "command": build_status_command("claude", status_script),
+                "command": build_status_command("claude", status_script, python_bin),
                 "timeout": 20,
                 "statusMessage": "Checking workspace-meta status",
             }
@@ -335,15 +337,15 @@ def sync_agents(template_path: Path, destination: Path) -> str:
     return action
 
 
-def sync_hooks(template_path: Path, destination: Path, status_script: Path) -> str:
-    rendered = render_hooks(template_path, destination, status_script)
+def sync_hooks(template_path: Path, destination: Path, status_script: Path, python_bin: str = "python3") -> str:
+    rendered = render_hooks(template_path, destination, status_script, python_bin)
     if rendered.content != read_text(destination):
         atomic_write(destination, rendered.content)
     return rendered.action
 
 
-def sync_claude_settings(destination: Path, status_script: Path) -> str:
-    result, action = render_claude_settings(destination, status_script)
+def sync_claude_settings(destination: Path, status_script: Path, python_bin: str = "python3") -> str:
+    result, action = render_claude_settings(destination, status_script, python_bin)
     if result != read_text(destination):
         atomic_write(destination, result)
     return action
@@ -378,6 +380,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--status-script", required=True, type=Path)
     parser.add_argument("--codex-home", required=True, type=Path)
     parser.add_argument("--claude-settings", required=True, type=Path)
+    parser.add_argument(
+        "--python",
+        default="python3",
+        help="Python interpreter to embed in generated SessionStart hook commands",
+    )
     parser.add_argument("--check", action="store_true")
     return parser.parse_args()
 
@@ -389,10 +396,10 @@ def main() -> int:
     try:
         agents_result, agents_action = render_agents(args.agents_template, agents_path)
         hooks_rendered = render_hooks(
-            args.hooks_template, codex_config_path, args.status_script
+            args.hooks_template, codex_config_path, args.status_script, args.python
         )
         claude_result, claude_action = render_claude_settings(
-            args.claude_settings, args.status_script
+            args.claude_settings, args.status_script, args.python
         )
     except (OSError, SyncError) as exc:
         print(f"agent config sync failed: {exc}", file=sys.stderr)

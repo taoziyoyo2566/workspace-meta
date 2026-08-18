@@ -274,7 +274,7 @@ make -C ~/workspace bootstrap
 ```bash
 make test
 bash -n scripts/*.sh .githooks/pre-commit
-python3 -m py_compile scripts/*.py tests/*.py
+PYTHON_BIN="$(./scripts/find_python.sh)" && "$PYTHON_BIN" -m py_compile scripts/*.py tests/*.py
 git diff --check
 ```
 
