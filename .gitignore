@@ -21,6 +21,8 @@
 !docs/reviews/refactor-codex-best-practices/*.md
 !docs/reviews/project-memory-governance/
 !docs/reviews/project-memory-governance/*.md
+!docs/plan/
+!docs/plan/*.md
 !.githooks/
 !.githooks/pre-commit
 !scripts/
