@@ -35,6 +35,9 @@ class CodexConfigSyncTests(unittest.TestCase):
         self.hooks_template = (
             ROOT / ".agents" / "host-templates" / "codex-hooks.toml"
         )
+        self.preferences_template = (
+            ROOT / ".agents" / "host-templates" / "codex-preferences.toml"
+        )
         self.status_script = ROOT / "scripts" / "workspace_status.py"
         self.rules_dir = ROOT / ".agents" / "rules"
 
@@ -68,6 +71,251 @@ class CodexConfigSyncTests(unittest.TestCase):
         self.assertEqual(len(groups), 1)
         self.assertEqual(len(groups[0]["hooks"]), 1)
         self.assertIn(SYNC.MANAGED_HOOK_MARKER, groups[0]["hooks"][0]["command"])
+
+    def test_preferences_add_missing_fields_and_are_idempotent(self) -> None:
+        current = '[tui]\nnotifications = true\n'
+
+        rendered = SYNC.render_preferences(self.preferences_template, current)
+        self.assertIn("history.persistence", rendered.changed_paths)
+        self.assertIn("history.max_bytes", rendered.changed_paths)
+        self.assertIn("tui.status_line", rendered.changed_paths)
+        parsed = tomllib.loads(rendered.content)
+        self.assertEqual(parsed["history"]["persistence"], "save-all")
+        self.assertEqual(parsed["history"]["max_bytes"], 5242880)
+        self.assertTrue(parsed["tui"]["notifications"])
+        self.assertEqual(
+            parsed["tui"]["status_line"],
+            [
+                "model",
+                "context-remaining",
+                "git-branch",
+                "used-tokens",
+                "total-input-tokens",
+                "total-output-tokens",
+                "weekly-limit",
+            ],
+        )
+
+        second = SYNC.render_preferences(self.preferences_template, rendered.content)
+        self.assertEqual(second.action, "already current")
+        self.assertEqual(second.content, rendered.content)
+
+    def test_preferences_update_only_owned_fields(self) -> None:
+        current = (
+            "# keep this comment\n"
+            "[history]\n"
+            'persistence = "none"\n'
+            "max_bytes = 12345\n"
+            "unmanaged = true\n\n"
+            "[tui]\n"
+            'status_line = ["old"]\n'
+            "status_line_use_colors = true\n\n"
+            "[tui.model_availability_nux]\n"
+            '"gpt-5.5" = 4\n'
+        )
+
+        rendered = SYNC.render_preferences(self.preferences_template, current)
+        parsed = tomllib.loads(rendered.content)
+        self.assertEqual(parsed["history"]["persistence"], "save-all")
+        self.assertEqual(parsed["history"]["max_bytes"], 5242880)
+        self.assertTrue(parsed["history"]["unmanaged"])
+        self.assertTrue(parsed["tui"]["status_line_use_colors"])
+        self.assertEqual(parsed["tui"]["model_availability_nux"]["gpt-5.5"], 4)
+        self.assertIn("# keep this comment", rendered.content)
+
+    def test_preferences_add_to_implicit_parent_table(self) -> None:
+        current = (
+            "# generated UI state\n"
+            "[tui.model_availability_nux]\n"
+            '"gpt-example" = 1\n'
+        )
+
+        rendered = SYNC.render_preferences(self.preferences_template, current)
+        parsed = tomllib.loads(rendered.content)
+        self.assertEqual(
+            parsed["tui"]["status_line"],
+            [
+                "model",
+                "context-remaining",
+                "git-branch",
+                "used-tokens",
+                "total-input-tokens",
+                "total-output-tokens",
+                "weekly-limit",
+            ],
+        )
+        self.assertEqual(parsed["tui"]["model_availability_nux"]["gpt-example"], 1)
+        self.assertLess(
+            rendered.content.index("tui.status_line ="),
+            rendered.content.index("[tui.model_availability_nux]"),
+        )
+
+        second = SYNC.render_preferences(self.preferences_template, rendered.content)
+        self.assertEqual(second.action, "already current")
+        self.assertEqual(second.content, rendered.content)
+
+    def test_preferences_update_root_dotted_assignment(self) -> None:
+        current = (
+            'tui.status_line = ["old"]\n\n'
+            "[tui.model_availability_nux]\n"
+            '"gpt-example" = 1\n'
+        )
+
+        rendered = SYNC.render_preferences(self.preferences_template, current)
+        parsed = tomllib.loads(rendered.content)
+        self.assertEqual(len(parsed["tui"]["status_line"]), 7)
+        self.assertEqual(parsed["tui"]["model_availability_nux"]["gpt-example"], 1)
+        self.assertNotIn('["old"]', rendered.content)
+
+    def test_preferences_skip_formatting_only_difference(self) -> None:
+        current = (
+            "[history]\n"
+            'persistence = "save-all"\n'
+            "max_bytes = 5242880\n\n"
+            "[tui]\n"
+            "status_line = [\n"
+            '  "model", "context-remaining", "git-branch",\n'
+            '  "used-tokens", "total-input-tokens", "total-output-tokens", "weekly-limit"\n'
+            "]\n"
+        )
+
+        rendered = SYNC.render_preferences(self.preferences_template, current)
+        self.assertEqual(rendered.action, "already current")
+        self.assertEqual(rendered.content, current)
+
+    def test_preferences_replace_multiline_owned_value(self) -> None:
+        current = (
+            "[history]\n"
+            'persistence = "none"\n\n'
+            "[tui]\n"
+            "status_line = [\n"
+            '  "old",\n'
+            "]\n"
+            "unmanaged = true\n"
+        )
+
+        rendered = SYNC.render_preferences(self.preferences_template, current)
+        parsed = tomllib.loads(rendered.content)
+        self.assertEqual(parsed["history"]["persistence"], "save-all")
+        self.assertEqual(parsed["history"]["max_bytes"], 5242880)
+        self.assertEqual(len(parsed["tui"]["status_line"]), 7)
+        self.assertTrue(parsed["tui"]["unmanaged"])
+
+    def test_preferences_preserve_quoted_table_with_hash(self) -> None:
+        current = (
+            "[tui]\n"
+            "notifications = true\n\n"
+            '["other#section"]\n'
+            'status_line = ["user-owned"]\n'
+        )
+
+        rendered = SYNC.render_preferences(self.preferences_template, current)
+        parsed = tomllib.loads(rendered.content)
+        self.assertEqual(
+            parsed["other#section"]["status_line"], ["user-owned"]
+        )
+        self.assertEqual(len(parsed["tui"]["status_line"]), 7)
+
+    def test_preferences_skip_unowned_multiline_value(self) -> None:
+        current = (
+            "[tui]\n"
+            '"other" = """\n'
+            'status_line = ["user-owned"]\n'
+            '"""\n'
+        )
+
+        rendered = SYNC.render_preferences(self.preferences_template, current)
+        parsed = tomllib.loads(rendered.content)
+        self.assertEqual(parsed["tui"]["other"], 'status_line = ["user-owned"]\n')
+        self.assertEqual(len(parsed["tui"]["status_line"]), 7)
+
+    def test_preferences_ignore_fake_tables_inside_multiline_string(self) -> None:
+        current = (
+            "[history]\n"
+            'persistence = "none"\n'
+            'note = """\n'
+            "[tui]\n"
+            'status_line = ["user-owned text"]\n'
+            '"""\n'
+        )
+
+        rendered = SYNC.render_preferences(self.preferences_template, current)
+        parsed = tomllib.loads(rendered.content)
+        self.assertEqual(
+            parsed["history"]["note"],
+            '[tui]\nstatus_line = ["user-owned text"]\n',
+        )
+        self.assertEqual(parsed["history"]["persistence"], "save-all")
+        self.assertEqual(parsed["history"]["max_bytes"], 5242880)
+        self.assertEqual(
+            parsed["tui"]["status_line"],
+            [
+                "model",
+                "context-remaining",
+                "git-branch",
+                "used-tokens",
+                "total-input-tokens",
+                "total-output-tokens",
+                "weekly-limit",
+            ],
+        )
+
+    def test_preferences_refuse_unlocatable_existing_value(self) -> None:
+        current = (
+            "[history]\n"
+            'persistence = "save-all"\n\n'
+            "[tui]\n"
+            'status_line.old = ["value"]\n'
+        )
+
+        with self.assertRaises(SYNC.SyncError):
+            SYNC.render_preferences(self.preferences_template, current)
+
+    def test_preferences_reject_unallowlisted_template(self) -> None:
+        template = Path(self.temp_dir.name) / "preferences.toml"
+        template.write_text("[tui]\nanimations = false\n")
+
+        with self.assertRaises(SYNC.SyncError):
+            SYNC.render_preferences(template, "")
+
+    def test_preferences_reject_invalid_history_limit(self) -> None:
+        template = Path(self.temp_dir.name) / "preferences.toml"
+        template.write_text(
+            '[history]\npersistence = "save-all"\nmax_bytes = 0\n'
+        )
+
+        with self.assertRaises(SYNC.SyncError):
+            SYNC.render_preferences(template, "")
+
+    def test_preferences_reject_duplicate_existing_toml(self) -> None:
+        current = '[history]\npersistence = "none"\n\n[history]\n'
+
+        with self.assertRaises(SYNC.SyncError):
+            SYNC.render_preferences(self.preferences_template, current)
+
+    def test_main_check_reports_preference_drift_without_writing(self) -> None:
+        agents = self.codex_home / "AGENTS.md"
+        config = self.codex_home / "config.toml"
+        settings = self.codex_home.parent / ".claude" / "settings.json"
+        settings.parent.mkdir(parents=True)
+        settings.write_text("{}")
+        args = SimpleNamespace(
+            agents_template=self.agents_template,
+            hooks_template=self.hooks_template,
+            preferences_template=self.preferences_template,
+            status_script=self.status_script,
+            codex_home=self.codex_home,
+            claude_settings=settings,
+            python="python3",
+            check=True,
+        )
+
+        with mock.patch.object(SYNC, "parse_args", return_value=args):
+            self.assertEqual(SYNC.main(), 1)
+
+        self.assertFalse(agents.exists())
+        self.assertFalse(config.exists())
+        self.assertEqual(settings.read_text(), "{}")
 
     def test_preserves_codex_hook_state_when_codex_puts_it_inside_marker(self) -> None:
         config = self.codex_home / "config.toml"
@@ -121,6 +369,7 @@ class CodexConfigSyncTests(unittest.TestCase):
         args = SimpleNamespace(
             agents_template=self.agents_template,
             hooks_template=self.hooks_template,
+            preferences_template=self.preferences_template,
             status_script=changed_status,
             codex_home=self.codex_home,
             claude_settings=settings,
@@ -602,6 +851,8 @@ class CodexConfigSyncTests(unittest.TestCase):
                 str(self.agents_template),
                 "--hooks-template",
                 str(self.hooks_template),
+                "--preferences-template",
+                str(self.preferences_template),
                 "--status-script",
                 str(self.status_script),
                 "--codex-home",

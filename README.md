@@ -14,7 +14,7 @@ Rules live in three layers, each with its own sync channel:
 
 | Layer | Holds | Sync channel |
 |---|---|---|
-| `~/.claude/`, `~/.codex/` | credentials, authorization, trust, caches, history, host preferences | **none — each machine maintains its own** |
+| `~/.claude/`, `~/.codex/` | credentials, authorization, trust, caches, history data, host preferences | **none — except explicitly declared Codex preference fields** |
 | `~/workspace/` root | cross-project methodology, provenance, host templates, bootstrap | **this repo** |
 | `~/workspace/projects/<project>/` | project-specific `CLAUDE.md`, `AGENTS.md`, `.agents/`, `.codex/`, governance docs | the project's own repo |
 
@@ -51,17 +51,18 @@ Full provenance: `feedback-register.md` entry **W-R26**.
   side effect: running git in a *non-repo* subdirectory (scratch dirs) now
   resolves to this repo instead of erroring; the whitelist keeps its status
   clean, so this is cosmetic.
-- **Per-host secrets and authorization stay out by design** — identity values,
-  credentials, Codex trust state, approval rules, caches, and histories are never
-  synced. The generated `.agents/env/<host>.yml` capability registry is the narrow,
-  explicit exception: it carries dated operational facts for cross-machine task
-  routing, never credential values.
+- **Per-host runtime facts stay local by design** — identity values,
+  credentials, Codex trust state, approval rules, caches, histories, and generated
+  `.agents/env/<host>.yml` capability snapshots are never synced. Each machine
+  probes its own dated environment facts; only the probe schema and behavior are
+  versioned.
 - **Agent configuration uses narrow managed surfaces, not home-directory
   mirrors** — the versioned templates converge only marked Codex sections and
-  one dedicated Claude SessionStart group. Both agents call the same ordered
-  status evaluator. Model choice, project trust, hook trust hashes, local
-  guidance outside the managed surfaces, `default.rules`, auth, plugins, skills,
-  databases, history, logs, and caches remain host-local. Full design:
+  one dedicated Claude SessionStart group, plus an explicit allowlist of stable
+  Codex preference fields. Both agents call the same ordered status evaluator.
+  Model choice, project trust, hook trust hashes, local guidance outside the
+  managed surfaces, `default.rules`, auth, plugins, skills, databases, history
+  data, unlisted preferences, logs, and caches remain host-local. Full design:
   `docs/architecture/codex-config-management.md`; ownership matrix:
   `.agents/host-templates/README-agents.md`; provenance: W-R28.
 - **Portable agent rules are modular and have one owner** — the workspace
@@ -178,6 +179,9 @@ The bootstrap is idempotent and host-local. It:
   `~/.codex/AGENTS.md`. The versioned root `CLAUDE.md` is Claude's thin adapter;
   both route to the same portable modules. Existing Codex content outside the
   managed block is preserved;
+- reconciles only the declared Codex preference fields in
+  `.agents/host-templates/codex-preferences.toml`; existing unowned `config.toml`
+  fields, comments, hook state, and sections are preserved;
   bootstrap warns if `AGENTS.override.md` would shadow it.
 
 Managed installs are idempotent and convergent for both agents. The legacy
@@ -199,9 +203,9 @@ host files are not.
 - **Never widen the whitelist toward project content.** A new
   *workspace-level* rule file gets one `!<file>` line in `.gitignore`;
   anything project-specific belongs in that project's repo.
-- **Never add secrets or authorization state** — names/emails, credential values,
-  `auth.json`, Codex approval rules and trust hashes remain host-local. The
-  generated capability registry is the only documented per-host snapshot.
+- **Never add host-local state** — names/emails, credential values, `auth.json`,
+  Codex approval rules, trust hashes, and generated capability snapshots remain
+  outside Git.
 - **Never mirror an agent home wholesale.** Add a managed field only after
   classifying its ownership in `.agents/host-templates/README-agents.md`.
 - **Register merge conflicts**: entries are append-style and usually

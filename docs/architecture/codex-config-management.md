@@ -14,12 +14,13 @@ workspace-meta 所有的配置面；用户目录中其余内容始终由当前�
 | 层级 | 内容 | 所有者 | 同步方式 |
 |---|---|---|---|
 | workspace-meta | `.agents/rules/` 中的跨项目方法、模板、安装器、状态评估器 | 本仓库 | Git 私有远端 |
+| 本机能力快照 | `.agents/env/<hostname -s>.yml` | 当前主机 | 本机 probe；Git 忽略 |
 | Claude 工作区适配器 | `~/workspace/CLAUDE.md` 中的紧凑路由与安全底线 | workspace-meta | 本仓库 Git |
 | Codex 全局指导 | `~/.codex/AGENTS.md` 中的路由与安全底线标记块 | workspace-meta + 主机 | `make bootstrap` 只替换标记块 |
-| Codex 全局配置 | `~/.codex/config.toml` 中的标记 hook 块 | workspace-meta + 主机 | `make bootstrap` 只替换标记块 |
+| Codex 全局配置 | `~/.codex/config.toml` 中的标记 hook 块和声明的偏好字段 | workspace-meta + 主机 | `make bootstrap` 只替换 hook 标记块并按字段收敛声明的偏好 |
 | Claude 全局配置 | `~/.claude/settings.json` 中一个专用 SessionStart 组 | workspace-meta + 主机 | `make bootstrap` 收敛该组，保留其他键和组 |
 | 项目配置 | `~/workspace/projects/<project>/` 中项目的 `AGENTS.md`、`.agents/`、`.codex/` | 项目仓库 | 项目自己的 Git |
-| 主机私有状态 | 凭据、模型偏好、信任 hash、审批规则、历史、缓存、数据库 | 当前主机 | 不同步 |
+| 主机私有状态 | 凭据、未声明的模型/偏好、信任 hash、审批规则、历史数据、缓存、数据库 | 当前主机 | 不同步 |
 
 “混合所有权”不是复制整个文件。它表示 workspace-meta 只拥有文件中一个可
 识别的区域，安装器必须保留区域外的内容。
@@ -155,6 +156,7 @@ operation 仍是独立事务。执行环境的 Yes/Allow 只解决技术权限�
 | `.agents/rules/*.md` | agent-neutral 的跨项目按任务读取模块 |
 | `.agents/rules/codex-runtime.md` | Codex-specific 运行机制 |
 | `.agents/host-templates/codex-hooks.toml` | Codex SessionStart 标记块模板 |
+| `.agents/host-templates/codex-preferences.toml` | Codex 字段级偏好期望配置 |
 | `.agents/host-templates/README-agents.md` | 共享核心、适配器和主机状态所有权矩阵 |
 | `scripts/workspace_status.py` | Claude/Codex 共用的状态评估策略 |
 | `scripts/sync_codex_config.py` | 渲染、迁移、校验并写入三个主机目标 |
@@ -223,14 +225,37 @@ UI 或事件流 warning，而纯文本 stdout 会进入额外 developer context�
 
 1. Codex `AGENTS.md`：验证标记唯一且有序；替换旧标记块，或在首次安装时
    追加并保留现有用户指导。
-2. Codex `config.toml`：渲染 hash-pinned 命令，移除完全归 workspace-meta
-   所有的旧 hook 组，插入新标记块，再用 `tomllib` 解析整个结果。
+2. Codex `config.toml`：先渲染 hash-pinned 命令，移除完全归 workspace-meta
+   所有的旧 hook 组，插入新标记块；再按
+   `.agents/host-templates/codex-preferences.toml` 的字段 allowlist 比较并
+   局部更新 `history.persistence`、`history.max_bytes`、`tui.status_line` 等
+   声明字段。整个合并结果再用 `tomllib` 解析。
 3. Claude `settings.json`：解析整个 JSON，移除完全归 workspace-meta 所有的
    旧组，在原位置插入一个新组，再序列化完整结果。
 
 只有三个目标全部通过校验后才开始原子写入。如果写入中途出现操作系统错误，
 同步器会尽力恢复本轮已经写过的目标。它不是跨文件系统事务，但避免了已知的
 “先写 AGENTS、后发现 JSON/TOML 无效”的部分升级。
+
+### 字段级 Codex 偏好
+
+`.agents/host-templates/codex-preferences.toml` 是一个 allowlist，而不是
+`~/.codex/config.toml` 的镜像。当前只声明 `history.persistence`、
+`history.max_bytes` 和 `tui.status_line`：
+
+- 使用解析后的 TOML 值比较；只有值缺失或不一致时才产生配置写入；
+- 只局部替换或插入声明字段，保留同一 section 内的未声明字段、注释和
+  Codex 生成的状态；
+- 无法定位的重复、冲突或复杂定义会拒绝同步，不自动删除用户内容；
+- `history.persistence = "save-all"` 只改变每台主机是否保存自己的
+  `history.jsonl`，不把已有对话历史带入仓库。
+- `history.max_bytes = 5242880` 使用官方样例中的 5 MiB 上限，超限时由 Codex
+  丢弃最旧条目；状态栏采用官方样例的 model/context/branch 组合。
+- 源码定位器跨行跟踪多行字符串；渲染后会重新解析并验证所有托管字段及
+  未托管 TOML 值，避免把字符串正文误认成 section 或赋值。
+
+新增偏好字段必须先在模板 allowlist、所有权矩阵和测试中登记。不要把
+`tui.model_availability_nux` 等机器生成的 UI 状态加入模板。
 
 ### 拒绝而不是猜测
 
@@ -266,8 +291,9 @@ make -C ~/workspace bootstrap
 
 先检查 ahead/behind、dirty state 和待引入提交；确认更新方向后才用项目允许的
 方式更新工作区。SessionStart 和日常入口都不自动 pull、merge 或 rebase。
-`agent-sync-check` 只报告漂移，返回 0 表示三个托管目标均已收敛；非零表示
-存在漂移或输入无效。`bootstrap` 才会写主机配置。
+`agent-sync-check` 只报告漂移，返回 0 表示三个托管目标（包括 Codex hook 和
+声明偏好字段）均已收敛；非零表示存在漂移或输入无效。`bootstrap` 才会写主机
+配置。
 
 ### 修改本项目
 
@@ -319,7 +345,8 @@ Codex 0.144.1 上的实测中，`/hooks` 正确显示一个待审查 SessionStar
 
 ## 明确不做的事
 
-- 不同步 `~/.codex/rules/default.rules`、`auth.json`、数据库、日志或历史。
+- 不同步 `~/.codex/rules/default.rules`、`auth.json`、数据库、日志或历史数据；
+  只按显式 allowlist 收敛 Codex 偏好字段。
 - 不同步 `~/.codex/rules/permissions.rules`；它和 `default.rules` 一样属于
   主机授权状态。
 - 不同步模型选择、project trust、hook trust hash 或 Claude/Codex 凭据。
@@ -335,6 +362,7 @@ Codex 0.144.1 上的实测中，`/hooks` 正确显示一个待审查 SessionStar
 - Codex hooks 与 stdout 协议：<https://developers.openai.com/codex/hooks>
 - Codex 内联 hooks 配置：<https://developers.openai.com/codex/config-advanced#hooks>
 - Codex 配置参考：<https://developers.openai.com/codex/config-reference#configtoml>
+- Codex 配置样例：<https://developers.openai.com/codex/config-sample>
 - Codex `AGENTS.md` 指导：<https://developers.openai.com/codex/concepts/customization#agents-guidance>
 - 本次协议核验源码：<https://github.com/openai/codex/blob/rust-v0.144.1/codex-rs/hooks/src/events/session_start.rs>
 - 决策来源：`feedback-register.md` 的 W-R28

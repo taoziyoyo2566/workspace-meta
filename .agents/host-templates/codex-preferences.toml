@@ -1,0 +1,17 @@
+# Workspace-meta owns only the explicitly listed Codex preference fields.
+# Other [history] and [tui] fields remain host-local.
+
+[history]
+persistence = "save-all"
+max_bytes = 5242880
+
+[tui]
+status_line = [
+  "model",
+  "context-remaining",
+  "git-branch",
+  "used-tokens",
+  "total-input-tokens",
+  "total-output-tokens",
+  "weekly-limit",
+]

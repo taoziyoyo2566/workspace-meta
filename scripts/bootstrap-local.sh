@@ -18,8 +18,8 @@ committed — the installer lives in the repo, the generated host files do not):
   - sets this repo's core.hooksPath to .githooks
   - checks global git identity without writing identity values
   - synchronizes workspace-meta-owned hooks into ~/.claude/settings.json
-  - synchronizes managed blocks into Codex AGENTS.md and config.toml while
-    preserving host-local settings:
+  - synchronizes managed blocks into Codex AGENTS.md and config.toml, and
+    reconciles declared Codex preference fields while preserving host-local settings:
       * one shared, ordered status evaluator for Claude and Codex
       * workspace-meta freshness and uncommitted/unpushed work
       * env capability registry freshness (~/workspace/.agents/env/<host>.yml)
@@ -95,6 +95,7 @@ if [ -n "$python_bin" ]; then
     --python "$python_bin" \
     --agents-template "$repo_root/.agents/host-templates/codex-AGENTS.md" \
     --hooks-template "$repo_root/.agents/host-templates/codex-hooks.toml" \
+    --preferences-template "$repo_root/.agents/host-templates/codex-preferences.toml" \
     --status-script "$repo_root/scripts/workspace_status.py" \
     --codex-home "$codex_home" \
     --claude-settings "$claude_settings"

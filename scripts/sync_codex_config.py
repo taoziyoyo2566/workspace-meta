@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 from collections import namedtuple
 import hashlib
 import json
@@ -39,6 +40,18 @@ HookRenderResult = namedtuple(
     "HookRenderResult",
     ("content", "action", "definition_changed", "state_normalized"),
 )
+
+PreferenceRenderResult = namedtuple(
+    "PreferenceRenderResult", ("content", "action", "changed_paths")
+)
+
+PREFERENCE_ALLOWED_PATHS = {
+    "history.max_bytes",
+    "history.persistence",
+    "tui.status_line",
+}
+PREFERENCE_SECTIONS = {path.split(".", 1)[0] for path in PREFERENCE_ALLOWED_PATHS}
+MISSING = object()
 
 
 def read_text(path: Path) -> str:
@@ -255,6 +268,500 @@ def render_hooks(
     return HookRenderResult(result, "installed or updated", definition_changed, False)
 
 
+def load_preferences(template_path: Path) -> dict[tuple[str, str], object]:
+    """Load and validate the small set of Codex fields workspace-meta owns."""
+
+    try:
+        settings = tomllib.loads(read_text(template_path))
+    except tomllib.TOMLDecodeError as exc:
+        raise SyncError(f"Codex preferences template is invalid TOML: {exc}") from exc
+    if not isinstance(settings, dict) or not settings:
+        raise SyncError("Codex preferences template must contain a non-empty TOML table")
+
+    targets: dict[tuple[str, str], object] = {}
+    for section, values in settings.items():
+        if section not in PREFERENCE_SECTIONS or not isinstance(values, dict):
+            raise SyncError(
+                f"Codex preferences template may contain only direct tables for: "
+                f"{', '.join(sorted(PREFERENCE_SECTIONS))}"
+            )
+        for key, value in values.items():
+            path = f"{section}.{key}"
+            if path not in PREFERENCE_ALLOWED_PATHS:
+                raise SyncError(f"Codex preference is not in the managed allowlist: {path}")
+            if path == "history.persistence" and value not in {"save-all", "none"}:
+                raise SyncError("history.persistence must be save-all or none")
+            if path == "history.max_bytes" and (
+                type(value) is not int or value <= 0
+            ):
+                raise SyncError("history.max_bytes must be a positive integer")
+            if path == "tui.status_line" and (
+                not isinstance(value, list) or not all(isinstance(item, str) for item in value)
+            ):
+                raise SyncError("tui.status_line must be an array of strings")
+            targets[(section, key)] = value
+
+    if not targets:
+        raise SyncError("Codex preferences template contains no managed fields")
+    return targets
+
+
+def parse_codex_toml(content: str) -> dict[str, object]:
+    try:
+        parsed = tomllib.loads(content)
+    except tomllib.TOMLDecodeError as exc:
+        raise SyncError(f"refusing to reconcile invalid Codex TOML: {exc}") from exc
+    if not isinstance(parsed, dict):
+        raise SyncError("Codex TOML root must be a table")
+    return parsed
+
+
+def _strip_toml_comment(line: str) -> str:
+    state: str | None = None
+    index = 0
+    while index < len(line):
+        if state == "basic":
+            if line[index] == "\\":
+                index += 2
+            elif line[index] == '"':
+                state = None
+                index += 1
+            else:
+                index += 1
+            continue
+        if state == "literal":
+            if line[index] == "'":
+                state = None
+            index += 1
+            continue
+        if state == "multiline_basic":
+            if line.startswith('"""', index):
+                state = None
+                index += 3
+            else:
+                index += 1
+            continue
+        if state == "multiline_literal":
+            if line.startswith("'''", index):
+                state = None
+                index += 3
+            else:
+                index += 1
+            continue
+        if line.startswith('"""', index):
+            state = "multiline_basic"
+            index += 3
+        elif line.startswith("'''", index):
+            state = "multiline_literal"
+            index += 3
+        elif line[index] == '"':
+            state = "basic"
+            index += 1
+        elif line[index] == "'":
+            state = "literal"
+            index += 1
+        elif line[index] == "#":
+            return line[:index]
+        else:
+            index += 1
+    return line
+
+
+def _toml_header(line: str) -> tuple[str, bool] | None:
+    candidate = _strip_toml_comment(line).strip()
+    if candidate.startswith('[[') and candidate.endswith(']]'):
+        return candidate[2:-2].strip(), True
+    if candidate.startswith("[") and candidate.endswith("]"):
+        return candidate[1:-1].strip(), False
+    return None
+
+
+def _toml_headers(lines: list[str]) -> list[tuple[int, str, bool]]:
+    headers: list[tuple[int, str, bool]] = []
+    state: str | None = None
+    for index, line in enumerate(lines):
+        if state is None:
+            header = _toml_header(line)
+            if header:
+                name, is_array = header
+                headers.append((index, name, is_array))
+        state, _ = _scan_toml_fragment(line, state, 0)
+    return headers
+
+
+def _table_spans(
+    lines: list[str], headers: list[tuple[int, str, bool]] | None = None
+) -> dict[str, tuple[int, int]]:
+    headers = _toml_headers(lines) if headers is None else headers
+
+    spans: dict[str, tuple[int, int]] = {}
+    for header_index, (start, name, is_array) in enumerate(headers):
+        if is_array:
+            continue
+        end = len(lines)
+        if header_index + 1 < len(headers):
+            end = headers[header_index + 1][0]
+        spans[name] = (start, end)
+    return spans
+
+
+def _scan_toml_fragment(
+    fragment: str, state: str | None, depth: int
+) -> tuple[str | None, int]:
+    index = 0
+    while index < len(fragment):
+        if state == "basic":
+            if fragment[index] == "\\":
+                index += 2
+            elif fragment[index] == '"':
+                state = None
+                index += 1
+            else:
+                index += 1
+            continue
+        if state == "literal":
+            if fragment[index] == "'":
+                state = None
+            index += 1
+            continue
+        if state == "multiline_basic":
+            if fragment[index] == "\\":
+                index += 2
+            elif fragment.startswith('"""', index):
+                state = None
+                index += 3
+            else:
+                index += 1
+            continue
+        if state == "multiline_literal":
+            if fragment.startswith("'''", index):
+                state = None
+                index += 3
+            else:
+                index += 1
+            continue
+
+        if fragment.startswith('"""', index):
+            state = "multiline_basic"
+            index += 3
+        elif fragment.startswith("'''", index):
+            state = "multiline_literal"
+            index += 3
+        elif fragment[index] == '"':
+            state = "basic"
+            index += 1
+        elif fragment[index] == "'":
+            state = "literal"
+            index += 1
+        elif fragment[index] == "#":
+            break
+        elif fragment[index] in "[{":
+            depth += 1
+            index += 1
+        elif fragment[index] in "]}":
+            depth -= 1
+            index += 1
+        else:
+            index += 1
+    return state, depth
+
+
+def _value_end(lines: list[str], start: int, equals: int) -> int:
+    state: str | None = None
+    depth = 0
+    for index in range(start, len(lines)):
+        fragment = lines[index][equals + 1 :] if index == start else lines[index]
+        state, depth = _scan_toml_fragment(fragment, state, depth)
+        if state is None and depth == 0:
+            return index + 1
+    raise SyncError("unable to locate the end of a managed TOML value")
+
+
+ASSIGNMENT_RE = re.compile(
+    r"^(?P<indent>\s*)(?P<key>[A-Za-z0-9_-]+)\s*="
+)
+DOTTED_ASSIGNMENT_RE = re.compile(
+    r"^(?P<indent>\s*)(?P<section>[A-Za-z0-9_-]+)\s*\.\s*"
+    r"(?P<key>[A-Za-z0-9_-]+)\s*="
+)
+
+
+def _assignment_equals(line: str) -> int | None:
+    state: str | None = None
+    index = 0
+    while index < len(line):
+        if state == "basic":
+            if line[index] == "\\":
+                index += 2
+            elif line[index] == '"':
+                state = None
+                index += 1
+            else:
+                index += 1
+            continue
+        if state == "literal":
+            if line[index] == "'":
+                state = None
+            index += 1
+            continue
+        if state == "multiline_basic":
+            if line.startswith('"""', index):
+                state = None
+                index += 3
+            else:
+                index += 1
+            continue
+        if state == "multiline_literal":
+            if line.startswith("'''", index):
+                state = None
+                index += 3
+            else:
+                index += 1
+            continue
+        if line.startswith('"""', index):
+            state = "multiline_basic"
+            index += 3
+        elif line.startswith("'''", index):
+            state = "multiline_literal"
+            index += 3
+        elif line[index] == '"':
+            state = "basic"
+            index += 1
+        elif line[index] == "'":
+            state = "literal"
+            index += 1
+        elif line[index] == "#":
+            return None
+        elif line[index] == "=":
+            return index
+        else:
+            index += 1
+    return None
+
+
+def _assignment_span(
+    lines: list[str], start: int, end: int, target_key: str
+) -> tuple[int, int, str] | None:
+    index = start + 1
+    while index < end:
+        line = lines[index]
+        equals = _assignment_equals(line)
+        if equals is None:
+            index += 1
+            continue
+        value_end = _value_end(lines, index, equals)
+        match = ASSIGNMENT_RE.match(line)
+        if match and match.group("key") == target_key:
+            return index, value_end, match.group("indent")
+        index = value_end
+    return None
+
+
+def _root_dotted_assignment_span(
+    lines: list[str], end: int, section: str, target_key: str
+) -> tuple[int, int, str] | None:
+    index = 0
+    while index < end:
+        line = lines[index]
+        equals = _assignment_equals(line)
+        if equals is None:
+            index += 1
+            continue
+        value_end = _value_end(lines, index, equals)
+        match = DOTTED_ASSIGNMENT_RE.match(line)
+        if (
+            match
+            and match.group("section") == section
+            and match.group("key") == target_key
+        ):
+            return index, value_end, match.group("indent")
+        index = value_end
+    return None
+
+
+def _format_toml_value(value: object) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, int):
+        return str(value)
+    if isinstance(value, float):
+        return repr(value)
+    if isinstance(value, str):
+        return json.dumps(value, ensure_ascii=False)
+    if isinstance(value, list):
+        return "[" + ", ".join(_format_toml_value(item) for item in value) + "]"
+    raise SyncError(f"cannot safely serialize managed TOML value of type {type(value).__name__}")
+
+
+def _line_offsets(lines: list[str]) -> list[int]:
+    offsets = [0]
+    for line in lines:
+        offsets.append(offsets[-1] + len(line))
+    return offsets
+
+
+def _preferred_newline(content: str) -> str:
+    return "\r\n" if "\r\n" in content else "\n"
+
+
+def _without_managed_preferences(
+    parsed: dict[str, object], targets: dict[tuple[str, str], object]
+) -> dict[str, object]:
+    remaining = copy.deepcopy(parsed)
+    for section, key in targets:
+        values = remaining.get(section)
+        if isinstance(values, dict):
+            values.pop(key, None)
+            if not values:
+                remaining.pop(section, None)
+    return remaining
+
+
+def render_preferences(
+    template_path: Path, current: str
+) -> PreferenceRenderResult:
+    targets = load_preferences(template_path)
+    parsed = parse_codex_toml(current)
+    changes: list[tuple[str, str, object, str]] = []
+
+    for (section, key), wanted in targets.items():
+        section_value = parsed.get(section, MISSING)
+        current_value = (
+            section_value.get(key, MISSING)
+            if isinstance(section_value, dict)
+            else MISSING
+        )
+        if current_value is MISSING:
+            changes.append((section, key, wanted, "missing"))
+        elif current_value != wanted:
+            changes.append((section, key, wanted, "different"))
+
+    if not changes:
+        return PreferenceRenderResult(current, "already current", ())
+
+    lines = current.splitlines(keepends=True)
+    offsets = _line_offsets(lines)
+    headers = _toml_headers(lines)
+    spans = _table_spans(lines, headers)
+    root_end = headers[0][0] if headers else len(lines)
+    newline = _preferred_newline(current)
+    edits: list[tuple[int, int, str]] = []
+    missing_by_section: dict[str, list[tuple[str, object]]] = {}
+    missing_at_root: list[tuple[str, str, object]] = []
+
+    for section, key, wanted, status in changes:
+        span = spans.get(section)
+        if span:
+            assignment = _assignment_span(lines, span[0], span[1], key)
+            if assignment:
+                start, end, indent = assignment
+                has_newline = lines[end - 1].endswith(("\n", "\r"))
+                replacement = (
+                    f"{indent}{key} = {_format_toml_value(wanted)}"
+                    + (newline if has_newline else "")
+                )
+                edits.append((offsets[start], offsets[end], replacement))
+            elif status == "different":
+                raise SyncError(
+                    f"cannot safely locate existing managed preference {section}.{key}"
+                )
+            else:
+                missing_by_section.setdefault(section, []).append((key, wanted))
+        else:
+            assignment = _root_dotted_assignment_span(lines, root_end, section, key)
+            if assignment:
+                start, end, indent = assignment
+                has_newline = lines[end - 1].endswith(("\n", "\r"))
+                replacement = (
+                    f"{indent}{section}.{key} = {_format_toml_value(wanted)}"
+                    + (newline if has_newline else "")
+                )
+                edits.append((offsets[start], offsets[end], replacement))
+            elif status == "different":
+                raise SyncError(
+                    f"cannot safely locate existing managed preference {section}.{key}"
+                )
+            elif section in parsed:
+                has_nested_table = any(
+                    name.startswith(f"{section}.") for _, name, _ in headers
+                )
+                if not has_nested_table:
+                    raise SyncError(
+                        f"cannot safely add {section}.{key}; {section} has no "
+                        "direct or implicit TOML table"
+                    )
+                missing_at_root.append((section, key, wanted))
+            else:
+                missing_by_section.setdefault(section, []).append((key, wanted))
+
+    if missing_at_root:
+        block = "".join(
+            f"{section}.{key} = {_format_toml_value(value)}{newline}"
+            for section, key, value in missing_at_root
+        )
+        # Dotted keys must be written in the TOML root. Insert them before the
+        # first table header so an implicit parent such as [tui.some_state]
+        # remains valid and no unrelated table receives the assignment.
+        block += newline
+        position = offsets[root_end]
+        edits.append((position, position, block))
+
+    new_sections: list[str] = []
+    for section, entries in missing_by_section.items():
+        block = "".join(
+            f"{key} = {_format_toml_value(value)}{newline}" for key, value in entries
+        )
+        if section in spans:
+            position = offsets[spans[section][1]]
+            edits.append((position, position, block))
+            continue
+        new_sections.append(f"[{section}]{newline}{block}")
+
+    if new_sections:
+        tables = (newline * 2).join(new_sections)
+        if not current:
+            append = tables
+        else:
+            separator = ""
+            if not current.endswith(("\n", "\r")):
+                separator += newline
+            if not current.endswith(newline * 2):
+                separator += newline
+            append = separator + tables
+        if not append.endswith(newline):
+            append += newline
+        edits.append((len(current), len(current), append))
+
+    result = current
+    for _, (start, end, replacement) in sorted(
+        enumerate(edits), key=lambda item: (item[1][0], item[0]), reverse=True
+    ):
+        result = result[:start] + replacement + result[end:]
+
+    result_parsed = parse_codex_toml(result)
+    for (section, key), wanted in targets.items():
+        section_value = result_parsed.get(section)
+        actual = (
+            section_value.get(key, MISSING)
+            if isinstance(section_value, dict)
+            else MISSING
+        )
+        if actual != wanted:
+            raise SyncError(
+                f"managed preference postcondition failed for {section}.{key}"
+            )
+    if _without_managed_preferences(parsed, targets) != _without_managed_preferences(
+        result_parsed, targets
+    ):
+        raise SyncError("preference reconciliation changed unowned TOML values")
+    changed_paths = tuple(f"{section}.{key}" for section, key, _, _ in changes)
+    return PreferenceRenderResult(
+        result,
+        "updated preferences: " + ", ".join(changed_paths),
+        changed_paths,
+    )
+
+
 def hook_commands(group: object) -> list[str]:
     if not isinstance(group, dict):
         raise SyncError("Claude SessionStart groups must be JSON objects")
@@ -377,6 +884,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--agents-template", required=True, type=Path)
     parser.add_argument("--hooks-template", required=True, type=Path)
+    parser.add_argument("--preferences-template", required=True, type=Path)
     parser.add_argument("--status-script", required=True, type=Path)
     parser.add_argument("--codex-home", required=True, type=Path)
     parser.add_argument("--claude-settings", required=True, type=Path)
@@ -398,6 +906,9 @@ def main() -> int:
         hooks_rendered = render_hooks(
             args.hooks_template, codex_config_path, args.status_script, args.python
         )
+        preferences_rendered = render_preferences(
+            args.preferences_template, hooks_rendered.content
+        )
         claude_result, claude_action = render_claude_settings(
             args.claude_settings, args.status_script, args.python
         )
@@ -407,13 +918,14 @@ def main() -> int:
 
     updates = [
         (agents_path, agents_result),
-        (codex_config_path, hooks_rendered.content),
+        (codex_config_path, preferences_rendered.content),
         (args.claude_settings, claude_result),
     ]
     drifted = any(content != read_text(path) for path, content in updates)
     if args.check:
         print(f"Codex AGENTS.md: {agents_action}")
         print(f"Codex hooks: {hooks_rendered.action}")
+        print(f"Codex preferences: {preferences_rendered.action}")
         print(f"Claude hooks: {claude_action}")
         return 1 if drifted else 0
 
@@ -425,6 +937,7 @@ def main() -> int:
 
     print(f"Codex AGENTS.md: {agents_action}")
     print(f"Codex hooks: {hooks_rendered.action}")
+    print(f"Codex preferences: {preferences_rendered.action}")
     print(f"Claude hooks: {claude_action}")
     if hooks_rendered.definition_changed:
         print(

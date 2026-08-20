@@ -32,7 +32,8 @@ by `authorization.md`; capability-selection triggers are owned by
 
 ## Configuration Boundary
 
-Workspace-meta owns only its marked Codex AGENTS/config blocks, canonical
-shared rules, and dedicated status hook. Model selection, project trust, hook
-trust, credentials, history, caches, databases, installed plugins, system
-skills, and host approval history remain host-local.
+Workspace-meta owns only its marked Codex AGENTS/config blocks, the explicitly
+listed fields in `codex-preferences.toml`, canonical shared rules, and dedicated
+status hook. Model selection, project trust, hook trust, credentials, history
+data, unlisted preferences, caches, databases, installed plugins, system skills,
+and host approval history remain host-local.

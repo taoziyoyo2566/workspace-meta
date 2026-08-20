@@ -1,13 +1,15 @@
 ---
 name: env-sync
-description: Probe this host's environment capabilities and sync them into the shared per-host registry (~/workspace/.agents/env/<host>.yml). Use at session start on a new/changed machine, when env-probe-check reports stale, or whenever a command unexpectedly fails with "not found" / daemon errors.
+description: Probe this host's environment capabilities into its local workspace registry (~/workspace/.agents/env/<host>.yml). Use at session start on a new/changed machine, when env-probe-check reports stale, or whenever a command unexpectedly fails with "not found" / daemon errors.
 ---
 
-# env-sync — refresh the shared per-host capability registry
+# env-sync — refresh the local per-host capability registry
 
-Workspace-wide host probe (hoisted from per-project repos 2026-07-11). One
-registry under `~/workspace/.agents/env/` serves every project. Behavior rule:
-`~/workspace/.agents/rules/environment-truth.md` (probe, don't recall).
+Workspace-wide host probe (hoisted from per-project repos 2026-07-11). One local
+registry under `~/workspace/.agents/env/` serves every project on this machine.
+Generated YAML remains Git-ignored and is never shared to another machine.
+Behavior rule: `~/workspace/.agents/rules/environment-truth.md` (probe, don't
+recall).
 
 ## When to run
 
@@ -24,13 +26,9 @@ registry under `~/workspace/.agents/env/` serves every project. Behavior rule:
    make -C ~/workspace env-probe
    ```
 
-2. Compare with the previous version and report deltas to the user — especially
-   capabilities that flipped (available ↔ absent), since stale plans or memories
-   may depend on the old state:
-
-   ```bash
-   git -C ~/workspace diff .agents/env/
-   ```
+2. If a previous local snapshot existed, compare the facts read before the probe
+   with the regenerated file and report capabilities that flipped
+   (available ↔ absent), since stale plans or memories may depend on old state.
 
 3. If a capability needed by the current task is **absent**, classify before acting:
    - **Project-local fix** (safe to do now): `ansible-galaxy` collection install,
@@ -49,11 +47,8 @@ registry under `~/workspace/.agents/env/` serves every project. Behavior rule:
    directs later execution. Preserve completed historical evidence and annotate
    it only when a reader needs a pointer to the current replacement.
 
-5. Report the registry path, delta, probe date, and whether the evidence is
-   still local-only. If another machine or later phase depends on the update,
-   take it through the normal content-review and publication workflow in
-   `~/workspace/.agents/rules/git-publication.md`; probing never grants
-   commit/push authority.
+5. Report the registry path, delta, and probe date. The snapshot stays local;
+   another machine or later host must re-probe rather than publish or copy it.
 
 ## Notes
 

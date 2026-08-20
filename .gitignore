@@ -50,7 +50,7 @@
 !.agents/rules/verification.md
 !.agents/env/
 !.agents/env/README.md
-!.agents/env/*.yml
+#!.agents/env/*.yml
 !.agents/host-templates/
 !.agents/host-templates/*.md
 !.agents/host-templates/*.toml

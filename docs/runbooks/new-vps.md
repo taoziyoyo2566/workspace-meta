@@ -13,7 +13,7 @@
 | Codex 全局指导和 Hook 标记块 | `~/.codex/AGENTS.md`、`config.toml` | 由 `bootstrap` 收敛，不直接提交 |
 | Claude SessionStart 组和 env-sync skill | `~/.claude/` | 由 `bootstrap` 收敛，不直接提交 |
 | 凭据、登录、项目 trust、Hook trust、approval rules | `~/.codex/`、`~/.claude/` | 永不复制或提交 |
-| 本机能力快照 | `~/workspace/.agents/env/<hostname -s>.yml` | 可审核后提交到 workspace-meta |
+| 本机能力快照 | `~/workspace/.agents/env/<hostname -s>.yml` | 否；本机生成并由 Git 忽略 |
 
 不要从旧 VPS 复制 `auth.json`、`history`、`default.rules`、
 `permissions.rules`、Hook trust state，或整个 `~/.codex`/`~/.claude`。
@@ -108,8 +108,8 @@ Git 命令管理嵌套项目。
 - **What**：运行环境探针，在当前 workspace-meta checkout 写入本机能力快照。
 - **Why now**：SessionStart 和环境检查需要一份不超过 7 天的当前主机事实。
 - **Target / effect**：只写 `~/workspace/.agents/env/<hostname -s>.yml`，不写凭据。
-- **Risk / recovery**：这是工作树变更；发现内容不应共享时不要提交，修复环境后
-  重新运行探针即可覆盖同一主机快照。
+- **Risk / recovery**：这是可覆盖的本机运行时文件；修复环境后重新运行探针即可
+  刷新同一主机快照。
 - **Excluded**：不安装软件、不登录服务、不修改 `~/.codex`/`~/.claude`，不 commit
   或 push。
 - **Checks / boundary**：执行前确认当前目录是 workspace-meta 根目录；本说明只覆盖
@@ -125,9 +125,9 @@ make env-probe
 make env-probe-check
 ```
 
-这会生成 `.agents/env/<hostname -s>.yml`。它是带时间戳的能力快照，不是凭据；
-脚本只记录通用工具可用性、Git 远端可达性等事实，不记录容器名称。新文件应
-先审核内容，再按正常 Git 发布流程决定是否提交；不会自动 commit 或 push。
+这会生成 `.agents/env/<hostname -s>.yml`。它是带时间戳的本机能力快照，不是
+凭据；脚本只记录通用工具可用性、Git 远端可达性等事实，不记录容器名称。
+该文件由 Git 忽略，不应 force-add、提交或复制到其他机器。
 
 每 7 天或能力发生变化时重新运行 `make env-probe`。`env-probe-check` 失败时，
 不要继续引用旧快照作为当前环境事实。
@@ -239,8 +239,8 @@ test -x .githooks/pre-commit
    未重新信任时，Hook 不应被当作已生效。
 4. **Claude 配置或 skill 变更**：完全退出并重新打开 Claude Code，让新的
    `settings.json` SessionStart 组和 skill 被重新加载。
-5. **环境能力变更**：运行 `make env-probe`，审核生成的 registry；需要共享时
-   再按正常 Git 流程提交它。
+5. **环境能力变更**：运行 `make env-probe`，审核本机生成的 registry；其他机器
+   需要同类事实时在当地重新运行 probe。
 
 最小验收标准是：`agent-sync-check` 返回 0、`env-probe-check` 返回 0、
 `core.hooksPath` 输出 `.githooks`，并且 pre-commit 文件可执行。真实的 Codex

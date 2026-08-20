@@ -13,6 +13,7 @@ agent-sync-check: ## Report host Claude/Codex managed-config drift without writi
 		--python "$(PYTHON)" \
 		--agents-template .agents/host-templates/codex-AGENTS.md \
 		--hooks-template .agents/host-templates/codex-hooks.toml \
+		--preferences-template .agents/host-templates/codex-preferences.toml \
 		--status-script scripts/workspace_status.py \
 		--codex-home "$${CODEX_HOME:-$$HOME/.codex}" \
 		--claude-settings "$$HOME/.claude/settings.json" \

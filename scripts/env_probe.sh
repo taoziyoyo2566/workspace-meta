@@ -2,8 +2,9 @@
 # env_probe.sh — per-host environment capability probe + registry writer.
 #
 # Workspace-level tool (IVG-TOOLENV-REGISTRY, hoisted 2026-07-11): one probe,
-# shared by every project under ~/workspace. Writes a per-host registry so agents
-# and operators probe, don't recall. Behavior rule: .agents/rules/environment-truth.md.
+# shared by every project on this machine under ~/workspace. Writes a local
+# per-host registry so agents and operators probe, don't recall. Behavior rule:
+# .agents/rules/environment-truth.md.
 # This script owns the execution knowledge; it emits GENERIC host capability facts
 # only — per-project task->command mapping stays in each project's own governance.
 #
@@ -77,8 +78,8 @@ ver_or_absent() {
 }
 
 # docker: distinguish CLI-present from daemon-reachable. Emit a COUNT of running
-# containers, not their names — the registry is committed to the shared repo, so
-# host container names (unrelated infra) must not leak into it.
+# containers, not their names — even local runtime evidence should avoid recording
+# unrelated host infrastructure details.
 probe_docker() {
   if ! have docker; then echo "{available: false, note: \"CLI not installed\"}"; return; fi
   local server
