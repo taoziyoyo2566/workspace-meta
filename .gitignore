@@ -13,6 +13,8 @@
 !docs/reviews/
 !docs/reviews/refactor-codex-sync/
 !docs/reviews/refactor-codex-sync/*.md
+!docs/reviews/feature-agent-status-line/
+!docs/reviews/feature-agent-status-line/*.md
 !docs/reviews/refactor-codex-permissions/
 !docs/reviews/refactor-codex-permissions/*.md
 !docs/reviews/refactor-codex-rules-mece/
@@ -27,11 +29,13 @@
 !scripts/bootstrap-local.sh
 !scripts/sync_codex_config.py
 !scripts/workspace_status.py
+!scripts/claude_status_line.py
 !scripts/env_probe.sh
 !scripts/find_python.sh
 !tests/
 !tests/test_sync_codex_config.py
 !tests/test_workspace_status.py
+!tests/test_claude_status_line.py
 !.agents/
 !.agents/rules/
 !.agents/rules/authorization.md

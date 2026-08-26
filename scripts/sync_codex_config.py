@@ -24,6 +24,7 @@ HOOKS_BEGIN = "# BEGIN workspace-meta managed Codex hooks"
 HOOKS_END = "# END workspace-meta managed Codex hooks"
 COMMAND_PLACEHOLDER = "__WORKSPACE_META_STATUS_COMMAND__"
 MANAGED_HOOK_MARKER = "workspace-meta-managed-status-v1"
+MANAGED_CLAUDE_STATUS_LINE_MARKER = "workspace-meta-managed-claude-status-line-v1"
 LEGACY_AGENTS_SHA256 = "d0894e6420d4d168e08984172b2f3a22b2edc375fb6ea9f2404274c38771bbc2"
 LEGACY_HOOK_MARKERS = (
     "workspace-meta: governance rule layer",
@@ -122,6 +123,24 @@ def build_status_command(agent: str, status_script: Path, python_bin: str = "pyt
         "printf '{\"systemMessage\":\"workspace-meta status evaluator changed or "
         "is unavailable. Run: make -C ~/workspace bootstrap\"}\\n'; "
         f'else {python_command} "$p" --agent {agent}; fi; : {MANAGED_HOOK_MARKER}'
+    )
+
+
+def build_claude_status_line_command(
+    status_line_script: Path, python_bin: str = "python3"
+) -> str:
+    digest = hashlib.sha256(status_line_script.read_bytes()).hexdigest()
+    python_command = shlex.quote(python_bin)
+    return (
+        'p="$HOME/workspace/scripts/claude_status_line.py"; '
+        f'expected="{digest}"; '
+        f"actual=$({python_command} -c 'import hashlib,sys; "
+        'print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())\' '
+        '"$p" 2>/dev/null || printf unavailable); '
+        'if [ "$actual" != "$expected" ]; then '
+        "printf '%s' 'workspace-meta status line changed or is unavailable; "
+        "run: make -C ~/workspace bootstrap'; "
+        f'else exec {python_command} "$p"; fi; : {MANAGED_CLAUDE_STATUS_LINE_MARKER}'
     )
 
 
@@ -780,8 +799,13 @@ def hook_commands(group: object) -> list[str]:
 
 
 def render_claude_settings(
-    destination: Path, status_script: Path, python_bin: str = "python3"
+    destination: Path,
+    status_script: Path,
+    python_bin: str = "python3",
+    claude_status_line_script: Path | None = None,
 ) -> tuple[str, str]:
+    if claude_status_line_script is None:
+        claude_status_line_script = Path(__file__).with_name("claude_status_line.py")
     current = read_text(destination)
     try:
         settings = json.loads(current) if current else {}
@@ -803,6 +827,11 @@ def render_claude_settings(
     for group in groups:
         commands = hook_commands(group)
         owned = [command for command in commands if any(m in command for m in markers)]
+        legacy_owned = [
+            command
+            for command in commands
+            if any(marker in command for marker in LEGACY_HOOK_MARKERS)
+        ]
         if owned and len(owned) != len(commands):
             raise SyncError(
                 "workspace-meta Claude hook shares a SessionStart group with an "
@@ -811,7 +840,8 @@ def render_claude_settings(
         if owned:
             if first_owned_index is None:
                 first_owned_index = len(retained)
-            migrated += 1
+            if legacy_owned:
+                migrated += 1
         else:
             retained.append(group)
 
@@ -829,6 +859,30 @@ def render_claude_settings(
     insert_at = len(retained) if first_owned_index is None else first_owned_index
     retained.insert(insert_at, managed_group)
     hooks["SessionStart"] = retained
+
+    managed_status_line = {
+        "type": "command",
+        "command": build_claude_status_line_command(
+            claude_status_line_script, python_bin
+        ),
+        "padding": 0,
+    }
+    current_status_line = settings.get("statusLine", MISSING)
+    if current_status_line is not MISSING:
+        if not isinstance(current_status_line, dict):
+            raise SyncError(
+                "refusing to replace an unmanaged Claude statusLine; remove or "
+                "migrate it explicitly before bootstrap"
+            )
+        current_command = current_status_line.get("command", "")
+        if not isinstance(current_command, str) or (
+            MANAGED_CLAUDE_STATUS_LINE_MARKER not in current_command
+        ):
+            raise SyncError(
+                "refusing to replace an unmanaged Claude statusLine; remove or "
+                "migrate it explicitly before bootstrap"
+            )
+    settings["statusLine"] = managed_status_line
     result = json.dumps(settings, ensure_ascii=False, indent=2) + "\n"
     if result == current:
         return result, "already current"
@@ -851,8 +905,15 @@ def sync_hooks(template_path: Path, destination: Path, status_script: Path, pyth
     return rendered.action
 
 
-def sync_claude_settings(destination: Path, status_script: Path, python_bin: str = "python3") -> str:
-    result, action = render_claude_settings(destination, status_script, python_bin)
+def sync_claude_settings(
+    destination: Path,
+    status_script: Path,
+    python_bin: str = "python3",
+    claude_status_line_script: Path | None = None,
+) -> str:
+    result, action = render_claude_settings(
+        destination, status_script, python_bin, claude_status_line_script
+    )
     if result != read_text(destination):
         atomic_write(destination, result)
     return action
@@ -886,6 +947,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--hooks-template", required=True, type=Path)
     parser.add_argument("--preferences-template", required=True, type=Path)
     parser.add_argument("--status-script", required=True, type=Path)
+    parser.add_argument("--claude-status-line-script", required=True, type=Path)
     parser.add_argument("--codex-home", required=True, type=Path)
     parser.add_argument("--claude-settings", required=True, type=Path)
     parser.add_argument(
@@ -910,7 +972,10 @@ def main() -> int:
             args.preferences_template, hooks_rendered.content
         )
         claude_result, claude_action = render_claude_settings(
-            args.claude_settings, args.status_script, args.python
+            args.claude_settings,
+            args.status_script,
+            args.python,
+            args.claude_status_line_script,
         )
     except (OSError, SyncError) as exc:
         print(f"agent config sync failed: {exc}", file=sys.stderr)
@@ -926,7 +991,7 @@ def main() -> int:
         print(f"Codex AGENTS.md: {agents_action}")
         print(f"Codex hooks: {hooks_rendered.action}")
         print(f"Codex preferences: {preferences_rendered.action}")
-        print(f"Claude hooks: {claude_action}")
+        print(f"Claude hooks/status line: {claude_action}")
         return 1 if drifted else 0
 
     try:
@@ -938,7 +1003,7 @@ def main() -> int:
     print(f"Codex AGENTS.md: {agents_action}")
     print(f"Codex hooks: {hooks_rendered.action}")
     print(f"Codex preferences: {preferences_rendered.action}")
-    print(f"Claude hooks: {claude_action}")
+    print(f"Claude hooks/status line: {claude_action}")
     if hooks_rendered.definition_changed:
         print(
             "WARNING: Codex hook definition changed; review and trust it with /hooks",

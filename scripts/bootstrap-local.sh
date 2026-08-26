@@ -17,10 +17,11 @@ Configures host-local workspace-meta integration (per-host; nothing here is
 committed — the installer lives in the repo, the generated host files do not):
   - sets this repo's core.hooksPath to .githooks
   - checks global git identity without writing identity values
-  - synchronizes workspace-meta-owned hooks into ~/.claude/settings.json
+  - synchronizes workspace-meta-owned hooks and status line into ~/.claude/settings.json
   - synchronizes managed blocks into Codex AGENTS.md and config.toml, and
     reconciles declared Codex preference fields while preserving host-local settings:
       * one shared, ordered status evaluator for Claude and Codex
+      * a Claude command status line and Codex native TUI status items
       * workspace-meta freshness and uncommitted/unpushed work
       * env capability registry freshness (~/workspace/.agents/env/<host>.yml)
   - installs the env-sync skill (~/.claude/skills/) and the Codex global routing
@@ -97,6 +98,7 @@ if [ -n "$python_bin" ]; then
     --hooks-template "$repo_root/.agents/host-templates/codex-hooks.toml" \
     --preferences-template "$repo_root/.agents/host-templates/codex-preferences.toml" \
     --status-script "$repo_root/scripts/workspace_status.py" \
+    --claude-status-line-script "$repo_root/scripts/claude_status_line.py" \
     --codex-home "$codex_home" \
     --claude-settings "$claude_settings"
 else

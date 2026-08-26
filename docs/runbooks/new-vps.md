@@ -11,7 +11,7 @@
 | 共享规则、模板、脚本、测试 | `~/workspace` | 是 |
 | 独立项目 checkout | `~/workspace/projects/<project>` | 项目各自同步 |
 | Codex 全局指导和 Hook 标记块 | `~/.codex/AGENTS.md`、`config.toml` | 由 `bootstrap` 收敛，不直接提交 |
-| Claude SessionStart 组和 env-sync skill | `~/.claude/` | 由 `bootstrap` 收敛，不直接提交 |
+| Claude SessionStart、status line 和 env-sync skill | `~/.claude/` | 由 `bootstrap` 收敛，不直接提交 |
 | 凭据、登录、项目 trust、Hook trust、approval rules | `~/.codex/`、`~/.claude/` | 永不复制或提交 |
 | 本机能力快照 | `~/workspace/.agents/env/<hostname -s>.yml` | 否；本机生成并由 Git 忽略 |
 
@@ -157,7 +157,7 @@ shell/Python/Node 解释器授权规则复制到仓库。
 执行前说明（Protected-Action Request Brief）：
 
 - **What**：运行 `make bootstrap`，安装或收敛本机 Git Hook、Codex 管理块、Claude
-  SessionStart 组和 env-sync skill，并运行只读的 `agent-sync-check`。
+  SessionStart/status line 和 env-sync skill，并运行只读的 `agent-sync-check`。
 - **Why now**：新 VPS 尚未接入 workspace-meta，或仓库中的托管模板已经发生变化。
 - **Target / effect**：影响当前仓库的 `.git/config`、当前主机的
   `~/.codex/AGENTS.md`、`~/.codex/config.toml`、`~/.claude/settings.json` 和
@@ -184,10 +184,12 @@ make agent-sync-check
 1. 将本仓库的 `core.hooksPath` 设置为 `.githooks`，启用 pre-commit 白名单守卫；
 2. 检查全局 Git 身份，但不写身份；
 3. 收敛 `~/.codex/AGENTS.md`、`~/.codex/config.toml` 和
-   `~/.claude/settings.json` 中 workspace-meta 所有的标记块；
+   `~/.claude/settings.json` 中 workspace-meta 所有的标记块和 status line；
 4. 安装或更新 `~/.claude/skills/env-sync/SKILL.md`。
 
-标记块之外的主机内容会保留。`agent-sync-check` 只报告漂移，不写主机文件；
+标记块之外的主机内容会保留。如果 Claude 已有不带 workspace-meta 标记的
+`statusLine`，同步器会拒绝覆盖；先审核并自行备份/移除旧配置，再重新运行。
+`agent-sync-check` 只报告漂移，不写主机文件；
 返回 0 才表示三个托管目标已经收敛。这个步骤不会安装 Codex/Claude，不会登录，
 不会信任 Hook，也不会自动 pull、commit 或 push。
 
@@ -237,8 +239,9 @@ test -x .githooks/pre-commit
 3. **Codex Hook 定义或 evaluator hash 变更**：在 Codex 中运行 `/hooks`，找到
    workspace-meta 的 SessionStart Hook，审查并信任新定义；然后再启动全新会话。
    未重新信任时，Hook 不应被当作已生效。
-4. **Claude 配置或 skill 变更**：完全退出并重新打开 Claude Code，让新的
-   `settings.json` SessionStart 组和 skill 被重新加载。
+4. **Claude 配置、status line 或 skill 变更**：完全退出并重新打开 Claude Code，
+   让新的 `settings.json` SessionStart/statusLine 和 skill 被重新加载；可用
+   `/statusline` 确认 UI。
 5. **环境能力变更**：运行 `make env-probe`，审核本机生成的 registry；其他机器
    需要同类事实时在当地重新运行 probe。
 

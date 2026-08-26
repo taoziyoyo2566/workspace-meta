@@ -39,6 +39,7 @@ class CodexConfigSyncTests(unittest.TestCase):
             ROOT / ".agents" / "host-templates" / "codex-preferences.toml"
         )
         self.status_script = ROOT / "scripts" / "workspace_status.py"
+        self.claude_status_line_script = ROOT / "scripts" / "claude_status_line.py"
         self.rules_dir = ROOT / ".agents" / "rules"
 
     def tearDown(self) -> None:
@@ -304,6 +305,7 @@ class CodexConfigSyncTests(unittest.TestCase):
             hooks_template=self.hooks_template,
             preferences_template=self.preferences_template,
             status_script=self.status_script,
+            claude_status_line_script=self.claude_status_line_script,
             codex_home=self.codex_home,
             claude_settings=settings,
             python="python3",
@@ -371,6 +373,7 @@ class CodexConfigSyncTests(unittest.TestCase):
             hooks_template=self.hooks_template,
             preferences_template=self.preferences_template,
             status_script=changed_status,
+            claude_status_line_script=self.claude_status_line_script,
             codex_home=self.codex_home,
             claude_settings=settings,
             python="python3",
@@ -723,12 +726,43 @@ class CodexConfigSyncTests(unittest.TestCase):
 
         self.assertIn("migrated 1 legacy hook group", action)
         self.assertEqual(parsed["theme"], "dark")
+        self.assertEqual(parsed["statusLine"]["type"], "command")
+        self.assertEqual(parsed["statusLine"]["padding"], 0)
+        self.assertIn(
+            SYNC.MANAGED_CLAUDE_STATUS_LINE_MARKER,
+            parsed["statusLine"]["command"],
+        )
         self.assertEqual(len(groups), 2)
         self.assertIn(SYNC.MANAGED_HOOK_MARKER, groups[0]["hooks"][0]["command"])
         self.assertEqual(groups[1]["hooks"][0]["command"], "user-owned-hook")
         self.assertEqual(
             SYNC.sync_claude_settings(settings, self.status_script), "already current"
         )
+
+    def test_claude_status_line_update_is_not_reported_as_legacy_migration(
+        self,
+    ) -> None:
+        settings = self.codex_home.parent / ".claude" / "settings.json"
+        SYNC.sync_claude_settings(
+            settings,
+            self.status_script,
+            claude_status_line_script=self.claude_status_line_script,
+        )
+        changed_renderer = Path(self.temp_dir.name) / "changed-status-line.py"
+        changed_renderer.write_bytes(
+            self.claude_status_line_script.read_bytes() + b"\n# changed renderer\n"
+        )
+
+        action = SYNC.sync_claude_settings(
+            settings,
+            self.status_script,
+            claude_status_line_script=changed_renderer,
+        )
+
+        self.assertEqual(action, "installed or updated")
+        groups = json.loads(settings.read_text())["hooks"]["SessionStart"]
+        self.assertEqual(len(groups), 1)
+        self.assertIn(SYNC.MANAGED_HOOK_MARKER, groups[0]["hooks"][0]["command"])
 
     def test_claude_refuses_mixed_owned_and_user_group(self) -> None:
         settings = self.codex_home.parent / ".claude" / "settings.json"
@@ -757,6 +791,61 @@ class CodexConfigSyncTests(unittest.TestCase):
 
         self.assertEqual(settings.read_text(), original)
 
+    def test_claude_refuses_unmanaged_status_line(self) -> None:
+        settings = self.codex_home.parent / ".claude" / "settings.json"
+        settings.parent.mkdir(parents=True)
+        original = json.dumps(
+            {
+                "theme": "dark",
+                "statusLine": {
+                    "type": "command",
+                    "command": "~/.claude/personal-status-line.sh",
+                },
+            }
+        )
+        settings.write_text(original)
+
+        with self.assertRaisesRegex(
+            SYNC.SyncError, "refusing to replace an unmanaged Claude statusLine"
+        ):
+            SYNC.sync_claude_settings(settings, self.status_script)
+
+        self.assertEqual(settings.read_text(), original)
+
+    def test_claude_status_line_loader_preserves_stdin_and_runs_renderer(self) -> None:
+        home = Path(self.temp_dir.name) / "home"
+        installed_script = home / "workspace" / "scripts" / "claude_status_line.py"
+        installed_script.parent.mkdir(parents=True)
+        installed_script.write_bytes(self.claude_status_line_script.read_bytes())
+        settings = home / ".claude" / "settings.json"
+
+        SYNC.sync_claude_settings(
+            settings,
+            self.status_script,
+            sys.executable,
+            self.claude_status_line_script,
+        )
+        command = json.loads(settings.read_text())["statusLine"]["command"]
+        payload = {
+            "workspace": {"current_dir": str(home / "workspace")},
+            "model": {"display_name": "Sonnet"},
+            "context_window": {"used_percentage": 25},
+        }
+        env = os.environ.copy()
+        env["HOME"] = str(home)
+        env["NO_COLOR"] = "1"
+        completed = subprocess.run(
+            ["/bin/sh", "-c", command],
+            input=json.dumps(payload),
+            capture_output=True,
+            check=False,
+            env=env,
+            text=True,
+        )
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(completed.stdout, "~/workspace  Sonnet  ctx:25%")
+
     def test_agents_pin_the_same_status_evaluator(self) -> None:
         config = self.codex_home / "config.toml"
         settings = self.codex_home.parent / ".claude" / "settings.json"
@@ -776,6 +865,12 @@ class CodexConfigSyncTests(unittest.TestCase):
         self.assertEqual(
             codex_command.replace("--agent codex", "--agent claude"), claude_command
         )
+        status_line = json.loads(settings.read_text())["statusLine"]
+        status_digest = hashlib.sha256(
+            self.claude_status_line_script.read_bytes()
+        ).hexdigest()
+        self.assertIn(status_digest, status_line["command"])
+        self.assertIn(SYNC.MANAGED_CLAUDE_STATUS_LINE_MARKER, status_line["command"])
 
     def test_embeds_resolved_python_in_generated_command(self) -> None:
         config = self.codex_home / "config.toml"
@@ -794,6 +889,9 @@ class CodexConfigSyncTests(unittest.TestCase):
         self.assertIn(f"{custom_python} -c", codex_command)
         self.assertIn(f'{custom_python} "$p"', codex_command)
         self.assertIn(custom_python, claude_command)
+        status_line_command = json.loads(settings.read_text())["statusLine"]["command"]
+        self.assertIn(f"{custom_python} -c", status_line_command)
+        self.assertIn(f'exec {custom_python} "$p"', status_line_command)
 
     def test_quotes_python_path_in_generated_command(self) -> None:
         config = self.codex_home / "config.toml"
@@ -855,6 +953,8 @@ class CodexConfigSyncTests(unittest.TestCase):
                 str(self.preferences_template),
                 "--status-script",
                 str(self.status_script),
+                "--claude-status-line-script",
+                str(self.claude_status_line_script),
                 "--codex-home",
                 str(self.codex_home),
                 "--claude-settings",

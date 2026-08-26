@@ -14,7 +14,7 @@ Rules live in three layers, each with its own sync channel:
 
 | Layer | Holds | Sync channel |
 |---|---|---|
-| `~/.claude/`, `~/.codex/` | credentials, authorization, trust, caches, history data, host preferences | **none — except explicitly declared Codex preference fields** |
+| `~/.claude/`, `~/.codex/` | credentials, authorization, trust, caches, history data, host preferences | **none — except explicitly declared managed fields** |
 | `~/workspace/` root | cross-project methodology, provenance, host templates, bootstrap | **this repo** |
 | `~/workspace/projects/<project>/` | project-specific `CLAUDE.md`, `AGENTS.md`, `.agents/`, `.codex/`, governance docs | the project's own repo |
 
@@ -58,8 +58,10 @@ Full provenance: `feedback-register.md` entry **W-R26**.
   versioned.
 - **Agent configuration uses narrow managed surfaces, not home-directory
   mirrors** — the versioned templates converge only marked Codex sections and
-  one dedicated Claude SessionStart group, plus an explicit allowlist of stable
-  Codex preference fields. Both agents call the same ordered status evaluator.
+  one dedicated Claude SessionStart group and status line, plus an explicit
+  allowlist of stable Codex preference fields. Both agents call the same
+  ordered startup-status evaluator; interactive status lines use each client's
+  native extension contract.
   Model choice, project trust, hook trust hashes, local guidance outside the
   managed surfaces, `default.rules`, auth, plugins, skills, databases, history
   data, unlisted preferences, logs, and caches remain host-local. Full design:
@@ -174,6 +176,10 @@ The bootstrap is idempotent and host-local. It:
 - pins the evaluator SHA-256 in each installed command. An evaluator change is
   therefore an auditable hook-command change instead of silently changing the
   meaning of an already trusted command;
+- installs a hash-pinned Claude `statusLine.command` that renders directory,
+  branch, model, context use, current token/cache detail, and Claude's own
+  session-cost estimate. Codex uses its native `tui.status_line` item list for
+  model, context, branch, token totals, and weekly usage;
 - installs the **env-sync skill** (`~/.claude/skills/env-sync/`) and synchronizes
   the workspace-wide Codex router/safety floor into a managed block in
   `~/.codex/AGENTS.md`. The versioned root `CLAUDE.md` is Claude's thin adapter;
@@ -181,7 +187,8 @@ The bootstrap is idempotent and host-local. It:
   managed block is preserved;
 - reconciles only the declared Codex preference fields in
   `.agents/host-templates/codex-preferences.toml`; existing unowned `config.toml`
-  fields, comments, hook state, and sections are preserved;
+  fields, comments, hook state, and sections are preserved. An unrecognized
+  existing Claude `statusLine` is rejected rather than overwritten;
   bootstrap warns if `AGENTS.override.md` would shadow it.
 
 Managed installs are idempotent and convergent for both agents. The legacy
@@ -189,7 +196,8 @@ Managed installs are idempotent and convergent for both agents. The legacy
 runs safely by default. All targets are rendered and parsed before the first write;
 ambiguous groups containing both workspace-meta and user handlers are rejected.
 Codex requires reviewing/trusting new or changed hooks via `/hooks` before they
-run. Claude settings outside the dedicated workspace-meta group are preserved.
+run. Claude settings outside the dedicated workspace-meta group and status-line
+field are preserved.
 
 Nothing under `~/.claude` or `~/.codex` is committed to this repo (they are
 outside `~/workspace` and per-host by design — W-R26). The root `CLAUDE.md`,

@@ -12,8 +12,9 @@ configuration. It does not mirror either home directory.
 | `.agents/rules/*.md` | workspace-meta | shared portable owners plus explicit agent runtime modules |
 | `.agents/env/*.yml` | host runtime | generated locally and ignored by Git; each host probes itself |
 | `~/.codex/config.toml` | mixed | replace only the marked status-hook block and reconcile declared preference fields |
-| `~/.claude/settings.json` | mixed | converge one dedicated SessionStart group |
+| `~/.claude/settings.json` | mixed | converge one dedicated SessionStart group and one marker-bearing `statusLine` object; refuse an unrecognized existing status line |
 | `scripts/workspace_status.py` | workspace-meta | one ordered status policy used by both agents |
+| `scripts/claude_status_line.py` | workspace-meta | render Claude's command status line from documented stdin fields; Codex uses native `tui.status_line` items |
 | model/reasoning defaults, credentials, trust, history data, caches, and unlisted preferences | host/user | never synchronized |
 | `~/.codex/rules/*.rules` | host executable authorization | never synchronized |
 | project agent/governance files | project repository | project facts and deltas travel with that project |
@@ -48,5 +49,5 @@ owner and is tested for drift. Path/project adapters state only narrower facts.
 
 `scripts/sync_codex_config.py` atomically prevalidates and converges the marked
 Codex AGENTS/config blocks, declared Codex preference fields, and Claude
-SessionStart group while preserving unmanaged content. See
+SessionStart/status-line fields while preserving unmanaged content. See
 `docs/architecture/codex-config-management.md`.

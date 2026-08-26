@@ -18,7 +18,7 @@ workspace-meta 所有的配置面；用户目录中其余内容始终由当前�
 | Claude 工作区适配器 | `~/workspace/CLAUDE.md` 中的紧凑路由与安全底线 | workspace-meta | 本仓库 Git |
 | Codex 全局指导 | `~/.codex/AGENTS.md` 中的路由与安全底线标记块 | workspace-meta + 主机 | `make bootstrap` 只替换标记块 |
 | Codex 全局配置 | `~/.codex/config.toml` 中的标记 hook 块和声明的偏好字段 | workspace-meta + 主机 | `make bootstrap` 只替换 hook 标记块并按字段收敛声明的偏好 |
-| Claude 全局配置 | `~/.claude/settings.json` 中一个专用 SessionStart 组 | workspace-meta + 主机 | `make bootstrap` 收敛该组，保留其他键和组 |
+| Claude 全局配置 | `~/.claude/settings.json` 中一个专用 SessionStart 组和带标记的 `statusLine` | workspace-meta + 主机 | `make bootstrap` 收敛这两个字段，保留其他键和组；拒绝覆盖未知 status line |
 | 项目配置 | `~/workspace/projects/<project>/` 中项目的 `AGENTS.md`、`.agents/`、`.codex/` | 项目仓库 | 项目自己的 Git |
 | 主机私有状态 | 凭据、未声明的模型/偏好、信任 hash、审批规则、历史数据、缓存、数据库 | 当前主机 | 不同步 |
 
@@ -159,9 +159,11 @@ operation 仍是独立事务。执行环境的 Yes/Allow 只解决技术权限�
 | `.agents/host-templates/codex-preferences.toml` | Codex 字段级偏好期望配置 |
 | `.agents/host-templates/README-agents.md` | 共享核心、适配器和主机状态所有权矩阵 |
 | `scripts/workspace_status.py` | Claude/Codex 共用的状态评估策略 |
+| `scripts/claude_status_line.py` | 从 Claude 官方 stdin payload 渲染交互式状态栏 |
 | `scripts/sync_codex_config.py` | 渲染、迁移、校验并写入三个主机目标 |
 | `scripts/bootstrap-local.sh` | 一台机器的安装入口 |
 | `tests/test_workspace_status.py` | 状态顺序、离线降噪和输出契约测试 |
+| `tests/test_claude_status_line.py` | Claude 状态栏字段、颜色、格式与失败降噪测试 |
 | `tests/test_sync_codex_config.py` | 安装、迁移、保留、拒绝和幂等测试 |
 | `docs/reviews/` | 非小型变更的计划与每轮 changelog |
 | `projects/<project>/` | 独立项目仓库；不属于 workspace-meta 的跟踪范围 |
@@ -231,7 +233,8 @@ UI 或事件流 warning，而纯文本 stdout 会进入额外 developer context�
    局部更新 `history.persistence`、`history.max_bytes`、`tui.status_line` 等
    声明字段。整个合并结果再用 `tomllib` 解析。
 3. Claude `settings.json`：解析整个 JSON，移除完全归 workspace-meta 所有的
-   旧组，在原位置插入一个新组，再序列化完整结果。
+   旧组，在原位置插入一个新组，并收敛带 workspace-meta 标记的 `statusLine`
+   对象，再序列化完整结果。若已有无法识别的 status line，拒绝写入所有目标。
 
 只有三个目标全部通过校验后才开始原子写入。如果写入中途出现操作系统错误，
 同步器会尽力恢复本轮已经写过的目标。它不是跨文件系统事务，但避免了已知的
@@ -265,6 +268,22 @@ UI 或事件流 warning，而纯文本 stdout 会进入额外 developer context�
 
 旧的三个独立 workspace-meta hook 会自动迁移为一个 handler。Codex 旧 trust
 索引可能成为孤立记录，但它属于主机状态且不影响运行，本项目不会删除。
+
+### Claude/Codex 交互式状态栏
+
+两个客户端都有 `/statusline`，但协议不同：Claude 配置一个 command，并把当前
+session 的 JSON 送到 stdin；Codex 配置内建 footer item 的有序列表。这里共享的
+是展示意图而不是脚本接口。
+
+Claude renderer 只使用官方 payload 中的 `workspace.current_dir`、
+`model.display_name`、`context_window.used_percentage`、
+`context_window.current_usage` 和 `cost.total_cost_usd`。它不再按 cwd 猜 session，
+不扫描私有 transcript，也不写死某个模型的价格。token 分项是当前上下文/最近
+响应数据；美元金额是 Claude 客户端给出的 session 估算值。
+
+Codex 继续使用 `.agents/host-templates/codex-preferences.toml` 中的原生
+`tui.status_line`。当前配置覆盖 model、context、Git branch、session token totals
+和 weekly limit；没有已验证的原生成本项时不模拟美元金额。
 
 ## 操作手册
 
@@ -364,5 +383,7 @@ Codex 0.144.1 上的实测中，`/hooks` 正确显示一个待审查 SessionStar
 - Codex 配置参考：<https://developers.openai.com/codex/config-reference#configtoml>
 - Codex 配置样例：<https://developers.openai.com/codex/config-sample>
 - Codex `AGENTS.md` 指导：<https://developers.openai.com/codex/concepts/customization#agents-guidance>
+- Codex `tui.status_line` 配置参考：<https://learn.chatgpt.com/docs/config-file/config-reference>
+- Claude Code status line：<https://code.claude.com/docs/en/statusline>
 - 本次协议核验源码：<https://github.com/openai/codex/blob/rust-v0.144.1/codex-rs/hooks/src/events/session_start.rs>
 - 决策来源：`feedback-register.md` 的 W-R28

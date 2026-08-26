@@ -52,10 +52,10 @@ not be copied into workspace-meta or a project.
 ## Managed Boundary
 
 Workspace-meta owns this marked block, its marked Codex hook block, the shared
-rules, and its dedicated Claude SessionStart group. Text outside markers, model
-selection, project/hook trust, credentials, history, caches, databases,
-installed plugins/system skills, and executable approval history remain
-host-local.
+rules, and its dedicated Claude SessionStart group and marker-bearing status
+line. Text outside markers, model selection, project/hook trust, credentials,
+history, caches, databases, installed plugins/system skills, and executable
+approval history remain host-local.
 
 After workspace-meta governance changes, leave the repository reviewable and
 report uncommitted/unpushed state.
