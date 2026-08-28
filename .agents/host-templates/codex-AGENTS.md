@@ -30,6 +30,7 @@ owners below.
 | merge/integration or post-integration handling | `~/workspace/.agents/rules/authorization.md` + `~/workspace/.agents/rules/git.md` + `~/workspace/.agents/rules/git-integration.md` |
 | rewrite/discard/force/delete/amend/recovery | `~/workspace/.agents/rules/authorization.md` + `~/workspace/.agents/rules/git.md` + `~/workspace/.agents/rules/git-recovery.md` |
 | non-trivial planning, evidence, approval scope, deviation, handoff | `~/workspace/.agents/rules/planning.md` |
+| implementation, configuration, refactoring, or artifact-structure change | `~/workspace/.agents/rules/implementation.md` |
 | change verification or blocked check | `~/workspace/.agents/rules/verification.md` |
 | review, audit, diagnosis, remediation assessment | `~/workspace/.agents/rules/review.md` |
 | capability selection or method failure | `~/workspace/.agents/rules/capabilities.md` + `~/workspace/.agents/rules/codex-runtime.md` when Codex mechanics are needed |

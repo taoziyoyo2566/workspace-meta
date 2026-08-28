@@ -21,6 +21,8 @@
 !docs/reviews/refactor-codex-rules-mece/*.md
 !docs/reviews/refactor-codex-best-practices/
 !docs/reviews/refactor-codex-best-practices/*.md
+!docs/reviews/refactor-implementation-shape/
+!docs/reviews/refactor-implementation-shape/*.md
 !docs/reviews/project-memory-governance/
 !docs/reviews/project-memory-governance/*.md
 !.githooks/
@@ -47,6 +49,7 @@
 !.agents/rules/git-integration.md
 !.agents/rules/git-publication.md
 !.agents/rules/git-recovery.md
+!.agents/rules/implementation.md
 !.agents/rules/planning.md
 !.agents/rules/review.md
 !.agents/rules/rule-authoring.md

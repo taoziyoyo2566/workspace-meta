@@ -8,6 +8,13 @@ Independent project repositories belong under `~/workspace/projects/<project>/`.
 They remain separate Git roots; the workspace-meta root is reserved for shared
 governance and its own review artifacts.
 
+## Scope Discipline
+
+- Default to the nearest Git root; workspace-meta work covers only this root.
+- Treat nested project repositories and source examples as out of scope unless
+  the user explicitly names them. They may inform a portable rule, but never
+  expand this repository's implementation, verification, or commit scope.
+
 ## Before Editing
 
 - Read `README.md` and, for agent configuration work,

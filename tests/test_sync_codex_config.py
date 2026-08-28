@@ -420,6 +420,7 @@ class CodexConfigSyncTests(unittest.TestCase):
             "git-integration.md",
             "git-publication.md",
             "git-recovery.md",
+            "implementation.md",
             "planning.md",
             "review.md",
             "rule-authoring.md",
@@ -521,6 +522,7 @@ class CodexConfigSyncTests(unittest.TestCase):
             "git-integration.md",
             "git-publication.md",
             "git-recovery.md",
+            "implementation.md",
             "planning.md",
             "review.md",
             "rule-authoring.md",
@@ -543,6 +545,7 @@ class CodexConfigSyncTests(unittest.TestCase):
             "git-integration.md",
             "git-publication.md",
             "git-recovery.md",
+            "implementation.md",
             "planning.md",
             "review.md",
             "rule-authoring.md",
@@ -565,6 +568,25 @@ class CodexConfigSyncTests(unittest.TestCase):
             "## Direct Task Routing", 1
         )[0]
         self.assertEqual(codex_floor, claude_floor)
+
+    def test_implementation_shape_has_one_owner_and_symmetric_route(self) -> None:
+        rule = (self.rules_dir / "implementation.md").read_text()
+
+        self.assertIn("## Ownership", rule)
+        self.assertIn("## One Fact, One Canonical Owner", rule)
+        self.assertIn("## Write Durable Comments", rule)
+        self.assertIn("## Test Contracts, Not Incidental Text", rule)
+        for adapter in (
+            self.agents_template.read_text(),
+            (ROOT / "CLAUDE.md").read_text(),
+        ):
+            route = next(
+                line
+                for line in adapter.splitlines()
+                if line.startswith("| implementation, configuration")
+            )
+            self.assertIn("artifact-structure", route)
+            self.assertIn("implementation.md", route)
 
     def test_git_modules_have_task_shaped_load_profiles(self) -> None:
         inspection = (self.rules_dir / "git.md").read_text()
