@@ -414,6 +414,7 @@ class CodexConfigSyncTests(unittest.TestCase):
             "authorization.md",
             "capabilities.md",
             "codex-runtime.md",
+            "documentation.md",
             "environment-truth.md",
             "git.md",
             "git-branches.md",
@@ -516,6 +517,7 @@ class CodexConfigSyncTests(unittest.TestCase):
             "authorization.md",
             "capabilities.md",
             "codex-runtime.md",
+            "documentation.md",
             "environment-truth.md",
             "git.md",
             "git-branches.md",
@@ -539,6 +541,7 @@ class CodexConfigSyncTests(unittest.TestCase):
         portable = (
             "authorization.md",
             "capabilities.md",
+            "documentation.md",
             "environment-truth.md",
             "git.md",
             "git-branches.md",
@@ -587,6 +590,36 @@ class CodexConfigSyncTests(unittest.TestCase):
             )
             self.assertIn("artifact-structure", route)
             self.assertIn("implementation.md", route)
+
+    def test_documentation_governance_has_one_owner_and_symmetric_route(self) -> None:
+        rule = (self.rules_dir / "documentation.md").read_text()
+        feedback = (ROOT / "feedback-register.md").read_text()
+
+        self.assertIn("## Ownership", rule)
+        self.assertIn("## Route Content By Role", rule)
+        self.assertIn("## Keep Truth Classes Explicit", rule)
+        self.assertIn("## Migrate Without Dual Authority", rule)
+        self.assertIn("Compatibility pointers are temporary migration artifacts", rule)
+        self.assertIn("project-owned executable gate", rule)
+        for adapter in (
+            self.agents_template.read_text(),
+            (ROOT / "CLAUDE.md").read_text(),
+        ):
+            route = next(
+                line
+                for line in adapter.splitlines()
+                if line.startswith("| project documentation authoring")
+            )
+            self.assertIn("lifecycle governance", route)
+            self.assertIn("documentation.md", route)
+
+        owner_row = next(
+            line
+            for line in feedback.splitlines()
+            if line.startswith("| `.agents/rules/documentation.md`")
+        )
+        self.assertIn("W-R38", owner_row)
+        self.assertIn("W-R39", owner_row)
 
     def test_git_modules_have_task_shaped_load_profiles(self) -> None:
         inspection = (self.rules_dir / "git.md").read_text()

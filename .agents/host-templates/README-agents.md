@@ -31,6 +31,7 @@ configuration. It does not mirror either home directory.
 | recovery/destructive Git | `git-recovery.md` | stricter ref/archive tooling |
 | planning/handoff | `planning.md` | artifact schema, sources, branch/live gates |
 | implementation shape | `implementation.md` | language/framework conventions and architecture |
+| documentation information architecture | `documentation.md` | project entry points, topic map, commands, domain constraints |
 | verification | `verification.md` | commands, environments, thresholds, CI |
 | review | `review.md` | domain scenarios, baseline, risk refinements |
 | capability selection | `capabilities.md` | project toolchain and adapters |

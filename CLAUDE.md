@@ -30,6 +30,7 @@ constraints.
 | rewrite/discard/force/delete/amend/recovery | `.agents/rules/authorization.md` + `.agents/rules/git.md` + `.agents/rules/git-recovery.md` |
 | non-trivial planning, evidence, approval scope, deviation, handoff | `.agents/rules/planning.md` |
 | implementation, configuration, refactoring, or artifact-structure change | `.agents/rules/implementation.md` |
+| project documentation authoring, restructuring, or lifecycle governance | `.agents/rules/documentation.md` |
 | change verification or blocked check | `.agents/rules/verification.md` |
 | review, audit, diagnosis, remediation assessment | `.agents/rules/review.md` |
 | capability selection or method failure | `.agents/rules/capabilities.md`; use only Claude mechanics actually available in the session |

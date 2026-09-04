@@ -23,6 +23,8 @@
 !docs/reviews/refactor-codex-best-practices/*.md
 !docs/reviews/refactor-implementation-shape/
 !docs/reviews/refactor-implementation-shape/*.md
+!docs/reviews/refactor-documentation-governance/
+!docs/reviews/refactor-documentation-governance/*.md
 !docs/reviews/project-memory-governance/
 !docs/reviews/project-memory-governance/*.md
 !.githooks/
@@ -43,6 +45,7 @@
 !.agents/rules/authorization.md
 !.agents/rules/capabilities.md
 !.agents/rules/codex-runtime.md
+!.agents/rules/documentation.md
 !.agents/rules/environment-truth.md
 !.agents/rules/git.md
 !.agents/rules/git-branches.md

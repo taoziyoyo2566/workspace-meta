@@ -44,6 +44,7 @@ agent-specific 适配器中：
 | 恢复与改写 | `.agents/rules/git-recovery.md` | 更严格的项目恢复限制 |
 | 计划与证据 | `.agents/rules/planning.md` | 文件结构、项目来源、命令 |
 | 实现形态 | `.agents/rules/implementation.md` | 语言/框架规约与项目架构 |
+| 文档信息架构 | `.agents/rules/documentation.md` | 项目入口、主题映射、命令与领域约束 |
 | 验证 | `.agents/rules/verification.md` | 项目测试矩阵和功能入口 |
 | 审查 | `.agents/rules/review.md` | 领域场景和架构基线 |
 | 能力选择 | `.agents/rules/capabilities.md` | 项目工具链 |
