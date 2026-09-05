@@ -48,6 +48,7 @@ with a named owner rather than recursive activation/closeout branches.
 ## Retirement Boundary
 
 Branch/worktree retirement or archival is a separate reviewed action after
-integration/cancellation. The original branch contract and integration
-authorization do not pre-authorize cleanup. Apply the project's archive,
-retention, and topology rules plus `git-recovery.md` when deletion is involved.
+integration/cancellation. The branch action review, any durable workstream
+contract, and integration authorization do not pre-authorize cleanup. Apply the
+project's archive, retention, and topology rules plus `git-recovery.md` when
+deletion is involved.

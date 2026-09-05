@@ -38,7 +38,7 @@ agent-specific 适配器中：
 |---|---|---|
 | 请求与权限 | `.agents/rules/authorization.md` | live/external 风险与项目字段 |
 | Git 检查 | `.agents/rules/git.md` | trunk 名称、CI/检查映射 |
-| 分支与 worktree | `.agents/rules/git-branches.md` | 分支拓扑、契约存放位置、归档工具 |
+| 分支与 worktree | `.agents/rules/git-branches.md` | 分支拓扑、目标、归档工具，以及可选的长期契约载体/schema |
 | 发布 | `.agents/rules/git-publication.md` | 提交格式、PR 模板、项目检查 |
 | 集成 | `.agents/rules/git-integration.md` | 合并策略、受保护分支和 CI 门禁 |
 | 恢复与改写 | `.agents/rules/git-recovery.md` | 更严格的项目恢复限制 |

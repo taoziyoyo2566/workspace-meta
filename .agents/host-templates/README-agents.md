@@ -25,7 +25,7 @@ configuration. It does not mirror either home directory.
 |---|---|---|
 | authorization | `authorization.md` | live/external constraints and risk fields |
 | Git inspection/state | `git.md` | canonical remote and project facts |
-| branch/worktree/stash | `git-branches.md` | topology, lifecycle, persistence, target |
+| branch/worktree/stash | `git-branches.md` | topology, target, and optional durable contract carrier/schema |
 | publication | `git-publication.md` | message format, checks, CI, PR fields |
 | integration/retirement | `git-integration.md` | routes, topology, release/archive policy |
 | recovery/destructive Git | `git-recovery.md` | stricter ref/archive tooling |

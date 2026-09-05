@@ -630,7 +630,42 @@ class CodexConfigSyncTests(unittest.TestCase):
 
         self.assertNotIn("gh pr create", inspection)
         self.assertNotIn("force-with-lease", inspection)
-        self.assertIn("Required Branch Task Contract", branches)
+        normalized_branches = " ".join(branches.split())
+        self.assertIn("Branch Action Review", branches)
+        self.assertIn("Conditional Durable Workstream Contract", branches)
+        self.assertIn("Content Non-Interference", branches)
+        self.assertIn(
+            "transaction context, not repository content", normalized_branches
+        )
+        self.assertIn(
+            "Git refs and later reviewed commits are the normal durable evidence",
+            normalized_branches,
+        )
+        self.assertIn(
+            "local diagnostic evidence, not portable handoff state",
+            normalized_branches,
+        )
+        self.assertIn(
+            "does not authorize a repository-content change", normalized_branches
+        )
+        self.assertIn("post-action diff must match", normalized_branches)
+        self.assertIn(
+            "only when the project names a canonical carrier and schema and at "
+            "least one of these conditions is true",
+            normalized_branches,
+        )
+        self.assertNotIn("refs, worktree state, reflogs", normalized_branches)
+        self.assertNotIn(
+            "reviewed contract is the first file write", normalized_branches
+        )
+        self.assertNotIn("branch exists, contract missing", normalized_branches)
+        feedback = (ROOT / "feedback-register.md").read_text()
+        owner_row = next(
+            line
+            for line in feedback.splitlines()
+            if line.startswith("| `.agents/rules/git-branches.md`")
+        )
+        self.assertIn("W-R40", owner_row)
         self.assertNotIn("gh pr create", branches)
         self.assertIn("gh pr create", publication)
         self.assertIn("Terminal Evidence", integration)
