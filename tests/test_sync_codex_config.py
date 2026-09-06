@@ -312,9 +312,14 @@ class CodexConfigSyncTests(unittest.TestCase):
             check=True,
         )
 
+        stdout = StringIO()
         with mock.patch.object(SYNC, "parse_args", return_value=args):
-            self.assertEqual(SYNC.main(), 1)
+            # `main` reports each managed target on stdout. Capture it so a test
+            # run cannot be misread as having just rewritten this host's config.
+            with redirect_stdout(stdout):
+                self.assertEqual(SYNC.main(), 1)
 
+        self.assertIn("Codex AGENTS.md:", stdout.getvalue())
         self.assertFalse(agents.exists())
         self.assertFalse(config.exists())
         self.assertEqual(settings.read_text(), "{}")
@@ -571,6 +576,8 @@ class CodexConfigSyncTests(unittest.TestCase):
             "## Direct Task Routing", 1
         )[0]
         self.assertEqual(codex_floor, claude_floor)
+        self.assertIn("Canonical sources:", codex_floor)
+        self.assertIn("switch away from", codex_floor)
 
     def test_implementation_shape_has_one_owner_and_symmetric_route(self) -> None:
         rule = (self.rules_dir / "implementation.md").read_text()
@@ -593,6 +600,7 @@ class CodexConfigSyncTests(unittest.TestCase):
 
     def test_documentation_governance_has_one_owner_and_symmetric_route(self) -> None:
         rule = (self.rules_dir / "documentation.md").read_text()
+        normalized_rule = " ".join(rule.split())
         feedback = (ROOT / "feedback-register.md").read_text()
 
         self.assertIn("## Ownership", rule)
@@ -601,6 +609,11 @@ class CodexConfigSyncTests(unittest.TestCase):
         self.assertIn("## Migrate Without Dual Authority", rule)
         self.assertIn("Compatibility pointers are temporary migration artifacts", rule)
         self.assertIn("project-owned executable gate", rule)
+        self.assertIn("before substantive project work", normalized_rule)
+        self.assertIn(
+            "including read-only review or any host/external action", normalized_rule
+        )
+        self.assertNotIn("before the first write", normalized_rule)
         for adapter in (
             self.agents_template.read_text(),
             (ROOT / "CLAUDE.md").read_text(),
@@ -620,6 +633,7 @@ class CodexConfigSyncTests(unittest.TestCase):
         )
         self.assertIn("W-R38", owner_row)
         self.assertIn("W-R39", owner_row)
+        self.assertIn("W-R42", owner_row)
 
     def test_git_modules_have_task_shaped_load_profiles(self) -> None:
         inspection = (self.rules_dir / "git.md").read_text()

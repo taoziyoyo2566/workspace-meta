@@ -1,4 +1,4 @@
-.PHONY: bootstrap agent-sync-check env-probe env-probe-check test
+.PHONY: bootstrap agent-sync-check docs-check env-probe env-probe-check test
 
 # Python 3.11+ (tomllib) is required to run the sync script and tests. Discover one
 # at parse time so a macOS system python3 (often 3.9 without tomllib) can't shadow a
@@ -26,5 +26,8 @@ env-probe: ## Probe this host's capabilities into .agents/env/<host>.yml (rule: 
 env-probe-check: ## Fail if this host's capability registry is missing or stale (TTL 7d; override ENV_PROBE_TTL_DAYS=N)
 	@bash scripts/env_probe.sh --check
 
-test: ## Run workspace-meta regression tests
+docs-check: ## Validate workspace-meta documentation structure and routes
+	@"$(PYTHON)" scripts/check_documentation.py
+
+test: docs-check ## Run workspace-meta regression tests
 	@"$(PYTHON)" -m unittest discover -s tests -v

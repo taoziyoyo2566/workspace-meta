@@ -8,8 +8,11 @@ owners below.
 
 ## Safety Floor
 
+Canonical sources: `git.md`, `authorization.md`, `git-publication.md`,
+`secrets.md`, `environment-truth.md`, and `verification.md`.
+
 - Preserve unrelated and unrecognized work; never reset, clean, overwrite,
-  move, hide, or delete it for convenience.
+  switch away from, move, hide, or delete it for convenience.
 - Working-tree edit authority does not include Git publication/integration,
   external writes, deployments, privilege/host changes, or live mutation.
 - A runtime permission/escalation response is technical permission only.

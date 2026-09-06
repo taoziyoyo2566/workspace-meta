@@ -7,8 +7,11 @@ constraints.
 
 ## Safety Floor
 
+Canonical sources: `git.md`, `authorization.md`, `git-publication.md`,
+`secrets.md`, `environment-truth.md`, and `verification.md`.
+
 - Preserve unrelated and unrecognized work; never reset, clean, overwrite,
-  move, hide, or delete it for convenience.
+  switch away from, move, hide, or delete it for convenience.
 - Working-tree edit authority does not include Git publication/integration,
   external writes, deployments, privilege/host changes, or live mutation.
 - A runtime permission/escalation response is technical permission only.
@@ -42,6 +45,12 @@ Read only the task-shaped owners. Project branch topology, artifact naming,
 commands, tests, live schemas, secret locations, and architecture remain with
 the project. Instruction precedence and repository factual truth are separate;
 report conflicts rather than inventing a linear order that mixes them.
+
+Claude loads `CLAUDE.md`, not `AGENTS.md`. A project whose agent instructions
+live only in `AGENTS.md` is therefore absent from this session's context. When
+working inside such a project, read its `AGENTS.md` before substantive project
+work, including read-only review or any host/external action, and report the
+missing importing adapter; `.agents/rules/documentation.md` owns the requirement.
 
 ## Handoff And Feedback
 

@@ -25,12 +25,15 @@
 !docs/reviews/refactor-implementation-shape/*.md
 !docs/reviews/refactor-documentation-governance/
 !docs/reviews/refactor-documentation-governance/*.md
+!docs/reviews/feature-project-agent-entrypoints/
+!docs/reviews/feature-project-agent-entrypoints/*.md
 !docs/reviews/project-memory-governance/
 !docs/reviews/project-memory-governance/*.md
 !.githooks/
 !.githooks/pre-commit
 !scripts/
 !scripts/bootstrap-local.sh
+!scripts/check_documentation.py
 !scripts/sync_codex_config.py
 !scripts/workspace_status.py
 !scripts/claude_status_line.py
@@ -40,6 +43,7 @@
 !tests/test_sync_codex_config.py
 !tests/test_workspace_status.py
 !tests/test_claude_status_line.py
+!tests/test_governance_docs.py
 !.agents/
 !.agents/rules/
 !.agents/rules/authorization.md

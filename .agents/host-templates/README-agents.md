@@ -17,7 +17,7 @@ configuration. It does not mirror either home directory.
 | `scripts/claude_status_line.py` | workspace-meta | render Claude's command status line from documented stdin fields; Codex uses native `tui.status_line` items |
 | model/reasoning defaults, credentials, trust, history data, caches, and unlisted preferences | host/user | never synchronized |
 | `~/.codex/rules/*.rules` | host executable authorization | never synchronized |
-| project agent/governance files | project repository | project facts and deltas travel with that project |
+| project agent/governance files | project repository | project facts and deltas travel with that project; every runtime the project is operated with needs an entry file it loads, importing one canonical owner |
 
 ## Portable Rule Owners
 

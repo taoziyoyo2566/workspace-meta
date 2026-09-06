@@ -5,8 +5,8 @@ description: Probe this host's environment capabilities into its local workspace
 
 # env-sync — refresh the local per-host capability registry
 
-Workspace-wide host probe (hoisted from per-project repos 2026-07-11). One local
-registry under `~/workspace/.agents/env/` serves every project on this machine.
+Workspace-wide host probe. One local registry under `~/workspace/.agents/env/`
+serves every project on this machine.
 Generated YAML remains Git-ignored and is never shared to another machine.
 Behavior rule: `~/workspace/.agents/rules/environment-truth.md` (probe, don't
 recall).

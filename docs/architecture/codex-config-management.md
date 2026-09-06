@@ -28,125 +28,27 @@ workspace-meta 所有的配置面；用户目录中其余内容始终由当前�
 工作区根目录只承载 workspace-meta 治理文件；独立项目 checkout 放在
 `~/workspace/projects/<project>/`，并保留各自最近的 `.git` 根目录。
 
-## 规则所有权
+## 规则与权限分层
 
-两个 agent 都采用“紧凑常驻适配器 + 按任务读取共享模块”。共享行为使用
-agent-neutral 文件名；只有 sandbox、工具发现和配置表面等运行机制留在
-agent-specific 适配器中：
+两个 agent 都采用“紧凑常驻适配器 + 按任务读取共享模块”。共享行为由
+`.agents/rules/` 下的 agent-neutral 文件负责；Codex 的 sandbox、工具发现和
+配置表面等运行机制由 `codex-runtime.md` 负责。Claude 的运行时机制只留在其
+适配器或实际客户端配置中。
 
-| 规则域 | 工作区级唯一所有者 | 项目级只允许补充 |
-|---|---|---|
-| 请求与权限 | `.agents/rules/authorization.md` | live/external 风险与项目字段 |
-| Git 检查 | `.agents/rules/git.md` | trunk 名称、CI/检查映射 |
-| 分支与 worktree | `.agents/rules/git-branches.md` | 分支拓扑、目标、归档工具，以及可选的长期契约载体/schema |
-| 发布 | `.agents/rules/git-publication.md` | 提交格式、PR 模板、项目检查 |
-| 集成 | `.agents/rules/git-integration.md` | 合并策略、受保护分支和 CI 门禁 |
-| 恢复与改写 | `.agents/rules/git-recovery.md` | 更严格的项目恢复限制 |
-| 计划与证据 | `.agents/rules/planning.md` | 文件结构、项目来源、命令 |
-| 实现形态 | `.agents/rules/implementation.md` | 语言/框架规约与项目架构 |
-| 文档信息架构 | `.agents/rules/documentation.md` | 项目入口、主题映射、命令与领域约束 |
-| 验证 | `.agents/rules/verification.md` | 项目测试矩阵和功能入口 |
-| 审查 | `.agents/rules/review.md` | 领域场景和架构基线 |
-| 能力选择 | `.agents/rules/capabilities.md` | 项目工具链 |
-| secrets | `.agents/rules/secrets.md` | 存放位置、消费者、轮换与校验 |
-| 环境事实 | `.agents/rules/environment-truth.md` | 项目命令映射与环境覆盖 |
-| 规则编写 | `.agents/rules/rule-authoring.md` | 项目反馈与本地路由 |
+规则域、唯一 owner 和项目允许补充的内容以
+[Agent 配置与规则所有权矩阵](../../.agents/host-templates/README-agents.md) 为准。
+本文只解释分层关系，不复制矩阵、任务路由或事务步骤。
 
-`CLAUDE.md` 与 `.agents/host-templates/codex-AGENTS.md` 是对称的薄适配器。
-Codex 独有的 sandbox、escalation、execpolicy、延迟工具发现和配置所有权放在
-`.agents/rules/codex-runtime.md`；Claude 的工具机制只在实际可用的会话能力中
-处理，不另建一套共享行为副本。
+语义授权与技术执行权限是两层独立机制：
 
-项目 `AGENTS.md`、`CLAUDE.md`、嵌套路由和 agent-specific 文件只保存更窄的
-事实、约束和入口。引用共享规则不算重复，但重新定义同一授权、事务或方法会
-形成第二个所有者。
+- [共享授权规则](../../.agents/rules/authorization.md) 定义用户意图和受保护动作；
+- [Codex 运行时规则](../../.agents/rules/codex-runtime.md) 定义 sandbox、escalation
+  和 host-local execpolicy 的技术边界；
+- Git 检查与动作流程由 `.agents/rules/git*.md` 中按任务加载的 owner 定义。
 
-### Git 按任务加载
-
-Git 不再由一个大文件承担所有场景。只读任务加载基础检查模块；受保护任务
-额外加载通用授权模块和一个动作模块：
-
-| 任务 | 加载 |
-|---|---|
-| 只读检查/新鲜度 | `git.md` |
-| 分支、worktree 或 stash | `authorization.md` + `git.md` + `git-branches.md` |
-| stage、commit、push 或创建 PR | `authorization.md` + `git.md` + `git-publication.md` |
-| merge、集成或集成后核验 | `authorization.md` + `git.md` + `git-integration.md` |
-| rewrite、discard、force、delete、amend 或恢复 | `authorization.md` + `git.md` + `git-recovery.md` |
-
-这种拆分按触发条件直接路由，不依赖执行者先读一个总目录再追索引用。各模块的
-实际行数和词数由 Phase 1 验证记录量化；若某个任务画像仍超预算，再按可观察
-触发条件拆分。
-
-## 权限策略
-
-权限分为两层，不能用一个文件解决：
-
-1. `.agents/host-templates/codex-AGENTS.md` 保存 Codex 常驻路由和安全底线；
-   `.agents/rules/authorization.md` 保存两个 agent 共用的完整行为意图，
-   `.agents/rules/codex-runtime.md` 保存 Codex 的技术执行边界。
-2. `~/.codex/rules/*.rules` 保存当前主机可执行的命令决策。它只决定命令是否
-   可以在 sandbox 外运行，不管理原生 Web Search，也不能判断任意脚本是否
-   “无副作用”。
-
-`~/.codex/rules/` 本身就是类似 `config.d` 的 drop-in 目录。Codex 启动时同时
-加载其中所有 `.rules` 文件；文件名和加载顺序不表示优先级，多个规则匹配时
-使用最严格结果。当前主机使用独立的 `permissions.rules` 补充 Codex 自动生成
-的 `default.rules`：前者表达人工维护的 allow/prompt 边界，后者继续积累历史
-批准。因此 `permissions.rules` 中的 `prompt` 可以覆盖 `default.rules` 里旧的
-`git commit` 或 `git push` allow。
-
-人工维护的规则只为边界明确的检查操作提供 `allow`，例如本地状态读取、有限的
-Git 状态查询和高层只读 GitHub 查询。`rg`、`sed`、工作区内 `cp`、Git
-`diff/log/show`、解释器和构建工具通常保持 unmatched，让现有 sandbox 根据实际
-目标执行；不能因为可执行文件存在可变更模式就整体 prompt。
-
-需要保持 prompt 的操作包括 Git commit/push/merge/rebase/reset、shell 网络客户
-端、远程执行/传输、远端 API 写、部署、提权、容器/集群控制、主机包/服务变更，
-以及真正启动第二个 Codex agent/session 的子命令。`codex execpolicy`、help、
-version、doctor、feature/MCP/plugin 的只读列表不应被“nested Codex”通配规则
-拦截。不要用 `bash`、Python、Node 等解释器的通配 allow 来模拟“所有安全命令”，
-因为前缀规则无法审查其 payload。
-
-本地规则可这样验证，不需要真正执行目标命令：
-
-```bash
-codex execpolicy check --pretty \
-  --rules ~/.codex/rules/default.rules \
-  --rules ~/.codex/rules/permissions.rules \
-  -- git push origin main
-```
-
-原生搜索不会经过 execpolicy；它应按托管指导直接使用，不做逐网站确认。
-
-语义授权和技术权限保持分离。凡是需要提出、要求用户执行或请求用户同意的受保护
-操作，通用授权 owner 要求先说明行动、原因、目标范围、预期效果、风险/恢复、排除
-项、检查缺口和本次同意的边界，再展示精确命令或请求。Codex 的 sandbox/execpolicy
-提示即使只显示命令，也不能替代这段语义说明；普通只读检查和已经授权范围内的
-工作树编辑不应因此重复询问。
-
-### Git 发布语义门禁
-
-execpolicy 的 `prompt` 只能表达“此命令越过技术边界前要提示”，无法判断聊天中
-是否已经授权。`authorization.md` 负责所有受保护操作的 action brief，Git
-模块负责各自的事务检查点；常驻 AGENTS 负责把 Git 任务路由到授权模块和对应动作模块：
-
-1. Codex 完成已授权的修改和校验后，先给出修改路径、结果、校验/缺口、排除项和
-   分支/脏状态；用户先验收内容。
-2. 内容验收后，Codex 先给出 authorization brief，再给出一个完整、可复制、按执行顺序排列的命令包，按适用范围
-   包含 exact-path `git add`、一次 `git commit`、一次 `git push` 和
-   `gh pr create`，并附带完整 message、remote/ref/range、检查结果和 PR
-   base/head。
-
-用户可用普通自然语言确认由 Codex 顺序执行一次未变化的命令包，也可自行执行其中
-部分或全部命令并回复完成。后一种情况下，Codex 只读核验实际 commit、远端 ref 和
-PR；完成报告不是让 Codex 重复执行的授权。路径/内容/message/ref/range/检查状态/
-PR 目标或命令改变后，旧授权失效，需要新的命令包。命令包中前一步引起的预期状态
-变化（例如 commit 产生随后要 push 的 commit）不算漂移。
-
-merge/PR merge、冲突解决、强推、ref 删除、分支/worktree 清理、部署和 live
-operation 仍是独立事务。执行环境的 Yes/Allow 只解决技术权限，不能替代上述内容
-验收或命令包审核。
+`CLAUDE.md` 与 `.agents/host-templates/codex-AGENTS.md` 负责把可观察的任务触发器
+路由到这些 owner。项目 entry file 只增加项目事实和更窄约束；共享规则的具体
+步骤不在架构说明或项目适配器中维护副本。
 
 ## 仓库地图
 
@@ -162,10 +64,12 @@ operation 仍是独立事务。执行环境的 Yes/Allow 只解决技术权限�
 | `.agents/host-templates/README-agents.md` | 共享核心、适配器和主机状态所有权矩阵 |
 | `scripts/workspace_status.py` | Claude/Codex 共用的状态评估策略 |
 | `scripts/claude_status_line.py` | 从 Claude 官方 stdin payload 渲染交互式状态栏 |
+| `scripts/check_documentation.py` | 校验入口、owner 路由、链接、truth lifecycle 和 runbook 结构 |
 | `scripts/sync_codex_config.py` | 渲染、迁移、校验并写入三个主机目标 |
 | `scripts/bootstrap-local.sh` | 一台机器的安装入口 |
 | `tests/test_workspace_status.py` | 状态顺序、离线降噪和输出契约测试 |
 | `tests/test_claude_status_line.py` | Claude 状态栏字段、颜色、格式与失败降噪测试 |
+| `tests/test_governance_docs.py` | 文档闸门的仓库正例与关键负向场景 |
 | `tests/test_sync_codex_config.py` | 安装、迁移、保留、拒绝和幂等测试 |
 | `docs/reviews/` | 非小型变更的计划与每轮 changelog |
 | `projects/<project>/` | 独立项目仓库；不属于 workspace-meta 的跟踪范围 |
@@ -217,11 +121,11 @@ Codex 可能把 `[hooks.state]` 写入 inline managed block 的结束标记之�
 会把这段主机状态移到 managed marker 之外并保留它，避免每次检查都产生漂移或
 意外重置 hook trust。
 
-当前官方 hooks 文档明确说明：`SessionStart` 的 JSON `systemMessage` 会显示为
-UI 或事件流 warning，而纯文本 stdout 会进入额外 developer context。Codex
-0.144.1 的对应实现也与此一致，可查看该版本源码
-`codex-rs/hooks/src/events/session_start.rs`。这证实了本项目统一使用 JSON 的
-协议选择，不再只是由配置 schema 推断。
+当前官方 hooks 文档定义 `SessionStart` 的 JSON `systemMessage` 为 UI 或事件流
+warning，而纯文本 stdout 会进入额外 developer context。本项目因此统一使用
+JSON 协议。版本化源码核验和 UI 探测属于 dated evidence，保存在
+[hook 同步验证记录](../reviews/refactor-codex-sync/round1-2026-07-11.changelog.md)，
+不嵌入当前架构说明。
 
 ## 同步与迁移
 
@@ -277,106 +181,26 @@ UI 或事件流 warning，而纯文本 stdout 会进入额外 developer context�
 session 的 JSON 送到 stdin；Codex 配置内建 footer item 的有序列表。这里共享的
 是展示意图而不是脚本接口。
 
-Claude renderer 只使用官方 payload 中的 `workspace.current_dir`、
-`model.display_name`、`context_window.used_percentage`、
-`context_window.current_usage` 和 `cost.total_cost_usd`。它不再按 cwd 猜 session，
-不扫描私有 transcript，也不写死某个模型的价格。token 分项是当前上下文/最近
-响应数据；美元金额是 Claude 客户端给出的 session 估算值。
+Claude renderer 只读官方 status line payload 送进 stdin 的字段：不按 cwd 猜
+session，不扫描私有 transcript，也不写死某个模型的价格。具体消费哪些字段
+以 `scripts/claude_status_line.py` 为准，本文不维护第二份清单。token 分项
+是当前上下文/最近响应数据；美元金额是 Claude 客户端给出的 session 估算
+值；额度窗口按剩余百分比加重置倒计时显示，payload 缺少该数据时整段省略。
 
 Codex 继续使用 `.agents/host-templates/codex-preferences.toml` 中的原生
 `tui.status_line`。当前配置覆盖 model、context、Git branch、session token totals
 和 weekly limit；没有已验证的原生成本项时不模拟美元金额。
 
-## 操作手册
+## 运维与治理入口
 
-新 VPS 的完整安装、主机策略选择、配置生效和恢复流程见
-[`docs/runbooks/new-vps.md`](../runbooks/new-vps.md)。本节只保留架构相关的
-最小操作入口。
+安装、升级、生效、恢复和故障排查由
+[新 VPS runbook](../runbooks/new-vps.md) 负责；本项目的开发与交付约束由根目录
+`AGENTS.md` 负责。本文不维护操作步骤副本。
 
-### 新机器
-
-```bash
-git clone https://github.com/taoziyoyo2566/workspace-meta.git ~/workspace
-make -C ~/workspace bootstrap
-```
-
-然后在 Codex 中运行 `/hooks`，审查并信任 workspace-meta SessionStart hook。
-
-### 日常升级
-
-```bash
-git -C ~/workspace fetch origin
-make -C ~/workspace agent-sync-check
-make -C ~/workspace bootstrap
-```
-
-先检查 ahead/behind、dirty state 和待引入提交；确认更新方向后才用项目允许的
-方式更新工作区。SessionStart 和日常入口都不自动 pull、merge 或 rebase。
-`agent-sync-check` 只报告漂移，返回 0 表示三个托管目标（包括 Codex hook 和
-声明偏好字段）均已收敛；非零表示存在漂移或输入无效。`bootstrap` 才会写主机
-配置。
-
-### 修改本项目
-
-```bash
-make test
-bash -n scripts/*.sh .githooks/pre-commit
-PYTHON_BIN="$(./scripts/find_python.sh)" && "$PYTHON_BIN" -m py_compile scripts/*.py tests/*.py
-git diff --check
-```
-
-非小型治理变更还需在 `docs/reviews/<topic>/` 写 plan 和 round changelog。
-除非用户明确要求，不自动 commit 或 push；交付时必须报告未提交/未推送状态。
-
-## 故障排查
-
-### `agent-sync-check` 返回非零
-
-先阅读三行目标状态。若只是 `installed or updated`，运行 `make bootstrap`。
-若提示 invalid JSON/TOML，先修复对应主机文件语法；同步器不会覆盖无效输入。
-
-### 提示 mixed hook group
-
-打开对应的 Claude JSON 或 Codex TOML，把 workspace-meta command 与用户 command
-拆成不同 SessionStart group，然后重新运行 bootstrap。不要删除无法识别的用户
-handler 来换取通过。
-
-### Codex hook 不触发
-
-运行 `/hooks` 检查新命令是否已信任。每次状态评估器 hash 改变都需要重新审查。
-同时检查 `~/.codex/AGENTS.override.md`；非空 override 会让全局 `AGENTS.md` 基线
-失效，但不会影响 hook 本身。
-
-不要把 `--dangerously-bypass-hook-trust` 当作 UI 验收的替代。2026-07-11 在
-Codex 0.144.1 上的实测中，`/hooks` 正确显示一个待审查 SessionStart hook，
-但一次性 bypass 会话没有在 TUI 或 `exec --json` 事件流中暴露该 hook 的
-`systemMessage`，尽管同一安装命令直接执行会输出正确 JSON。最终 UI smoke
-应在操作者通过 `/hooks` 持久信任后，用一个全新会话完成。
-
-### 每次离线都提示
-
-检查 `~/.cache/workspace-meta/status.json` 是否可写、系统时间是否合理。远端失败
-默认 24 小时只提示一次；其他持续状态按设计每次提示。
-
-### Python 不满足要求
-
-安装器要求 Python 3.11+，因为使用标准库 `tomllib` 校验完整 Codex 配置。前置
-条件不满足时 bootstrap 会跳过 agent 同步并明确警告，不会退化为未经校验的
-字符串追加。
-
-## 明确不做的事
-
-- 不同步 `~/.codex/rules/default.rules`、`auth.json`、数据库、日志或历史数据；
-  只按显式 allowlist 收敛 Codex 偏好字段。
-- 不同步 `~/.codex/rules/permissions.rules`；它和 `default.rules` 一样属于
-  主机授权状态。
-- 不同步模型选择、project trust、hook trust hash 或 Claude/Codex 凭据。
-- 不自动 pull、commit、push、解决冲突或信任 hook。
-- 不把项目专用规则提升到全局；它们应留在项目自己的治理文件中。
-- 不允许 agent 适配器或项目通过复制共享授权、Git、计划或审查流程来建立
-  第二个规则所有者。
-- 不保证所有 agent 版本都具有相同 hook stdout 协议；升级 Codex 后应重新核对
-  官方 hooks 文档或对应版本实现并做一次真实 SessionStart UI smoke test。
+配置范围以 [Agent 配置与规则所有权矩阵](../../.agents/host-templates/README-agents.md)
+为准。主机 credentials、trust、authorization、history、cache 和生成状态不属于
+版本化架构载体；受保护动作、Git 发布和验证分别由对应 `.agents/rules/` owner
+定义。
 
 ## 参考
 
@@ -387,5 +211,4 @@ Codex 0.144.1 上的实测中，`/hooks` 正确显示一个待审查 SessionStar
 - Codex `AGENTS.md` 指导：<https://developers.openai.com/codex/concepts/customization#agents-guidance>
 - Codex `tui.status_line` 配置参考：<https://learn.chatgpt.com/docs/config-file/config-reference>
 - Claude Code status line：<https://code.claude.com/docs/en/statusline>
-- 本次协议核验源码：<https://github.com/openai/codex/blob/rust-v0.144.1/codex-rs/hooks/src/events/session_start.rs>
 - 决策来源：`feedback-register.md` 的 W-R28

@@ -43,6 +43,27 @@ Tutorials, operational guides, reference, and explanation serve different user
 needs. Historical records and decisions serve lifecycle needs. Directory names
 may vary, but the roles and ownership boundaries must remain visible.
 
+## Make Agent Instructions Loadable
+
+Agent instructions govern only if the runtime in use loads them. Different
+agents load different entry files from a project root, so name the runtimes the
+project is actually operated with and give each one an entry file it loads.
+
+- Keep one canonical owner for the project's agent facts, commands, routes, and
+  constraints.
+- Every additional entry file is a thin adapter that imports that owner and
+  states no rule of its own, so no second authority exists to drift.
+- Mentioning or linking the owner does not load it. Use the runtime's own
+  import mechanism and confirm the position where it is written is one the
+  runtime actually follows.
+- Enforce the adapter's presence and its resolved import in the project's
+  executable documentation gate, alongside the entry-file allowlist.
+
+When operating a runtime for which a project has no entry file, read that
+project's canonical owner before substantive project work, including read-only
+review or any host/external action, and report the missing entry file as a
+governance gap.
+
 ## Keep Truth Classes Explicit
 
 - Desired configuration is owned by source, templates, or declarative config.

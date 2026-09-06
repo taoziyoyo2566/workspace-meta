@@ -100,6 +100,19 @@ Full provenance: `feedback-register.md` entry **W-R26**.
   no merge, concurrent register edits would overwrite each other; symlinking
   from another repo — indirection plus mixing concerns with unrelated repos.
 
+## Documentation map
+
+- [Configuration architecture](docs/architecture/codex-config-management.md)
+  explains managed surfaces, ownership boundaries, and synchronization design.
+- [Agent configuration ownership](.agents/host-templates/README-agents.md)
+  is the canonical matrix for portable, project, and host-local owners.
+- [New VPS runbook](docs/runbooks/new-vps.md) owns installation, activation,
+  recovery, and troubleshooting procedures.
+- [Feedback register](feedback-register.md) preserves rule provenance and
+  historical dispositions; `.agents/rules/` contains the current behavior.
+- `docs/reviews/` contains dated plans, verification records, and changelogs;
+  those records are evidence rather than current configuration authority.
+
 ## Daily workflow
 
 - **After editing** governance files or host templates: review/verify the
@@ -179,9 +192,10 @@ The bootstrap is idempotent and host-local. It:
   therefore an auditable hook-command change instead of silently changing the
   meaning of an already trusted command;
 - installs a hash-pinned Claude `statusLine.command` that renders directory,
-  branch, model, context use, current token/cache detail, and Claude's own
-  session-cost estimate. Codex uses its native `tui.status_line` item list for
-  model, context, branch, token totals, and weekly usage;
+  branch, model, context use, five-hour remaining usage with reset countdown,
+  current token/cache detail, and Claude's own session-cost estimate. Codex uses
+  its native `tui.status_line` item list for model, context, branch, token totals,
+  and weekly usage;
 - installs the **env-sync skill** (`~/.claude/skills/env-sync/`) and synchronizes
   the workspace-wide Codex router/safety floor into a managed block in
   `~/.codex/AGENTS.md`. The versioned root `CLAUDE.md` is Claude's thin adapter;
