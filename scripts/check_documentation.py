@@ -166,6 +166,17 @@ def _check_safety_floor(root: Path, errors: list[str]) -> None:
         ("secrets.md", "real credentials", "real secrets"),
         ("git-publication.md", "co-authored-by", "co-authored-by"),
         ("environment-truth.md", "dated snapshots", "environment/remote claims"),
+        (
+            "reasoning.md",
+            "validate premises proportionally",
+            "validate load-bearing premises proportionally",
+        ),
+        (
+            "reasoning.md",
+            "decisions remain authoritative as decisions; "
+            "they are not empirical evidence",
+            "technical conclusions distinct from assumptions and operator decisions",
+        ),
         ("verification.md", "cannot run", "checks that cannot"),
     )
     normalized_floor = _normalize(claude)

@@ -9,7 +9,7 @@ owners below.
 ## Safety Floor
 
 Canonical sources: `git.md`, `authorization.md`, `git-publication.md`,
-`secrets.md`, `environment-truth.md`, and `verification.md`.
+`secrets.md`, `environment-truth.md`, `reasoning.md`, and `verification.md`.
 
 - Preserve unrelated and unrecognized work; never reset, clean, overwrite,
   switch away from, move, hide, or delete it for convenience.
@@ -19,6 +19,8 @@ Canonical sources: `git.md`, `authorization.md`, `git-publication.md`,
 - Do not expose, commit, push, or copy real secrets into evidence.
 - Use the operator's configured Git identity; add no AI attribution,
   `Co-Authored-By`, or `Signed-off-by` trailers.
+- Validate load-bearing premises proportionally; keep technical conclusions
+  distinct from assumptions and operator decisions.
 - Treat environment/remote claims as snapshots and report checks that cannot
   run as gaps, never as passed.
 
@@ -32,6 +34,7 @@ Canonical sources: `git.md`, `authorization.md`, `git-publication.md`,
 | stage/commit/push/PR publication | `~/workspace/.agents/rules/authorization.md` + `~/workspace/.agents/rules/git.md` + `~/workspace/.agents/rules/git-publication.md` |
 | merge/integration or post-integration handling | `~/workspace/.agents/rules/authorization.md` + `~/workspace/.agents/rules/git.md` + `~/workspace/.agents/rules/git-integration.md` |
 | rewrite/discard/force/delete/amend/recovery | `~/workspace/.agents/rules/authorization.md` + `~/workspace/.agents/rules/git.md` + `~/workspace/.agents/rules/git-recovery.md` |
+| load-bearing premise validation, conflicting evidence, independent technical judgment, competing explanations, or diagnostic method | `~/workspace/.agents/rules/reasoning.md` |
 | non-trivial planning, evidence, approval scope, deviation, handoff | `~/workspace/.agents/rules/planning.md` |
 | implementation, configuration, refactoring, or artifact-structure change | `~/workspace/.agents/rules/implementation.md` |
 | project documentation authoring, restructuring, or lifecycle governance | `~/workspace/.agents/rules/documentation.md` |

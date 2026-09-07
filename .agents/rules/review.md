@@ -1,13 +1,17 @@
 # Review
 
-Agent-neutral workspace rule for reviews, audits, diagnoses, remediation,
-severity, evidence, and stopping conditions.
+Agent-neutral workspace rule for review and audit procedure, findings,
+remediation, severity, evidence reporting, and stopping conditions.
 
 ## Ownership
 
-This file owns generic review method. Projects own their architecture baseline,
-domain-specific scenarios, test matrix, artifact routing, and risk-specific
-severity refinements.
+This file owns generic review and audit procedure, findings, remediation,
+severity, independent-review requirements, and stopping conditions. Technical
+premise and evidence evaluation, including diagnostic reasoning, follow
+`reasoning.md`; independent technical judgment does not itself require an
+independent reviewer. Projects own their architecture baseline, domain-specific
+scenarios, test matrix, artifact routing, and risk-specific severity
+refinements.
 
 Review, audit, and diagnosis requests are read-only by default. A request to fix
 findings or apply recommendations authorizes bounded working-tree remediation

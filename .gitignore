@@ -29,6 +29,8 @@
 !docs/reviews/feature-project-agent-entrypoints/*.md
 !docs/reviews/project-memory-governance/
 !docs/reviews/project-memory-governance/*.md
+!docs/reviews/refactor-reasoning-governance/
+!docs/reviews/refactor-reasoning-governance/*.md
 !.githooks/
 !.githooks/pre-commit
 !scripts/
@@ -58,6 +60,7 @@
 !.agents/rules/git-recovery.md
 !.agents/rules/implementation.md
 !.agents/rules/planning.md
+!.agents/rules/reasoning.md
 !.agents/rules/review.md
 !.agents/rules/rule-authoring.md
 !.agents/rules/secrets.md

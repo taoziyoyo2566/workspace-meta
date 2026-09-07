@@ -428,6 +428,7 @@ class CodexConfigSyncTests(unittest.TestCase):
             "git-recovery.md",
             "implementation.md",
             "planning.md",
+            "reasoning.md",
             "review.md",
             "rule-authoring.md",
             "secrets.md",
@@ -531,6 +532,7 @@ class CodexConfigSyncTests(unittest.TestCase):
             "git-recovery.md",
             "implementation.md",
             "planning.md",
+            "reasoning.md",
             "review.md",
             "rule-authoring.md",
             "secrets.md",
@@ -555,6 +557,7 @@ class CodexConfigSyncTests(unittest.TestCase):
             "git-recovery.md",
             "implementation.md",
             "planning.md",
+            "reasoning.md",
             "review.md",
             "rule-authoring.md",
             "secrets.md",
@@ -578,6 +581,108 @@ class CodexConfigSyncTests(unittest.TestCase):
         self.assertEqual(codex_floor, claude_floor)
         self.assertIn("Canonical sources:", codex_floor)
         self.assertIn("switch away from", codex_floor)
+        normalized_floor = " ".join(codex_floor.split()).lower()
+        reasoning_invariant = (
+            "validate load-bearing premises proportionally; keep technical "
+            "conclusions distinct from assumptions and operator decisions."
+        )
+        self.assertEqual(normalized_floor.count(reasoning_invariant), 1)
+        self.assertIn("`reasoning.md`", codex_floor)
+
+    def test_reasoning_governance_has_one_owner_and_symmetric_route(self) -> None:
+        rule = (self.rules_dir / "reasoning.md").read_text()
+        normalized_rule = " ".join(rule.split()).lower()
+
+        for heading in (
+            "## Ownership",
+            "## Validate Premises Proportionally",
+            "## Classify Knowledge States",
+            "## Evaluate Evidence",
+            "## Diagnose With Discriminating Probes",
+            "## Calibrate Uncertainty And Stop",
+        ):
+            self.assertIn(heading, rule)
+        self.assertEqual(rule.count("This file owns the portable method"), 1)
+
+        for invariant in (
+            "without an exhaustive premise audit",
+            "do not manufacture disagreement",
+            "remain authoritative as decisions; they are not empirical evidence",
+            "not a mandatory report schema",
+            "when ambiguity or consequence makes alternative causes material",
+            "do not require a fixed number, a hypothesis table",
+            "prefer read-only observation first, then an isolated or reversible probe",
+            "a persistent change may still be the appropriate discriminating test",
+            "remains subject to `authorization.md`",
+            "do not require a numerical confidence score or verbose reasoning report",
+            "do not expose or require hidden chain-of-thought",
+        ):
+            self.assertIn(invariant, normalized_rule)
+
+        for adapter in (
+            self.agents_template.read_text(),
+            (ROOT / "CLAUDE.md").read_text(),
+        ):
+            route = next(
+                line
+                for line in adapter.splitlines()
+                if line.startswith("| load-bearing premise validation")
+            )
+            trigger, owner = (
+                cell.strip() for cell in route.strip("|").split("|", 1)
+            )
+            for phrase in (
+                "load-bearing premise validation",
+                "conflicting evidence",
+                "independent technical judgment",
+                "competing explanations",
+                "diagnostic method",
+            ):
+                self.assertIn(phrase, trigger)
+            self.assertIn("reasoning.md", owner)
+
+            normalized_adapter = " ".join(adapter.split()).lower()
+            for routed_detail in (
+                "relevance to the actual question",
+                "a fixed number, a hypothesis table",
+                "read-only observation first",
+                "numerical confidence score",
+            ):
+                self.assertNotIn(routed_detail, normalized_adapter)
+
+        owner_matrix = (
+            ROOT / ".agents/host-templates/README-agents.md"
+        ).read_text()
+        owner_rows = [
+            line
+            for line in owner_matrix.splitlines()
+            if "| `reasoning.md` |" in line
+        ]
+        self.assertEqual(len(owner_rows), 1)
+        for phrase in (
+            "premises",
+            "knowledge states",
+            "evidence",
+            "competing explanations",
+            "probes",
+            "independent judgment",
+            "uncertainty",
+        ):
+            self.assertIn(phrase, owner_rows[0])
+
+        feedback = (ROOT / "feedback-register.md").read_text()
+        provenance_rows = [
+            line
+            for line in feedback.splitlines()
+            if line.startswith("| `.agents/rules/reasoning.md`")
+        ]
+        self.assertEqual(len(provenance_rows), 1)
+        self.assertIn("W-R43", provenance_rows[0])
+        self.assertEqual(feedback.count("- **W-R43 ("), 1)
+
+        readme = (ROOT / "README.md").read_text()
+        self.assertIn("technical reasoning", readme)
+        self.assertIn("W-R43", readme)
 
     def test_implementation_shape_has_one_owner_and_symmetric_route(self) -> None:
         rule = (self.rules_dir / "implementation.md").read_text()

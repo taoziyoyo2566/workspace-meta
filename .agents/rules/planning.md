@@ -18,10 +18,11 @@ Investigate in two passes:
 2. implementation: current code/configuration, existing patterns, native
    framework/tool approaches, risks, and acceptance carrier.
 
-Separate known repository facts, verified external facts, assumptions,
-research/probe needs, and operator decisions. Do not make changing external
-behavior load-bearing from memory; use current primary/official sources.
-Environment facts follow `environment-truth.md`.
+Using the knowledge-state definitions in `reasoning.md`, separate known
+repository facts, verified external facts, assumptions, research/probe needs,
+and operator decisions. Do not make changing external behavior load-bearing
+from memory; use current primary/official sources. Environment facts follow
+`environment-truth.md`.
 
 Every material unknown names when/how it closes and what happens if evidence
 contradicts the proposed direction.

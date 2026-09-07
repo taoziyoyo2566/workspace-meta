@@ -30,6 +30,7 @@ configuration. It does not mirror either home directory.
 | integration/retirement | `git-integration.md` | routes, topology, release/archive policy |
 | recovery/destructive Git | `git-recovery.md` | stricter ref/archive tooling |
 | planning/handoff | `planning.md` | artifact schema, sources, branch/live gates |
+| technical reasoning: premises, knowledge states, evidence, competing explanations/probes, independent judgment, uncertainty | `reasoning.md` | domain evidence sources, diagnostic commands/surfaces, thresholds, invariants, and safer probes |
 | implementation shape | `implementation.md` | language/framework conventions and architecture |
 | documentation information architecture | `documentation.md` | project entry points, topic map, commands, domain constraints |
 | verification | `verification.md` | commands, environments, thresholds, CI |

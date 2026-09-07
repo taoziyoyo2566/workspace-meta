@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 from pathlib import Path
+import re
 import shutil
 import tempfile
 import unittest
@@ -74,15 +75,47 @@ class GovernanceDocumentationTests(unittest.TestCase):
         self.assertTrue(any("safety floor" in error for error in DOCS.check(root)))
 
     def test_rejects_identically_drifted_safety_floor_copies(self) -> None:
+        mutations = (
+            (r"switch away from, ", ""),
+            (
+                r"keep\s+technical\s+conclusions\s+distinct\s+from\s+"
+                r"assumptions\s+and\s+operator\s+decisions",
+                "keep technical conclusions evidence-based",
+            ),
+        )
+        for pattern, replacement in mutations:
+            with self.subTest(pattern=pattern):
+                temporary, root = self.fixture()
+                self.addCleanup(temporary.cleanup)
+                for path in (
+                    root / "CLAUDE.md",
+                    root / ".agents/host-templates/codex-AGENTS.md",
+                ):
+                    mutated, count = re.subn(pattern, replacement, path.read_text())
+                    self.assertEqual(count, 1, path)
+                    path.write_text(mutated)
+                self.assertTrue(
+                    any(
+                        "adapter safety floor lacks" in error
+                        for error in DOCS.check(root)
+                    )
+                )
+
+    def test_rejects_reasoning_canonical_source_drift(self) -> None:
         temporary, root = self.fixture()
         self.addCleanup(temporary.cleanup)
-        for path in (
-            root / "CLAUDE.md",
-            root / ".agents/host-templates/codex-AGENTS.md",
-        ):
-            path.write_text(path.read_text().replace("switch away from, ", ""))
+        reasoning = root / ".agents/rules/reasoning.md"
+        reasoning.write_text(
+            reasoning.read_text().replace(
+                "they are not empirical evidence",
+                "they are accepted empirical evidence",
+            )
+        )
         self.assertTrue(
-            any("adapter safety floor lacks" in error for error in DOCS.check(root))
+            any(
+                "canonical safety source reasoning.md lacks" in error
+                for error in DOCS.check(root)
+            )
         )
 
     def test_rejects_dated_current_guidance_and_broken_links(self) -> None:

@@ -7,9 +7,10 @@ coherent, maintainable set of artifacts.
 
 This file owns artifact boundaries, source-of-truth placement, local comment
 quality, implementation change surface, and the shape of related tests.
-`planning.md` owns approved outcome and scope. `verification.md` owns evidence
-selection, execution, and reporting. `review.md` owns defect assessment.
-Projects may add language, framework, architecture, and repository conventions.
+`planning.md` owns approved outcome and scope. `verification.md` owns selection,
+execution, and reporting of post-change verification evidence. `review.md` owns
+defect assessment. Projects may add language, framework, architecture, and
+repository conventions.
 
 ## Shape The Change Before Editing
 

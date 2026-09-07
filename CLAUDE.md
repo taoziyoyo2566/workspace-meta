@@ -8,7 +8,7 @@ constraints.
 ## Safety Floor
 
 Canonical sources: `git.md`, `authorization.md`, `git-publication.md`,
-`secrets.md`, `environment-truth.md`, and `verification.md`.
+`secrets.md`, `environment-truth.md`, `reasoning.md`, and `verification.md`.
 
 - Preserve unrelated and unrecognized work; never reset, clean, overwrite,
   switch away from, move, hide, or delete it for convenience.
@@ -18,6 +18,8 @@ Canonical sources: `git.md`, `authorization.md`, `git-publication.md`,
 - Do not expose, commit, push, or copy real secrets into evidence.
 - Use the operator's configured Git identity; add no AI attribution,
   `Co-Authored-By`, or `Signed-off-by` trailers.
+- Validate load-bearing premises proportionally; keep technical conclusions
+  distinct from assumptions and operator decisions.
 - Treat environment/remote claims as snapshots and report checks that cannot
   run as gaps, never as passed.
 
@@ -31,6 +33,7 @@ Canonical sources: `git.md`, `authorization.md`, `git-publication.md`,
 | stage/commit/push/PR publication | `.agents/rules/authorization.md` + `.agents/rules/git.md` + `.agents/rules/git-publication.md` |
 | merge/integration or post-integration handling | `.agents/rules/authorization.md` + `.agents/rules/git.md` + `.agents/rules/git-integration.md` |
 | rewrite/discard/force/delete/amend/recovery | `.agents/rules/authorization.md` + `.agents/rules/git.md` + `.agents/rules/git-recovery.md` |
+| load-bearing premise validation, conflicting evidence, independent technical judgment, competing explanations, or diagnostic method | `.agents/rules/reasoning.md` |
 | non-trivial planning, evidence, approval scope, deviation, handoff | `.agents/rules/planning.md` |
 | implementation, configuration, refactoring, or artifact-structure change | `.agents/rules/implementation.md` |
 | project documentation authoring, restructuring, or lifecycle governance | `.agents/rules/documentation.md` |
@@ -43,8 +46,7 @@ Canonical sources: `git.md`, `authorization.md`, `git-publication.md`,
 
 Read only the task-shaped owners. Project branch topology, artifact naming,
 commands, tests, live schemas, secret locations, and architecture remain with
-the project. Instruction precedence and repository factual truth are separate;
-report conflicts rather than inventing a linear order that mixes them.
+the project.
 
 Claude loads `CLAUDE.md`, not `AGENTS.md`. A project whose agent instructions
 live only in `AGENTS.md` is therefore absent from this session's context. When

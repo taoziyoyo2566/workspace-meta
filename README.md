@@ -69,14 +69,14 @@ Full provenance: `feedback-register.md` entry **W-R26**.
   `.agents/host-templates/README-agents.md`; provenance: W-R28.
 - **Portable agent rules are modular and have one owner** — the workspace
   `CLAUDE.md` and installed Codex AGENTS block are compact adapters. Shared
-  authorization, task-shaped Git, planning/handoff, implementation shape,
-  documentation information architecture, verification, review, capability
-  selection, secret/environment safety, and rule authoring live under
-  `.agents/rules/`; agent runtime mechanics are explicit, and projects keep
-  only topology, commands, schemas, operational constraints, and stricter
-  deltas. Ownership matrix:
+  authorization, task-shaped Git, planning/handoff, technical reasoning,
+  implementation shape, documentation information architecture, verification,
+  review, capability selection, secret/environment safety, and rule authoring
+  live under `.agents/rules/`; agent runtime mechanics are explicit, and
+  projects keep only topology, commands, schemas, operational constraints, and
+  stricter deltas. Ownership matrix:
   `.agents/host-templates/README-agents.md`; provenance: W-R32, W-R37, W-R38,
-  and W-R39.
+  W-R39, and W-R43.
 - **Permission intent is portable; executable authorization is host-local** —
   the shared authorization owner says that native search, URL retrieval, remote
   read queries, and ordinary inspection need no conversational confirmation;
