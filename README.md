@@ -222,8 +222,11 @@ host files are not.
 
 ## Caveats
 
-- **Keep the remote private.** `feedback-register.md` contains verbatim
-  internal incident records and quotes.
+- **This workspace-meta repository is intentionally PUBLIC.** Public visibility
+  is the operator-approved synchronization topology, not permission to publish
+  arbitrary workspace or host state. Only explicitly whitelisted, portable
+  workspace-meta material may enter Git; project content and host-local/private
+  runtime state remain outside it.
 - **Never widen the whitelist toward project content.** A new
   *workspace-level* rule file gets one `!<file>` line in `.gitignore`;
   anything project-specific belongs in that project's repo.

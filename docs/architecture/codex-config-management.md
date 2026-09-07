@@ -13,7 +13,7 @@ workspace-meta 所有的配置面；用户目录中其余内容始终由当前�
 
 | 层级 | 内容 | 所有者 | 同步方式 |
 |---|---|---|---|
-| workspace-meta | `.agents/rules/` 中的跨项目方法、模板、安装器、状态评估器 | 本仓库 | Git 私有远端 |
+| workspace-meta | `.agents/rules/` 中的跨项目方法、模板、安装器、状态评估器 | 本仓库 | 有意公开的 Git 远端；仅同步白名单中的可移植内容 |
 | 本机能力快照 | `.agents/env/<hostname -s>.yml` | 当前主机 | 本机 probe；Git 忽略 |
 | Claude 工作区适配器 | `~/workspace/CLAUDE.md` 中的紧凑路由与安全底线 | workspace-meta | 本仓库 Git |
 | Codex 全局指导 | `~/.codex/AGENTS.md` 中的路由与安全底线标记块 | workspace-meta + 主机 | `make bootstrap` 只替换标记块 |
@@ -21,6 +21,9 @@ workspace-meta 所有的配置面；用户目录中其余内容始终由当前�
 | Claude 全局配置 | `~/.claude/settings.json` 中一个专用 SessionStart 组和带标记的 `statusLine` | workspace-meta + 主机 | `make bootstrap` 收敛这两个字段，保留其他键和组；拒绝覆盖未知 status line |
 | 项目配置 | `~/workspace/projects/<project>/` 中项目的 `AGENTS.md`、`.agents/`、`.codex/` | 项目仓库 | 项目自己的 Git |
 | 主机私有状态 | 凭据、未声明的模型/偏好、信任 hash、审批规则、历史数据、缓存、数据库 | 当前主机 | 不同步 |
+
+workspace-meta 远端有意公开；可发布范围仍由反向白名单和现有安全/发布规则
+决定。仓库公开不等于工作区、独立项目或主机运行时状态公开。
 
 “混合所有权”不是复制整个文件。它表示 workspace-meta 只拥有文件中一个可
 识别的区域，安装器必须保留区域外的内容。
