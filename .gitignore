@@ -31,6 +31,8 @@
 !docs/reviews/project-memory-governance/*.md
 !docs/reviews/refactor-reasoning-governance/
 !docs/reviews/refactor-reasoning-governance/*.md
+!docs/reviews/refactor-plan-changelog-lifecycle/
+!docs/reviews/refactor-plan-changelog-lifecycle/*.md
 !.githooks/
 !.githooks/pre-commit
 !scripts/

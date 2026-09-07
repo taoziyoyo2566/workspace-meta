@@ -33,7 +33,10 @@ separate plan for every trivial edit.
 | local comment | Why does this location require a non-obvious constraint? |
 | user/API contract | What may a consumer rely on? |
 | runbook | How does an operator perform or recover an operation? |
-| plan/ADR/review/changelog | Why was a decision made, and what happened? |
+| Plan | What implementation intent and acceptance boundary are approved? |
+| ADR | Why was an architectural decision made? |
+| review | What findings and readiness judgment resulted? |
+| Changelog | What verified implementation outcome was delivered? |
 | legal notice/license carrier | What attribution or terms must accompany the work? |
 | test | Which observable contract or load-bearing invariant is proven? |
 

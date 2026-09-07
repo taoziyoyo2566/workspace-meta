@@ -23,15 +23,15 @@ number. Never renumber. Numbering accumulates; mark replacements rather than del
 | `.agents/rules/git-publication.md` | W-R25, W-R30 refined by W-R31 |
 | `.agents/rules/git-integration.md` | W-R21 and the accepted W-R32 terminal-evidence refinement |
 | `.agents/rules/git-recovery.md` | W-R19–W-R20 |
-| `.agents/rules/planning.md` | W-R1–W-R7, W-R12, W-R18 and accepted W-R32 refinements |
+| `.agents/rules/planning.md` | W-R1–W-R7, W-R12, W-R18 and accepted W-R32 refinements, refined by W-R44 |
 | `.agents/rules/reasoning.md` | W-R43 |
-| `.agents/rules/implementation.md` | W-R37 |
-| `.agents/rules/documentation.md` | W-R38 refined by W-R39, W-R41 entry-point loadability refined by W-R42 |
+| `.agents/rules/implementation.md` | W-R37 refined by W-R44 |
+| `.agents/rules/documentation.md` | W-R38 refined by W-R39, W-R41 entry-point loadability refined by W-R42, Plan/Changelog lifecycle refined by W-R44 |
 | `.agents/rules/verification.md` | W-R15–W-R17 |
 | `.agents/rules/review.md` | W-R13, W-R20, W-R33 and accepted W-R32 refinements |
-| `.agents/rules/capabilities.md` | W-R18 and accepted W-R32 refinements |
+| `.agents/rules/capabilities.md` | W-R18 and accepted W-R32 refinements, refined by W-R44 |
 | `.agents/rules/secrets.md` | W-R13 |
-| `.agents/rules/environment-truth.md` | W-R24 |
+| `.agents/rules/environment-truth.md` | W-R24 refined by W-R44 |
 | `.agents/rules/rule-authoring.md` | W-R8–W-R14, W-R27–W-R28, W-R32 |
 
 Earlier entries intentionally retain incident-era terminology and recipes. When an earlier
@@ -168,3 +168,6 @@ Distilled cross-project rules. Numbering accumulates — do not delete old rules
 - **W-R43 (2026-09-07)** — **Technical conclusions need one proportional, portable reasoning owner.** Cross-project rules had workflow-specific treatments of facts, assumptions, evidence, diagnosis, and uncertainty, but no shared method for validating load-bearing premises, classifying knowledge states, evaluating evidence, comparing warranted explanations, selecting discriminating probes, or calibrating decision-relevant uncertainty. `.agents/rules/reasoning.md` is the single canonical owner; its detailed method is task-routed, while one compact premise-validation and conclusion-separation invariant remains resident in the shared Hybrid Safety Floor.
     - **Why**: one owner closes the gap without fragmenting it into debugging, evidence, or diagnosis modules or replacing planning, review, verification, environment truth, implementation, or authorization. Proportionality and stopping rules prevent exhaustive premise checking and mandatory hypothesis rituals; independent judgment means evidence-based assessment, not reflexive disagreement.
     - **How to apply**: operator goals, constraints, tradeoffs, and decisions are authoritative choices but not empirical evidence. Route material premise/evidence conflicts, competing explanations, independent-judgment questions, or diagnostic-method work to `reasoning.md`; retain existing workflow owners and authorization boundaries. Projects may add domain evidence sources, diagnostic commands/surfaces, thresholds, invariants, and safer project-specific probes, but not duplicate the portable method.
+- **W-R44 (2026-09-07)** — **A Plan is approved implementation intent; a Changelog is the verified closeout outcome.** After approval, stable Plan content freezes and ordinary progress, attempts, repairs, command output, and intermediate verification remain transient. A material deviation stops affected work and requires approval before the Plan is amended and work resumes; identifying it is not approval. Create the Changelog only when implementation is verified, content-complete, and commit-ready for publication review, then complete the Plan with status/link metadata rather than a duplicated closeout narrative.
+    - **Why**: persisting execution loops in Plans and later restating them in Changelogs created document churn, overlapping owners, and low-signal historical records. The controlled deviation exception preserves approval boundaries without turning routine repair into Plan administration.
+    - **How to apply**: `planning.md` owns Plan approval, freeze, deviation, and completion workflow; `documentation.md` owns distinct Plan/Changelog content roles; implementation, capability, and environment owners keep routine execution state out of frozen Plans. Apply prospectively without rewriting historical Plans, Changelogs, or provenance.

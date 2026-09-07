@@ -40,12 +40,18 @@ capability audit.
 
 ## Recording
 
-Record a capability choice in an existing durable plan or handoff only when an
-observable event affects reproducibility:
+Keep routine discovery attempts, failed capability attempts, and execution
+method changes in transient task context. Record the final capability choice in
+an existing outcome or handoff owner only when an observable event affects
+reproducibility, for example when:
 
 - deferred discovery or a connected application was used;
 - delegation or specialized generation/automation was used;
 - execution changed after a failed or abandoned capability attempt.
+
+If a capability finding materially invalidates an `APPROVED` Plan, follow
+`planning.md` material-deviation handling. The finding does not itself
+authorize Plan amendment.
 
 Do not require a `Capability fit` section, a list of unused capabilities, or a
 model-choice note for every plan. Model selection may be host/user-owned or

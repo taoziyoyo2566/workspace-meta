@@ -42,10 +42,13 @@ recall).
      automatically. Propose the exact install command to the user and record the
      gap + fallback in your report.
 
-4. If any flipped capability contradicts an agent memory file or an active
-   plan's pre-conditions, update the currently governing record before it
-   directs later execution. Preserve completed historical evidence and annotate
-   it only when a reader needs a pointer to the current replacement.
+4. If any flipped capability contradicts a living environment or capability
+   record, update that canonical owner before it directs later execution.
+   Do not routinely rewrite an `APPROVED` Plan. If the changed fact materially
+   invalidates its execution contract, stop the affected work and follow
+   `planning.md` material-deviation handling. Preserve completed historical
+   evidence and annotate it only when a reader needs a pointer to the current
+   replacement.
 
 5. Report the registry path, delta, and probe date. The snapshot stays local;
    another machine or later host must re-probe rather than publish or copy it.

@@ -31,6 +31,13 @@ When a probe contradicts a living record:
 3. never require an automatic same-round commit/push;
 4. never write “assume this, do not re-discover” for an aging fact.
 
+Correct the canonical owner of volatile environment truth; do not rewrite an
+`APPROVED` Plan merely because a fact changed. A Plan's Current State is an
+approval-time snapshot, not the environment registry. If the changed fact
+materially invalidates the approved contract, follow `planning.md`
+material-deviation handling; changed evidence alone does not authorize Plan
+amendment.
+
 Publication follows `git-publication.md`.
 
 ## Per-Host Registry

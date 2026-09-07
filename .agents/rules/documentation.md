@@ -36,12 +36,36 @@ of the truth classes conflict.
 | Understand design or tradeoffs | explanation or architecture | context, boundaries, relationships, rationale |
 | Preserve an accepted choice | decision record | status, context, decision, consequences, supersession links |
 | Preserve what happened or was observed | incident or verification record | date, scope, environment, evidence, outcome, follow-up links |
-| Track possible future work | issue, backlog, or approved plan | owner, status, acceptance boundary; never presented as current behavior |
+| Preserve approved implementation intent | Plan | goal, approval-time state, intended change, scope/non-goals, acceptance criteria, approved deviations, lifecycle status |
+| Preserve a verified implementation outcome | Changelog | Plan link, summary, meaningful changed surface, final verification, implemented deviations and residual gaps when relevant |
+| Track possible future work | issue or backlog | owner, status, acceptance boundary; never presented as current behavior |
 | Constrain coding agents | project agent instructions | project facts, commands, constraints, and routes; not a human manual |
 
 Tutorials, operational guides, reference, and explanation serve different user
 needs. Historical records and decisions serve lifecycle needs. Directory names
 may vary, but the roles and ownership boundaries must remain visible.
+
+## Separate Plan, Execution, And Changelog
+
+A Plan owns the approved Goal, approval-time Current State, Intended Change,
+Scope and non-goals, Acceptance Criteria, approved Material Deviations, and
+lifecycle Status. Current State is a decision snapshot, not a live environment
+registry. `planning.md` owns Plan approval, freeze, deviation, and completion
+workflow.
+
+Routine progress, intermediate hypotheses, failed attempts, routine fixes,
+command output, retry loops, and intermediate verification belong in transient
+task context. Do not create another durable execution journal for them.
+
+A Changelog is a verified closeout artifact created at content-complete,
+commit-ready closeout. It records the verified final outcome, meaningful
+changed surface, final verification summary, approved deviations actually
+implemented, and relevant residual gaps. It is not a chronological activity
+log: do not require command-by-command transcripts, per-file diaries where Git
+already owns exact history, duplicated Plan goal/scope/risk text, or a copied
+verification procedure. Preserve an intermediate failure only when it explains
+a lasting limitation or material final correction. `verification.md` continues
+to own check execution and verdicts.
 
 ## Make Agent Instructions Loadable
 

@@ -5,9 +5,11 @@ scope, execution deviation, durable handoff, and closeout.
 
 ## Ownership
 
-This file owns generic planning and handoff behavior. Projects own plan
-filenames/directories, required metadata, architecture sources, branch gates,
-test commands, and live-resource fields.
+This file owns generic planning, approval, material-deviation, handoff, and
+Plan lifecycle behavior. `documentation.md` owns the durable content roles of
+Plans and Changelogs. Projects own plan filenames/directories, additional
+metadata, architecture sources, branch gates, test commands, and live-resource
+fields.
 
 ## Before Planning
 
@@ -42,9 +44,15 @@ selected from observable scope and risk. Do not require a level declaration,
 two artifacts, cost/usage estimate, or separate approval merely because a task
 is non-trivial or has a given number of steps.
 
-A plan states goal, scope/exclusions, prerequisites, expected effect, approach,
-risks, concrete changes, verification, and follow-up handling in depth
-proportional to the decision.
+A persistent Plan is the approved implementation intent and execution contract.
+It states the goal, approval-time current state, intended change,
+scope/exclusions, load-bearing prerequisites or assumptions, acceptance
+criteria, risks, and follow-up handling in depth proportional to the decision.
+
+Use `DRAFT` for an unapproved Plan, `APPROVED` for its executable frozen
+contract, and `COMPLETE` for verified closeout. `IN_PROGRESS` and `BLOCKED` are
+not required as normal durable Plan states; report ordinary execution or
+blocked state in task context instead.
 
 ## Approval Scope
 
@@ -53,10 +61,35 @@ conflicting implementation details; parent approval does not approve a
 conflicting child; implementation approval does not authorize Git publication,
 external writes, or live mutation. A pending child blocks only its named scope.
 
-A material change to approved scope, direction, approach, or verification makes
-the affected plan visibly pending again. Update the existing plan with a dated
-note when it remains the same decision; create a superseding artifact only when
-the old decision needs an independent historical identity.
+At `APPROVED`, stable Plan content freezes. Ordinary implementation progress,
+failed attempts, retries, routine repairs, intermediate hypotheses, command
+output, and intermediate verification stay in transient task context rather
+than being persisted into the Plan.
+
+A variation is a material deviation when continuing would require a reasonable
+approver to reconsider the approved outcome or authority because it changes the
+goal or expected effect, scope or non-goals, canonical ownership or
+architecture, a load-bearing approved approach or dependency, a safety,
+security, or authorization boundary, a load-bearing assumption, acceptance
+criteria, or the evidence capable of proving acceptance. File count and bug
+severity alone do not decide materiality; routine in-scope implementation,
+repair, and verification are not automatically material.
+
+For a material deviation:
+
+1. stop affected work before crossing the approved boundary;
+2. identify the proposed deviation and its impact in transient review context;
+3. obtain the approval required by this file and `authorization.md`;
+4. only after approval, amend the necessary stable Plan content and add a
+   concise dated approved-deviation record;
+5. freeze the Plan again; and
+6. resume within the amended approval.
+
+Identification or recommendation is not approval. A rejected deviation leaves
+the approved Plan unchanged; continue the original path only when still
+feasible, otherwise stop and report through the existing owner. Unaffected work
+may continue while a deviation is pending only when it is genuinely separable
+and cannot prejudice the decision.
 
 ## Execution And Evidence
 
@@ -64,21 +97,16 @@ Use approved scope and acceptance checks as the baseline. At each substantial
 phase, re-check repository state, current external behavior, environment
 capability, operator decisions, and live target scope when load-bearing.
 
-When reality contradicts the plan:
-
-1. stop before compounding the mismatch;
-2. classify stale knowledge, repository drift, missing probe/decision,
-   ambiguity, or rules gap;
-3. record the contradiction in the owning evidence location;
-4. revise approval state when the decision materially changes;
-5. continue only after the required decision/approval.
+When reality contradicts the Plan, classify the mismatch and update its actual
+truth owner. Apply the material-deviation boundary above only when the
+contradiction changes the approved execution contract; a new fact alone does
+not authorize Plan amendment.
 
 Phases are coherent implementation and verification units, not mandatory Git
-commit units. A phase may close with valid working-tree or approved external
-evidence. Its closeout states when evidence is local-only and unpublished.
-Evidence needed by another machine or agent must enter the normal publication
-flow, or another approved durable store, before handoff; no evidence-only
-administrative commit is required.
+commit units. Their ordinary progress and intermediate evidence remain in task
+context. Evidence needed by another machine or agent must enter the normal
+publication flow, or another approved durable store, before handoff; no
+evidence-only administrative commit is required.
 
 ## Handoff And Closeout
 
@@ -90,9 +118,16 @@ When an in-scope change resolves a living source that still directs future
 work, update it in the same bounded content change or report the exact deferred
 owner/gap. Publication remains a separate Git transaction.
 
-Closeout compares the result/evidence with goal, expected effect, scope, and
-acceptance. Report outcome, checks/gaps, deviations, synchronized living truth,
-remaining owner, local-only/unpublished evidence, and protected follow-ups.
+Closeout compares the result and evidence with the approved goal, expected
+effect, scope, and acceptance criteria. After implementation is content-complete
+and non-transaction-bound verification demonstrates acceptance, create the
+Changelog as the verified outcome record under `documentation.md`, ready for
+publication review. Commit-ready does not mean staged, committed, pushed, or
+published.
+
+The Plan may then transition from `APPROVED` to `COMPLETE` and add a Changelog
+link as closeout metadata. Do not copy implementation history, command output,
+or the verification narrative into the completed Plan.
 
 Plan completion, implementation completion, publication, integration, release,
 and archival are distinct facts.

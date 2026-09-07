@@ -740,6 +740,48 @@ class CodexConfigSyncTests(unittest.TestCase):
         self.assertIn("W-R39", owner_row)
         self.assertIn("W-R42", owner_row)
 
+    def test_plan_changelog_lifecycle_uses_frozen_contract_and_verified_closeout(
+        self,
+    ) -> None:
+        planning = (self.rules_dir / "planning.md").read_text()
+        documentation = (self.rules_dir / "documentation.md").read_text()
+        agents = (ROOT / "AGENTS.md").read_text()
+
+        normalized_plan = " ".join(planning.split())
+        normalized_docs = " ".join(documentation.split())
+        normalized_agents = " ".join(agents.split())
+
+        for state in ("`DRAFT`", "`APPROVED`", "`COMPLETE`"):
+            self.assertIn(state, planning)
+        for invariant in (
+            "approved implementation intent and execution contract",
+            "At `APPROVED`, stable Plan content freezes",
+            "stay in transient task context",
+            "Identification or recommendation is not approval",
+            "only after approval, amend",
+            "resume within the amended approval",
+            "File count and bug severity alone",
+            "verification demonstrates acceptance",
+            "create the Changelog as the verified outcome",
+            "add a Changelog link as closeout metadata",
+        ):
+            self.assertIn(invariant, normalized_plan)
+
+        self.assertIn("## Separate Plan, Execution, And Changelog", documentation)
+        for invariant in (
+            "approval-time Current State",
+            "belong in transient task context",
+            "verified closeout artifact",
+            "It is not a chronological activity log",
+            "Git already owns exact history",
+            "lasting limitation or material final correction",
+        ):
+            self.assertIn(invariant, normalized_docs)
+
+        self.assertIn(
+            "verified, content-complete, commit-ready closeout", normalized_agents
+        )
+
     def test_git_modules_have_task_shaped_load_profiles(self) -> None:
         inspection = (self.rules_dir / "git.md").read_text()
         branches = (self.rules_dir / "git-branches.md").read_text()

@@ -20,8 +20,10 @@ governance and its own review artifacts.
 - Read `README.md` and, for agent configuration work,
   `docs/architecture/codex-config-management.md`.
 - Non-trivial behavior or configuration changes require a plan under
-  `docs/reviews/<kind>-<topic>/plan-<slug>-YYYY-MM-DD.md` before implementation
-  and a round changelog in the same directory after implementation.
+  `docs/reviews/<kind>-<topic>/plan-<slug>-YYYY-MM-DD.md` before implementation.
+  Create the round changelog in the same directory only at verified,
+  content-complete, commit-ready closeout; this does not require staging,
+  committing, pushing, or publication.
 - Keep the reverse whitelist in `.gitignore` explicit. New tracked paths require
   a matching allow rule and a pre-commit verification.
 

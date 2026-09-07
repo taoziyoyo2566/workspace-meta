@@ -71,7 +71,7 @@ workspace-meta 所有的配置面；用户目录中其余内容始终由当前�
 | `tests/test_claude_status_line.py` | Claude 状态栏字段、颜色、格式与失败降噪测试 |
 | `tests/test_governance_docs.py` | 文档闸门的仓库正例与关键负向场景 |
 | `tests/test_sync_codex_config.py` | 安装、迁移、保留、拒绝和幂等测试 |
-| `docs/reviews/` | 非小型变更的计划与每轮 changelog |
+| `docs/reviews/` | 非小型变更的已批准 Plan（意图/执行合同）与验证完成、可提交时的 Changelog（结果） |
 | `projects/<project>/` | 独立项目仓库；不属于 workspace-meta 的跟踪范围 |
 
 ## 启动检查流程
