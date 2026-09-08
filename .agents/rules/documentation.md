@@ -47,25 +47,41 @@ may vary, but the roles and ownership boundaries must remain visible.
 
 ## Separate Plan, Execution, And Changelog
 
-A Plan owns the approved Goal, approval-time Current State, Intended Change,
-Scope and non-goals, Acceptance Criteria, approved Material Deviations, and
-lifecycle Status. Current State is a decision snapshot, not a live environment
-registry. `planning.md` owns Plan approval, freeze, deviation, and completion
-workflow.
+A Plan owns one coherent workstream's approved Goal, approval-time Current
+State, Intended Change, Scope and non-goals, Acceptance Criteria, approved
+Material Deviations, and lifecycle Status. Current State is a decision snapshot,
+not a live environment registry. `planning.md` owns workstream identity, Plan
+reuse, approval, freeze, deviation, and completion workflow.
 
 Routine progress, intermediate hypotheses, failed attempts, routine fixes,
 command output, retry loops, and intermediate verification belong in transient
 task context. Do not create another durable execution journal for them.
 
-A Changelog is a verified closeout artifact created at content-complete,
-commit-ready closeout. It records the verified final outcome, meaningful
-changed surface, final verification summary, approved deviations actually
-implemented, and relevant residual gaps. It is not a chronological activity
-log: do not require command-by-command transcripts, per-file diaries where Git
-already owns exact history, duplicated Plan goal/scope/risk text, or a copied
-verification procedure. Preserve an intermediate failure only when it explains
-a lasting limitation or material final correction. `verification.md` continues
-to own check execution and verdicts.
+A Changelog is the final verified outcome record for a coherent workstream,
+created at content-complete, commit-ready closeout. Normally one Plan produces
+one final Changelog; implementation rounds, conversational turns, operator
+feedback, remediation, and re-verification do not produce intermediate or
+round-specific Changelogs. This is a scope default, not a mechanical
+cardinality requirement for every Plan.
+
+The Changelog records the final outcome, meaningful changed surface, final
+verification summary, approved deviations actually implemented, and relevant
+residual gaps. It is not a chronological interaction log: do not require
+command-by-command transcripts, per-file diaries where Git already owns exact
+history, duplicated Plan goal/scope/risk text, or a copied verification
+procedure. Preserve an intermediate failure only when it explains a lasting
+limitation or material final correction. `verification.md` continues to own
+check execution and verdicts.
+
+Before the workstream result is committed, a legitimate pre-commit closeout
+correction under `planning.md` may revise the existing Changelog because it has
+not yet become durable history. After correction and final verification, that
+same Changelog records the actual final outcome. Once the result is committed,
+preserve its Changelog as the historical verified outcome; later work must not
+rewrite it, including between commit and push. A later workstream gets its own
+Changelog only when proportional planning gives that workstream the persistent
+Plan/Changelog lifecycle; neither a new commit nor a routine fix creates one
+automatically.
 
 ## Make Agent Instructions Loadable
 

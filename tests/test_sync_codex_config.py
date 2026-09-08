@@ -1222,33 +1222,70 @@ class CodexConfigSyncTests(unittest.TestCase):
         for state in ("`DRAFT`", "`APPROVED`", "`COMPLETE`"):
             self.assertIn(state, planning)
         for invariant in (
+            "Plan at the level of a coherent workstream",
+            "Before creating a persistent Plan",
+            "same goal and scope",
             "approved implementation intent and execution contract",
             "At `APPROVED`, stable Plan content freezes",
             "stay in transient task context",
+            "conversational turns, implementation rounds",
+            "They are not automatically new planning decisions",
             "Identification or recommendation is not approval",
             "only after approval, amend",
             "resume within the amended approval",
             "File count and bug severity alone",
-            "verification demonstrates acceptance",
+            "Do not mark a Plan `COMPLETE` merely because one implementation or verification pass finished",
+            "still actively reviewing, testing, or refining the same goal and scope",
+            "final non-transaction-bound verification demonstrates acceptance",
             "create the Changelog as the verified outcome",
             "add a Changelog link as closeout metadata",
+            "A `COMPLETE` Plan is normally a historical record",
+            "Before its verified result enters durable Git history as a commit",
+            "restore that Plan to `APPROVED`",
+            "narrow pre-commit closeout-correction exception",
+            "Once the completed result has entered Git history, do not reopen its Plan",
+            "even when the commit has not been pushed",
+            "Treat later work as a follow-up coherent workstream",
+            "apply proportional planning independently",
+            "a narrow fix may need no persistent Plan",
+            "is not authorized by this lifecycle rule",
         ):
             self.assertIn(invariant, normalized_plan)
 
         self.assertIn("## Separate Plan, Execution, And Changelog", documentation)
         for invariant in (
+            "one coherent workstream's approved Goal",
             "approval-time Current State",
             "belong in transient task context",
-            "verified closeout artifact",
-            "It is not a chronological activity log",
+            "final verified outcome record for a coherent workstream",
+            "Normally one Plan produces one final Changelog",
+            "round-specific Changelogs",
+            "not a mechanical cardinality requirement",
+            "It is not a chronological interaction log",
             "Git already owns exact history",
             "lasting limitation or material final correction",
+            "Before the workstream result is committed",
+            "may revise the existing Changelog",
+            "Once the result is committed, preserve its Changelog",
+            "including between commit and push",
+            "only when proportional planning gives that workstream the persistent Plan/Changelog lifecycle",
+            "neither a new commit nor a routine fix creates one automatically",
         ):
             self.assertIn(invariant, normalized_docs)
 
-        self.assertIn(
-            "verified, content-complete, commit-ready closeout", normalized_agents
+        for invariant in (
+            "non-trivial coherent workstream",
+            "Before creating a Plan, reuse an existing active or approved Plan",
+            "same goal and scope",
+            "do not create additional Plans",
+            "not per implementation round",
+            "planning.md` and `documentation.md",
+        ):
+            self.assertIn(invariant, normalized_agents)
+        self.assertNotIn(
+            "Non-trivial behavior or configuration changes require a plan", agents
         )
+        self.assertNotIn("Create the round changelog", agents)
 
     def test_git_modules_have_task_shaped_load_profiles(self) -> None:
         inspection = (self.rules_dir / "git.md").read_text()

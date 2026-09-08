@@ -23,10 +23,10 @@ number. Never renumber. Numbering accumulates; mark replacements rather than del
 | `.agents/rules/git-publication.md` | W-R25, W-R30 refined by W-R31 |
 | `.agents/rules/git-integration.md` | W-R21 and the accepted W-R32 terminal-evidence refinement |
 | `.agents/rules/git-recovery.md` | W-R19–W-R20 |
-| `.agents/rules/planning.md` | W-R1–W-R7, W-R12, W-R18 and accepted W-R32 refinements, refined by W-R44 |
+| `.agents/rules/planning.md` | W-R1–W-R7, W-R12, W-R18 and accepted W-R32 refinements, refined by W-R44 and W-R46 |
 | `.agents/rules/reasoning.md` | W-R43 |
 | `.agents/rules/implementation.md` | W-R37 refined by W-R44 |
-| `.agents/rules/documentation.md` | W-R38 refined by W-R39, W-R41 entry-point loadability refined by W-R42, Plan/Changelog lifecycle refined by W-R44 |
+| `.agents/rules/documentation.md` | W-R38 refined by W-R39, W-R41 entry-point loadability refined by W-R42, Plan/Changelog lifecycle refined by W-R44 and W-R46 |
 | `.agents/rules/verification.md` | W-R15–W-R17 |
 | `.agents/rules/review.md` | W-R13, W-R20, W-R33 and accepted W-R32 refinements |
 | `.agents/rules/capabilities.md` | W-R18 and accepted W-R32 refinements, refined by W-R44 |
@@ -174,3 +174,6 @@ Distilled cross-project rules. Numbering accumulates — do not delete old rules
 - **W-R45 (2026-09-07)** — **The workspace-meta synchronization repository is intentionally public, while its publishable scope remains explicitly portable and whitelisted.** W-R26 accurately records the earlier private-remote topology and remains unchanged historical provenance; repository visibility is not the security boundary for arbitrary workspace or host state.
     - **Why**: operator policy now keeps the repository public, but current README and architecture wording still described privacy as required. Security continues to depend on excluding credentials and host-local/private runtime state through the existing content, whitelist, and publication boundaries.
     - **How to apply**: `README.md` and the current architecture documentation own the active repository topology. Existing secrets, Git, publication, and reverse-whitelist owners continue to determine what may enter Git; public workspace-meta visibility never makes project content or host runtime state publishable.
+- **W-R46 (2026-09-08)** — **Plan and Changelog lifecycle is scoped to a coherent workstream, not each change, conversational turn, or execution round.**
+    - **Why**: one managed-sync task progressed from implementation through operator dry-run feedback, clearer diagnostics, a status-line adjustment, and final verification, but produced three Plan/Changelog pairs. The project adapter used per-change and per-round wording, while the shared lifecycle owners did not explicitly require reuse of a covering Plan or keep it open during active in-scope operator refinement. Pre-publication review of the correction then exposed the converse ambiguity: whether a prematurely completed Plan could be corrected before commit, and whether a committed Plan remained reusable until push.
+    - **How to apply**: before creating a persistent Plan, check for and reuse an active or approved Plan covering the same goal and scope. Keep routine in-scope feedback, repairs, value decisions, and re-verification under that Plan; do not complete it while the operator is still reviewing or refining the workstream. Before commit only, a premature same-scope closeout with no material deviation may restore the same Plan to `APPROVED`, revise its Changelog, re-verify, and close again. A committed completed result is historical even before push: later work is a follow-up workstream whose need for a persistent Plan is decided proportionally, and the historical Changelog is not rewritten. Preserve the existing material-deviation and Git-transaction boundaries, apply this refinement prospectively, and leave historical artifacts unchanged.

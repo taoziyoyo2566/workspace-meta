@@ -31,6 +31,12 @@ contradicts the proposed direction.
 
 ## Proportional Shape
 
+Plan at the level of a coherent workstream: one bounded outcome, scope, and
+acceptance path may span multiple conversational turns, implementation passes,
+operator feedback cycles, repairs, and verification runs. Before creating a
+persistent Plan, inspect existing active or approved Plans and reuse one that
+already covers the same goal and scope.
+
 Use the smallest plan that preserves the decision:
 
 - narrow work may use a concise conversational plan;
@@ -42,7 +48,16 @@ Use the smallest plan that preserves the decision:
 Architecture, engineering, fix, and exploration are optional review lenses
 selected from observable scope and risk. Do not require a level declaration,
 two artifacts, cost/usage estimate, or separate approval merely because a task
-is non-trivial or has a given number of steps.
+is non-trivial or has a given number of steps. File count, conversational turns,
+implementation rounds, operator feedback, fixes, and re-verification do not by
+themselves create another workstream or require another Plan.
+
+Create a new persistent Plan only when persistent planning is warranted and no
+existing Plan covers the workstream, the requested outcome is genuinely
+independent, or a material change requires reconsidering the approved execution
+contract. In the last case, follow the material-deviation process below; that
+process determines whether to amend the existing Plan or approve a replacement
+contract rather than silently multiplying Plans.
 
 A persistent Plan is the approved implementation intent and execution contract.
 It states the goal, approval-time current state, intended change,
@@ -65,6 +80,12 @@ At `APPROVED`, stable Plan content freezes. Ordinary implementation progress,
 failed attempts, retries, routine repairs, intermediate hypotheses, command
 output, and intermediate verification stay in transient task context rather
 than being persisted into the Plan.
+
+Follow-up requests such as continuing the work, clarifying diagnostics,
+adjusting an in-scope configuration value or order, fixing an implementation or
+test defect, and repeating acceptance verification stay under the same Plan
+when their goal and scope remain covered. They are not automatically new
+planning decisions.
 
 A variation is a material deviation when continuing would require a reasonable
 approver to reconsider the approved outcome or authority because it changes the
@@ -119,15 +140,35 @@ work, update it in the same bounded content change or report the exact deferred
 owner/gap. Publication remains a separate Git transaction.
 
 Closeout compares the result and evidence with the approved goal, expected
-effect, scope, and acceptance criteria. After implementation is content-complete
-and non-transaction-bound verification demonstrates acceptance, create the
-Changelog as the verified outcome record under `documentation.md`, ready for
-publication review. Commit-ready does not mean staged, committed, pushed, or
-published.
+effect, scope, and acceptance criteria. Do not mark a Plan `COMPLETE` merely
+because one implementation or verification pass finished. While the operator
+is still actively reviewing, testing, or refining the same goal and scope, the
+coherent workstream remains under its `APPROVED` Plan. After the workstream is
+content-complete and final non-transaction-bound verification demonstrates
+acceptance, create the Changelog as the verified outcome record under
+`documentation.md`, ready for publication review. Commit-ready does not mean
+staged, committed, pushed, or published.
 
 The Plan may then transition from `APPROVED` to `COMPLETE` and add a Changelog
 link as closeout metadata. Do not copy implementation history, command output,
 or the verification narrative into the completed Plan.
+
+A `COMPLETE` Plan is normally a historical record. Before its verified result
+enters durable Git history as a commit, an unresolved issue may show that
+closeout was premature. Only when the correction remains within the same goal
+and scope and requires no material deviation, restore that Plan to `APPROVED`,
+correct and verify the same workstream, update its existing Changelog under
+`documentation.md`, and then close it again. This is a narrow pre-commit
+closeout-correction exception, not a way to reactivate completed Plans
+generally.
+
+Once the completed result has entered Git history, do not reopen its Plan for a
+later change, even when the commit has not been pushed or the change affects the
+same feature or files. Treat later work as a follow-up coherent workstream and
+apply proportional planning independently: a narrow fix may need no persistent
+Plan, while a substantial redesign may warrant one. Amending, resetting,
+discarding, or otherwise rewriting Git history is a separate Git transaction
+and is not authorized by this lifecycle rule.
 
 Plan completion, implementation completion, publication, integration, release,
 and archival are distinct facts.

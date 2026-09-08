@@ -19,11 +19,14 @@ governance and its own review artifacts.
 
 - Read `README.md` and, for agent configuration work,
   `docs/architecture/codex-config-management.md`.
-- Non-trivial behavior or configuration changes require a plan under
-  `docs/reviews/<kind>-<topic>/plan-<slug>-YYYY-MM-DD.md` before implementation.
-  Create the round changelog in the same directory only at verified,
-  content-complete, commit-ready closeout; this does not require staging,
-  committing, pushing, or publication.
+- A non-trivial coherent workstream uses a persistent Plan under
+  `docs/reviews/<kind>-<topic>/plan-<slug>-YYYY-MM-DD.md` when `planning.md`
+  calls for one. Before creating a Plan, reuse an existing active or approved
+  Plan covering the same goal and scope.
+- Routine in-scope feedback, repairs, UX/configuration refinements, and
+  re-verification do not create additional Plans. Create one Changelog at final
+  verified workstream closeout, not per implementation round; generic lifecycle
+  semantics remain owned by `planning.md` and `documentation.md`.
 - Keep the reverse whitelist in `.gitignore` explicit. New tracked paths require
   a matching allow rule and a pre-commit verification.
 
