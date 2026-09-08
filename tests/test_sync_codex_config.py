@@ -600,6 +600,48 @@ class CodexConfigSyncTests(unittest.TestCase):
         self.assertEqual(parsed["tui"]["model_availability_nux"]["gpt-5.5"], 4)
         self.assertIn("# keep this comment", rendered.content)
 
+    def test_sync_moves_history_limit_out_of_hook_block_and_converges(
+        self,
+    ) -> None:
+        self.install_current_managed_state()
+        config = self.codex_home / "config.toml"
+        config.write_text(
+            "[history]\n"
+            'persistence = "save-all"\n'
+            'unmanaged = "preserved"\n'
+        )
+        hooked = SYNC.render_hooks(
+            self.hooks_template, config, self.status_script, sys.executable
+        ).content
+        misplaced = hooked.replace(
+            f"{SYNC.HOOKS_BEGIN}\n",
+            f"{SYNC.HOOKS_BEGIN}\nmax_bytes = 5242880\n",
+            1,
+        )
+        misplaced += (
+            "\n[tui]\n"
+            f"status_line = {json.dumps(self.expected_status_line)}\n"
+        )
+        config.write_text(misplaced)
+        self.assertEqual(tomllib.loads(misplaced)["history"]["max_bytes"], 5242880)
+
+        completed = self.make_target("sync", "Y\n")
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        result = config.read_text()
+        self.assertLess(result.index("max_bytes = 5242880"), result.index(SYNC.HOOKS_BEGIN))
+        parsed = tomllib.loads(result)
+        self.assertEqual(parsed["history"]["max_bytes"], 5242880)
+        self.assertEqual(parsed["history"]["unmanaged"], "preserved")
+        rerendered_hooks = SYNC.render_hooks(
+            self.hooks_template, config, self.status_script, sys.executable
+        )
+        self.assertEqual(rerendered_hooks.content, result)
+
+        second = self.make_target("agent-sync-check")
+        self.assertEqual(second.returncode, 0, second.stderr)
+        self.assertIn("Result: everything is already current.", second.stdout)
+
     def test_preferences_add_to_implicit_parent_table(self) -> None:
         current = (
             "# generated UI state\n"
@@ -1573,6 +1615,34 @@ class CodexConfigSyncTests(unittest.TestCase):
                     SYNC.sync_claude_settings(settings, self.status_script)
 
                 self.assertEqual(settings.read_text(), original)
+
+    def test_sync_explains_unmanaged_status_line_without_writing(self) -> None:
+        self.install_current_managed_state()
+        settings = self.codex_home.parent / ".claude" / "settings.json"
+        parsed = json.loads(settings.read_text())
+        manual_command = "bash ~/.claude/statusline-command.sh"
+        parsed["statusLine"] = {
+            "type": "command",
+            "command": manual_command,
+        }
+        settings.write_text(json.dumps(parsed, indent=2) + "\n")
+        before = {path: self.path_snapshot(path) for path in self.managed_paths()}
+
+        completed = self.make_target("sync", "Y\n")
+        output = completed.stdout + completed.stderr
+
+        self.assertNotEqual(completed.returncode, 0)
+        self.assertIn("refusing to replace an unmanaged Claude statusLine", output)
+        self.assertIn(str(settings), output)
+        self.assertIn("remove only the statusLine field", output)
+        self.assertIn("then rerun synchronization", output)
+        self.assertNotIn(manual_command, output)
+        self.assertNotIn("Apply these changes?", output)
+        self.assertIn("No files were modified.", output)
+        self.assertEqual(
+            before,
+            {path: self.path_snapshot(path) for path in self.managed_paths()},
+        )
 
     def test_claude_status_line_loader_preserves_stdin_and_runs_renderer(self) -> None:
         home = Path(self.temp_dir.name) / "home"

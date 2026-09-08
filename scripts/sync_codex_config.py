@@ -660,6 +660,32 @@ def _preferred_newline(content: str) -> str:
     return "\r\n" if "\r\n" in content else "\n"
 
 
+def _preference_insertion_offset(
+    content: str,
+    lines: list[str],
+    offsets: list[int],
+    span: tuple[int, int],
+) -> int:
+    position = offsets[span[1]]
+    if content.count(HOOKS_BEGIN) != 1 or content.count(HOOKS_END) != 1:
+        return position
+    managed_start = content.index(HOOKS_BEGIN)
+    if content.find(HOOKS_END, managed_start) == -1:
+        return position
+    if offsets[span[0]] < managed_start < position:
+        # TOML comments do not end a table, so a table before this marker can
+        # appear to extend into the hook block. Keep field-owned preferences
+        # outside the region that hook rendering replaces wholesale.
+        try:
+            marker_line = offsets.index(managed_start)
+        except ValueError:
+            return managed_start
+        while marker_line > span[0] + 1 and not lines[marker_line - 1].strip():
+            marker_line -= 1
+        return offsets[marker_line]
+    return position
+
+
 def _without_managed_preferences(
     parsed: dict[str, object], targets: dict[tuple[str, str], object]
 ) -> dict[str, object]:
@@ -779,7 +805,9 @@ def render_preferences(
             f"{key} = {_format_toml_value(value)}{newline}" for key, value in entries
         )
         if section in spans:
-            position = offsets[spans[section][1]]
+            position = _preference_insertion_offset(
+                current, lines, offsets, spans[section]
+            )
             edits.append((position, position, block))
             continue
         new_sections.append(f"[{section}]{newline}{block}")
@@ -845,6 +873,15 @@ def hook_commands(group: object) -> list[str]:
             raise SyncError("Claude hook command must be a string")
         commands.append(command)
     return commands
+
+
+def _unmanaged_status_line_error(destination: Path) -> SyncError:
+    return SyncError(
+        "refusing to replace an unmanaged Claude statusLine in "
+        f"{destination}; review and preserve the existing value, or remove only "
+        "the statusLine field if you intend workspace-meta to own it, then rerun "
+        "synchronization"
+    )
 
 
 def render_claude_settings(
@@ -923,18 +960,12 @@ def render_claude_settings(
     current_status_line = settings.get("statusLine", MISSING)
     if current_status_line is not MISSING:
         if not isinstance(current_status_line, dict):
-            raise SyncError(
-                "refusing to replace an unmanaged Claude statusLine; remove or "
-                "migrate it explicitly before bootstrap"
-            )
+            raise _unmanaged_status_line_error(destination)
         current_command = current_status_line.get("command", "")
         if not isinstance(current_command, str) or not (
             MANAGED_CLAUDE_STATUS_LINE_MARKER_PATTERN.search(current_command)
         ):
-            raise SyncError(
-                "refusing to replace an unmanaged Claude statusLine; remove or "
-                "migrate it explicitly before bootstrap"
-            )
+            raise _unmanaged_status_line_error(destination)
     settings["statusLine"] = managed_status_line
     result = json.dumps(settings, ensure_ascii=False, indent=2) + "\n"
     if result == current:

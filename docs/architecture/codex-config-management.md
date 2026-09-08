@@ -173,6 +173,8 @@ statusMessage、padding、脚本路径、命令目标、解释器、hash pin、h
 - 使用解析后的 TOML 值比较；只有值缺失或不一致时才产生配置写入；
 - 只局部替换或插入声明字段，保留同一 section 内的未声明字段、注释和
   Codex 生成的状态；
+- 若某个 section 的 TOML 语义范围跨入 Codex hook 标记块，缺失偏好字段会插在
+  begin marker 之前，避免后续 hook 块替换再次删除该字段；
 - 无法定位的重复、冲突或复杂定义会拒绝同步，不自动删除用户内容；
 - `history.persistence = "save-all"` 只改变每台主机是否保存自己的
   `history.jsonl`，不把已有对话历史带入仓库。

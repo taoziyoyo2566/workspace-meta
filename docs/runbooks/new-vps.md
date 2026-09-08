@@ -284,6 +284,7 @@ checkout。workspace-meta 更新后重复第 7 节；项目更新则进入对应
 | `agent-sync-check` 返回非零 | 先读它列出的具体目标；输入无效先修复主机 JSON/TOML，配置漂移运行 `make sync` 审核并确认 |
 | Python/tomllib 不可用 | 安装 Python 3.11+；不要绕过同步器的解析校验 |
 | `mixed hook group` | 将 workspace-meta handler 与用户 handler 拆到不同 SessionStart group；不要删除未知的用户 handler |
+| `unmanaged Claude statusLine` | 先审核并保留现有值；若明确要把该字段交给 workspace-meta，先备份，再只移除 `settings.json` 的 `statusLine` 字段并重新运行 `make sync`，不要删除整个文件 |
 | Codex Hook 不触发 | 按第 6 节重新 bootstrap，再在 `/hooks` 审查/信任并启动新会话；同时检查 `AGENTS.override.md` 是否遮蔽全局指导 |
 | 仍然出现远端离线提示 | 检查 Git 凭据、DNS、远端可达性和 `~/.cache/workspace-meta/status.json` 的可写性 |
 | 普通命令反复询问 | 检查本机 `approval_policy`；`untrusted` 对未知命令更严格，使用精确的执行授权检查，不要添加宽泛白名单 |
