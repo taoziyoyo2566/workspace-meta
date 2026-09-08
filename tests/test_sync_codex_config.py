@@ -7,6 +7,7 @@ from io import StringIO
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import tempfile
 import tomllib
@@ -38,12 +39,495 @@ class CodexConfigSyncTests(unittest.TestCase):
         self.preferences_template = (
             ROOT / ".agents" / "host-templates" / "codex-preferences.toml"
         )
+        self.expected_status_line = tomllib.loads(
+            self.preferences_template.read_text()
+        )["tui"]["status_line"]
         self.status_script = ROOT / "scripts" / "workspace_status.py"
         self.claude_status_line_script = ROOT / "scripts" / "claude_status_line.py"
+        self.env_skill_template = (
+            ROOT / ".agents" / "host-templates" / "env-sync-SKILL.md"
+        )
+        self.env_skill = (
+            Path(self.temp_dir.name) / ".claude" / "skills" / "env-sync" / "SKILL.md"
+        )
         self.rules_dir = ROOT / ".agents" / "rules"
 
     def tearDown(self) -> None:
         self.temp_dir.cleanup()
+
+    def sync_cli(self, mode: str | None = None, input_text: str | None = None):
+        args = [
+            sys.executable,
+            str(ROOT / "scripts" / "sync_codex_config.py"),
+            "--python",
+            sys.executable,
+            "--agents-template",
+            str(self.agents_template),
+            "--hooks-template",
+            str(self.hooks_template),
+            "--preferences-template",
+            str(self.preferences_template),
+            "--status-script",
+            str(self.status_script),
+            "--claude-status-line-script",
+            str(self.claude_status_line_script),
+            "--env-skill-template",
+            str(self.env_skill_template),
+            "--codex-home",
+            str(self.codex_home),
+            "--claude-settings",
+            str(Path(self.temp_dir.name) / ".claude" / "settings.json"),
+            "--env-skill",
+            str(self.env_skill),
+        ]
+        if mode:
+            args.append(mode)
+        return subprocess.run(
+            args,
+            input=input_text,
+            capture_output=True,
+            check=False,
+            text=True,
+        )
+
+    def make_target(self, target: str, input_text: str | None = None):
+        env = os.environ.copy()
+        env["HOME"] = self.temp_dir.name
+        env["CODEX_HOME"] = str(self.codex_home)
+        env["PYTHON"] = sys.executable
+        return subprocess.run(
+            ["make", target],
+            cwd=ROOT,
+            env=env,
+            input=input_text,
+            capture_output=True,
+            check=False,
+            text=True,
+        )
+
+    def managed_paths(self) -> tuple[Path, ...]:
+        return (
+            self.codex_home / "AGENTS.md",
+            self.codex_home / "config.toml",
+            Path(self.temp_dir.name) / ".claude" / "settings.json",
+            self.env_skill,
+        )
+
+    @staticmethod
+    def path_snapshot(path: Path) -> tuple[bool, bytes | None, int | None]:
+        return (
+            path.exists(),
+            path.read_bytes() if path.exists() else None,
+            path.stat().st_mtime_ns if path.exists() else None,
+        )
+
+    def install_current_managed_state(self) -> None:
+        completed = self.sync_cli()
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+
+    def drift_status_line(self) -> None:
+        config = self.codex_home / "config.toml"
+        changed, replacements = re.subn(
+            r'(?m)^status_line = \[[^\n]*\]$',
+            'status_line = ["context-remaining", "git-branch"]',
+            config.read_text(),
+        )
+        self.assertEqual(replacements, 1)
+        config.write_text(changed)
+
+    def test_make_sync_skips_prompt_and_writes_when_everything_is_current(self) -> None:
+        self.install_current_managed_state()
+        before = {path: self.path_snapshot(path) for path in self.managed_paths()}
+
+        completed = self.make_target("sync")
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertNotIn("Apply these changes?", completed.stdout)
+        self.assertIn("Result: everything is already current.", completed.stdout)
+        self.assertIn("No files changed.", completed.stdout)
+        for label in (
+            "Codex AGENTS.md",
+            "Codex SessionStart hook",
+            "Codex preferences",
+            "Claude SessionStart hook",
+            "Claude statusLine",
+            "env-sync skill",
+        ):
+            self.assertRegex(completed.stdout, rf"(?m)^{re.escape(label)}:\s+OK$")
+        self.assertEqual(
+            before,
+            {path: self.path_snapshot(path) for path in self.managed_paths()},
+        )
+
+    def test_make_sync_reports_preference_drift_before_declining(self) -> None:
+        self.install_current_managed_state()
+        self.drift_status_line()
+        before = {path: self.path_snapshot(path) for path in self.managed_paths()}
+
+        for response in ("\n", "N\n", "n\n", "anything\n"):
+            with self.subTest(response=response):
+                completed = self.make_target("sync", response)
+                self.assertEqual(completed.returncode, 0, completed.stderr)
+                self.assertRegex(
+                    completed.stdout, r"(?m)^Codex preferences:\s+DRIFT$"
+                )
+                self.assertIn("tui.status_line", completed.stdout)
+                self.assertIn("Repository:", completed.stdout)
+                self.assertIn("Current host:", completed.stdout)
+                self.assertIn(
+                    f"1. {self.expected_status_line[0]}", completed.stdout
+                )
+                self.assertIn("1. context-remaining", completed.stdout)
+                self.assertIn(
+                    "Applying workspace-meta will replace the current local values",
+                    completed.stdout,
+                )
+                self.assertIn("Changes to apply:", completed.stdout)
+                self.assertIn(
+                    "- Codex preferences: replace tui.status_line",
+                    completed.stdout,
+                )
+                self.assertLess(
+                    completed.stdout.index("Changes to apply:"),
+                    completed.stdout.index("Apply these changes? [y/N]:"),
+                )
+                self.assertIn("Unmanaged local configuration will be preserved.", completed.stdout)
+                self.assertIn("Apply these changes? [y/N]:", completed.stdout)
+                self.assertIn("No changes applied.", completed.stdout)
+                self.assertNotIn("updated preferences", completed.stdout.lower())
+                self.assertEqual(
+                    before,
+                    {path: self.path_snapshot(path) for path in self.managed_paths()},
+                )
+
+    def test_make_sync_yes_updates_only_drifted_target_and_is_idempotent(self) -> None:
+        self.install_current_managed_state()
+        config = self.codex_home / "config.toml"
+        config.write_text('model = "host-model"\n\n' + config.read_text())
+        self.drift_status_line()
+        unchanged_paths = tuple(path for path in self.managed_paths() if path != config)
+        unchanged_before = {
+            path: self.path_snapshot(path) for path in unchanged_paths
+        }
+
+        completed = self.make_target("sync", "Y\n")
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("Final managed configuration:", completed.stdout)
+        self.assertRegex(
+            completed.stdout, r"(?m)^Codex preferences:\s+UPDATED$"
+        )
+        for label in (
+            "Codex AGENTS.md",
+            "Codex SessionStart hook",
+            "Claude SessionStart hook",
+            "Claude statusLine",
+            "env-sync skill",
+        ):
+            self.assertRegex(completed.stdout, rf"(?m)^{re.escape(label)}:\s+OK$")
+        self.assertIn("Sync complete: 1 updated, 5 unchanged.", completed.stdout)
+        self.assertEqual(tomllib.loads(config.read_text())["model"], "host-model")
+        self.assertEqual(
+            unchanged_before,
+            {path: self.path_snapshot(path) for path in unchanged_paths},
+        )
+
+        current_snapshot = self.path_snapshot(config)
+        second = self.make_target("sync")
+        self.assertEqual(second.returncode, 0, second.stderr)
+        self.assertNotIn("Apply these changes?", second.stdout)
+        self.assertIn("Result: everything is already current.", second.stdout)
+        self.assertEqual(current_snapshot, self.path_snapshot(config))
+
+    def test_agent_sync_check_reports_drift_and_never_writes(self) -> None:
+        self.install_current_managed_state()
+        self.drift_status_line()
+        before = {path: self.path_snapshot(path) for path in self.managed_paths()}
+
+        direct = self.sync_cli("--check")
+
+        self.assertEqual(direct.returncode, 1)
+        self.assertRegex(direct.stdout, r"(?m)^Codex preferences:\s+DRIFT$")
+        self.assertIn("Repository:", direct.stdout)
+        self.assertIn("Current host:", direct.stdout)
+        self.assertIn("No files were modified.", direct.stdout)
+        self.assertNotIn("updated", direct.stdout.lower())
+        self.assertEqual(
+            before,
+            {path: self.path_snapshot(path) for path in self.managed_paths()},
+        )
+
+        through_make = self.make_target("agent-sync-check")
+        self.assertNotEqual(through_make.returncode, 0)
+        self.assertIn("DRIFT", through_make.stdout)
+        self.assertIn("No files were modified.", through_make.stdout)
+        self.assertEqual(
+            before,
+            {path: self.path_snapshot(path) for path in self.managed_paths()},
+        )
+
+    def test_codex_pin_only_drift_reports_the_script_pin_semantically(self) -> None:
+        self.install_current_managed_state()
+        config = self.codex_home / "config.toml"
+        repository_pin = hashlib.sha256(self.status_script.read_bytes()).hexdigest()
+        installed_pin = "0" * 64
+        config.write_text(config.read_text().replace(repository_pin, installed_pin, 1))
+
+        completed = self.sync_cli("--check")
+
+        self.assertEqual(completed.returncode, 1)
+        self.assertRegex(
+            completed.stdout, r"(?m)^Codex SessionStart hook:\s+DRIFT$"
+        )
+        details = completed.stdout.split("  Codex SessionStart hook:", 1)[1]
+        details = details.split("\n\n  ", 1)[0]
+        self.assertIn("Script: scripts/workspace_status.py", details)
+        self.assertIn(f'Installed: "{installed_pin}"', details)
+        self.assertIn(f'Repository: "{repository_pin}"', details)
+        self.assertIn("~ expected script hash changed", details)
+        self.assertIn(
+            "Refresh the managed hook so it trusts the current "
+            "repository version of workspace_status.py.",
+            completed.stdout,
+        )
+        self.assertNotIn("matcher:", details)
+        self.assertNotIn("timeout:", details)
+        self.assertNotIn("command loader:", details)
+        self.assertNotIn("unparsed command structure", details)
+
+        interactive = self.sync_cli("--interactive", "N\n")
+        self.assertIn(
+            "- Codex SessionStart hook: refresh workspace_status.py hash pin",
+            interactive.stdout,
+        )
+        self.assertLess(
+            interactive.stdout.index("Changes to apply:"),
+            interactive.stdout.index("Apply these changes? [y/N]:"),
+        )
+
+    def test_codex_hook_reports_only_changed_managed_fields(self) -> None:
+        self.install_current_managed_state()
+        config = self.codex_home / "config.toml"
+        changed = config.read_text()
+        changed = changed.replace('matcher = "startup|resume"', 'matcher = "startup"')
+        changed = changed.replace(
+            "workspace/scripts/workspace_status.py",
+            "workspace/scripts/other_status.py",
+        )
+        changed = changed.replace("timeout = 20", "timeout = 12")
+        changed = changed.replace(
+            'statusMessage = "Checking workspace-meta status"',
+            'statusMessage = "Checking another status"',
+        )
+        config.write_text(changed)
+
+        completed = self.sync_cli("--check")
+
+        self.assertEqual(completed.returncode, 1)
+        details = completed.stdout.split("  Codex SessionStart hook:", 1)[1]
+        details = details.split("\n\n  ", 1)[0]
+        for field in (
+            "~ matcher changed",
+            "~ script path changed",
+            "~ command target changed",
+            "~ timeout changed",
+            "~ statusMessage changed",
+        ):
+            self.assertIn(field, details)
+        self.assertNotIn("type:", details)
+        self.assertNotIn("expected script hash", details)
+        self.assertNotIn("command loader:", details)
+        self.assertNotIn("unparsed command structure", details)
+
+    def test_recovery_command_drift_is_semantic_for_all_three_commands(self) -> None:
+        self.install_current_managed_state()
+        config = self.codex_home / "config.toml"
+        config.write_text(
+            config.read_text().replace(
+                "make -C ~/workspace sync", "make -C ~/workspace bootstrap", 1
+            )
+        )
+        settings = Path(self.temp_dir.name) / ".claude" / "settings.json"
+        settings.write_text(
+            settings.read_text().replace(
+                "make -C ~/workspace sync", "make -C ~/workspace bootstrap"
+            )
+        )
+
+        completed = self.sync_cli("--interactive", "N\n")
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        for label, script in (
+            ("Codex SessionStart hook", "scripts/workspace_status.py"),
+            ("Claude SessionStart hook", "scripts/workspace_status.py"),
+            ("Claude statusLine", "scripts/claude_status_line.py"),
+        ):
+            details = completed.stdout.split(f"  {label}:", 1)[1]
+            details = details.split("\n\n  ", 1)[0]
+            self.assertIn(f"Script: {script}", details)
+            self.assertIn("~ hash-mismatch recovery command changed", details)
+            self.assertIn(
+                'Installed: "make -C ~/workspace bootstrap"', details
+            )
+            self.assertIn('Repository: "make -C ~/workspace sync"', details)
+            self.assertIn(
+                "Use make -C ~/workspace sync when the managed script hash "
+                "check fails.",
+                completed.stdout,
+            )
+            self.assertNotIn("command loader", details)
+            self.assertNotIn("unparsed command structure", details)
+            self.assertIn(
+                f"- {label}: update hash-mismatch recovery command",
+                completed.stdout,
+            )
+
+    def test_command_structure_version_drift_is_reported_separately(self) -> None:
+        self.install_current_managed_state()
+        config = self.codex_home / "config.toml"
+        config.write_text(
+            config.read_text().replace(
+                SYNC.MANAGED_HOOK_MARKER,
+                "workspace-meta-managed-status-v0",
+                1,
+            )
+        )
+
+        completed = self.sync_cli("--check")
+
+        self.assertEqual(completed.returncode, 1)
+        details = completed.stdout.split("  Codex SessionStart hook:", 1)[1]
+        details = details.split("\n\n  ", 1)[0]
+        self.assertIn("~ command structure version changed", details)
+        self.assertIn('Installed: "v0"', details)
+        self.assertIn('Repository: "v1"', details)
+        self.assertNotIn("unparsed command structure", details)
+
+    def test_unparsed_command_change_uses_structure_hash_fallback(self) -> None:
+        self.install_current_managed_state()
+        config = self.codex_home / "config.toml"
+        config.write_text(
+            config.read_text().replace(
+                "status evaluator changed or is unavailable",
+                "status evaluator drifted or is unavailable",
+                1,
+            )
+        )
+
+        completed = self.sync_cli("--interactive", "N\n")
+
+        self.assertEqual(completed.returncode, 0)
+        details = completed.stdout.split("  Codex SessionStart hook:", 1)[1]
+        details = details.split("\n\n  ", 1)[0]
+        self.assertIn("~ unparsed command structure changed", details)
+        self.assertEqual(details.count("SHA-256 "), 2)
+        self.assertIn(
+            "Replace the unrecognized managed command structure with the "
+            "repository definition.",
+            completed.stdout,
+        )
+        self.assertNotIn("command loader", details)
+        self.assertIn(
+            "- Codex SessionStart hook: replace unrecognized command structure",
+            completed.stdout,
+        )
+
+    def test_claude_hook_and_status_line_pin_drift_are_separate(self) -> None:
+        self.install_current_managed_state()
+        settings = Path(self.temp_dir.name) / ".claude" / "settings.json"
+        parsed = json.loads(settings.read_text())
+        hook_pin = hashlib.sha256(self.status_script.read_bytes()).hexdigest()
+        status_line_pin = hashlib.sha256(
+            self.claude_status_line_script.read_bytes()
+        ).hexdigest()
+        parsed["hooks"]["SessionStart"][0]["hooks"][0]["command"] = parsed[
+            "hooks"
+        ]["SessionStart"][0]["hooks"][0]["command"].replace(hook_pin, "1" * 64)
+        parsed["statusLine"]["command"] = parsed["statusLine"]["command"].replace(
+            status_line_pin, "2" * 64
+        )
+        settings.write_text(json.dumps(parsed, indent=2) + "\n")
+
+        completed = self.sync_cli("--check")
+
+        self.assertEqual(completed.returncode, 1)
+        self.assertRegex(
+            completed.stdout, r"(?m)^Claude SessionStart hook:\s+DRIFT$"
+        )
+        self.assertRegex(completed.stdout, r"(?m)^Claude statusLine:\s+DRIFT$")
+        hook_details = completed.stdout.split("  Claude SessionStart hook:", 1)[1]
+        hook_details = hook_details.split("\n\n  ", 1)[0]
+        status_details = completed.stdout.split("  Claude statusLine:", 1)[1]
+        status_details = status_details.split("\n\n  ", 1)[0]
+        self.assertIn("~ expected script hash changed", hook_details)
+        self.assertIn("workspace_status.py", hook_details)
+        self.assertNotIn("claude_status_line.py", hook_details)
+        self.assertIn("~ expected script hash changed", status_details)
+        self.assertIn("claude_status_line.py", status_details)
+        self.assertNotIn("workspace_status.py", status_details)
+
+    def test_claude_components_report_their_own_changed_fields(self) -> None:
+        self.install_current_managed_state()
+        settings = Path(self.temp_dir.name) / ".claude" / "settings.json"
+        parsed = json.loads(settings.read_text())
+        group = parsed["hooks"]["SessionStart"][0]
+        group["matcher"] = "startup"
+        group["hooks"][0]["timeout"] = 7
+        parsed["statusLine"]["padding"] = 2
+        parsed["statusLine"]["command"] = parsed["statusLine"]["command"].replace(
+            "workspace/scripts/claude_status_line.py",
+            "workspace/scripts/other_status_line.py",
+        )
+        settings.write_text(json.dumps(parsed, indent=2) + "\n")
+
+        completed = self.sync_cli("--check")
+
+        self.assertEqual(completed.returncode, 1)
+        hook_details = completed.stdout.split("  Claude SessionStart hook:", 1)[1]
+        hook_details = hook_details.split("\n\n  ", 1)[0]
+        status_details = completed.stdout.split("  Claude statusLine:", 1)[1]
+        status_details = status_details.split("\n\n  ", 1)[0]
+        self.assertIn("~ matcher changed", hook_details)
+        self.assertIn("~ timeout changed", hook_details)
+        self.assertNotIn("~ padding changed", hook_details)
+        self.assertIn("~ script path changed", status_details)
+        self.assertIn("~ command target changed", status_details)
+        self.assertIn("~ padding changed", status_details)
+        self.assertNotIn("~ matcher changed", status_details)
+        self.assertNotIn("~ timeout changed", status_details)
+
+    def test_make_sync_reports_parse_errors_without_prompt_or_writes(self) -> None:
+        self.install_current_managed_state()
+        valid_contents = {
+            path: path.read_bytes() for path in self.managed_paths()
+        }
+        for invalid_target in ("toml", "json"):
+            with self.subTest(invalid_target=invalid_target):
+                for path, content in valid_contents.items():
+                    path.write_bytes(content)
+                if invalid_target == "toml":
+                    (self.codex_home / "config.toml").write_text(
+                        'model = "unterminated\n'
+                    )
+                else:
+                    (Path(self.temp_dir.name) / ".claude" / "settings.json").write_text(
+                        '{"hooks":'
+                    )
+                before = {
+                    path: self.path_snapshot(path) for path in self.managed_paths()
+                }
+
+                completed = self.make_target("sync", "Y\n")
+                output = completed.stdout + completed.stderr
+
+                self.assertNotEqual(completed.returncode, 0)
+                self.assertIn("ERROR", output)
+                self.assertIn("No files were modified.", output)
+                self.assertNotIn("Apply these changes?", output)
+                self.assertEqual(
+                    before,
+                    {path: self.path_snapshot(path) for path in self.managed_paths()},
+                )
 
     def test_installs_and_is_idempotent(self) -> None:
         agents = self.codex_home / "AGENTS.md"
@@ -86,15 +570,7 @@ class CodexConfigSyncTests(unittest.TestCase):
         self.assertTrue(parsed["tui"]["notifications"])
         self.assertEqual(
             parsed["tui"]["status_line"],
-            [
-                "model",
-                "context-remaining",
-                "git-branch",
-                "used-tokens",
-                "total-input-tokens",
-                "total-output-tokens",
-                "weekly-limit",
-            ],
+            self.expected_status_line,
         )
 
         second = SYNC.render_preferences(self.preferences_template, rendered.content)
@@ -135,15 +611,7 @@ class CodexConfigSyncTests(unittest.TestCase):
         parsed = tomllib.loads(rendered.content)
         self.assertEqual(
             parsed["tui"]["status_line"],
-            [
-                "model",
-                "context-remaining",
-                "git-branch",
-                "used-tokens",
-                "total-input-tokens",
-                "total-output-tokens",
-                "weekly-limit",
-            ],
+            self.expected_status_line,
         )
         self.assertEqual(parsed["tui"]["model_availability_nux"]["gpt-example"], 1)
         self.assertLess(
@@ -164,19 +632,21 @@ class CodexConfigSyncTests(unittest.TestCase):
 
         rendered = SYNC.render_preferences(self.preferences_template, current)
         parsed = tomllib.loads(rendered.content)
-        self.assertEqual(len(parsed["tui"]["status_line"]), 7)
+        self.assertEqual(parsed["tui"]["status_line"], self.expected_status_line)
         self.assertEqual(parsed["tui"]["model_availability_nux"]["gpt-example"], 1)
         self.assertNotIn('["old"]', rendered.content)
 
     def test_preferences_skip_formatting_only_difference(self) -> None:
+        alternate_status_line = ", ".join(
+            json.dumps(item) for item in self.expected_status_line
+        )
         current = (
             "[history]\n"
             'persistence = "save-all"\n'
             "max_bytes = 5242880\n\n"
             "[tui]\n"
             "status_line = [\n"
-            '  "model", "context-remaining", "git-branch",\n'
-            '  "used-tokens", "total-input-tokens", "total-output-tokens", "weekly-limit"\n'
+            f"  {alternate_status_line}\n"
             "]\n"
         )
 
@@ -199,7 +669,7 @@ class CodexConfigSyncTests(unittest.TestCase):
         parsed = tomllib.loads(rendered.content)
         self.assertEqual(parsed["history"]["persistence"], "save-all")
         self.assertEqual(parsed["history"]["max_bytes"], 5242880)
-        self.assertEqual(len(parsed["tui"]["status_line"]), 7)
+        self.assertEqual(parsed["tui"]["status_line"], self.expected_status_line)
         self.assertTrue(parsed["tui"]["unmanaged"])
 
     def test_preferences_preserve_quoted_table_with_hash(self) -> None:
@@ -215,7 +685,7 @@ class CodexConfigSyncTests(unittest.TestCase):
         self.assertEqual(
             parsed["other#section"]["status_line"], ["user-owned"]
         )
-        self.assertEqual(len(parsed["tui"]["status_line"]), 7)
+        self.assertEqual(parsed["tui"]["status_line"], self.expected_status_line)
 
     def test_preferences_skip_unowned_multiline_value(self) -> None:
         current = (
@@ -228,7 +698,7 @@ class CodexConfigSyncTests(unittest.TestCase):
         rendered = SYNC.render_preferences(self.preferences_template, current)
         parsed = tomllib.loads(rendered.content)
         self.assertEqual(parsed["tui"]["other"], 'status_line = ["user-owned"]\n')
-        self.assertEqual(len(parsed["tui"]["status_line"]), 7)
+        self.assertEqual(parsed["tui"]["status_line"], self.expected_status_line)
 
     def test_preferences_ignore_fake_tables_inside_multiline_string(self) -> None:
         current = (
@@ -250,15 +720,7 @@ class CodexConfigSyncTests(unittest.TestCase):
         self.assertEqual(parsed["history"]["max_bytes"], 5242880)
         self.assertEqual(
             parsed["tui"]["status_line"],
-            [
-                "model",
-                "context-remaining",
-                "git-branch",
-                "used-tokens",
-                "total-input-tokens",
-                "total-output-tokens",
-                "weekly-limit",
-            ],
+            self.expected_status_line,
         )
 
     def test_preferences_refuse_unlocatable_existing_value(self) -> None:
@@ -306,10 +768,13 @@ class CodexConfigSyncTests(unittest.TestCase):
             preferences_template=self.preferences_template,
             status_script=self.status_script,
             claude_status_line_script=self.claude_status_line_script,
+            env_skill_template=self.env_skill_template,
+            env_skill=self.env_skill,
             codex_home=self.codex_home,
             claude_settings=settings,
             python="python3",
             check=True,
+            interactive=False,
         )
 
         stdout = StringIO()
@@ -379,10 +844,13 @@ class CodexConfigSyncTests(unittest.TestCase):
             preferences_template=self.preferences_template,
             status_script=changed_status,
             claude_status_line_script=self.claude_status_line_script,
+            env_skill_template=self.env_skill_template,
+            env_skill=self.env_skill,
             codex_home=self.codex_home,
             claude_settings=settings,
             python="python3",
             check=False,
+            interactive=False,
         )
         stdout = StringIO()
         stderr = StringIO()
@@ -1045,23 +1513,29 @@ class CodexConfigSyncTests(unittest.TestCase):
     def test_claude_refuses_unmanaged_status_line(self) -> None:
         settings = self.codex_home.parent / ".claude" / "settings.json"
         settings.parent.mkdir(parents=True)
-        original = json.dumps(
-            {
-                "theme": "dark",
-                "statusLine": {
-                    "type": "command",
-                    "command": "~/.claude/personal-status-line.sh",
-                },
-            }
-        )
-        settings.write_text(original)
-
-        with self.assertRaisesRegex(
-            SYNC.SyncError, "refusing to replace an unmanaged Claude statusLine"
+        for command in (
+            "~/.claude/personal-status-line.sh",
+            f"echo {SYNC.MANAGED_CLAUDE_STATUS_LINE_MARKER}-custom",
         ):
-            SYNC.sync_claude_settings(settings, self.status_script)
+            with self.subTest(command=command):
+                original = json.dumps(
+                    {
+                        "theme": "dark",
+                        "statusLine": {
+                            "type": "command",
+                            "command": command,
+                        },
+                    }
+                )
+                settings.write_text(original)
 
-        self.assertEqual(settings.read_text(), original)
+                with self.assertRaisesRegex(
+                    SYNC.SyncError,
+                    "refusing to replace an unmanaged Claude statusLine",
+                ):
+                    SYNC.sync_claude_settings(settings, self.status_script)
+
+                self.assertEqual(settings.read_text(), original)
 
     def test_claude_status_line_loader_preserves_stdin_and_runs_renderer(self) -> None:
         home = Path(self.temp_dir.name) / "home"
@@ -1206,10 +1680,14 @@ class CodexConfigSyncTests(unittest.TestCase):
                 str(self.status_script),
                 "--claude-status-line-script",
                 str(self.claude_status_line_script),
+                "--env-skill-template",
+                str(self.env_skill_template),
                 "--codex-home",
                 str(self.codex_home),
                 "--claude-settings",
                 str(claude),
+                "--env-skill",
+                str(self.env_skill),
             ],
             capture_output=True,
             check=False,

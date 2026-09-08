@@ -190,7 +190,7 @@ make agent-sync-check
 标记块之外的主机内容会保留。如果 Claude 已有不带 workspace-meta 标记的
 `statusLine`，同步器会拒绝覆盖；先审核并自行备份/移除旧配置，再重新运行。
 `agent-sync-check` 只报告漂移，不写主机文件；
-返回 0 才表示三个托管目标已经收敛。这个步骤不会安装 Codex/Claude，不会登录，
+返回 0 才表示六个托管区域已经收敛。这个步骤不会安装 Codex/Claude，不会登录，
 不会信任 Hook，也不会自动 pull、commit 或 push。
 
 ## 7. 修改后如何让它生效
@@ -201,11 +201,11 @@ make agent-sync-check
 执行前说明（Protected-Action Request Brief）：
 
 - **What**：刷新远端引用并检查状态；在审核 incoming commits 后，可选择一次精确
-  的快进更新，然后重新运行 bootstrap 和收敛检查。
+  的快进更新，然后运行交互式托管配置同步和只读收敛检查。
 - **Why now**：让当前 checkout 和主机托管配置包含指定的 workspace-meta 变更。
 - **Target / effect**：`git fetch` 更新当前仓库的 `origin` 引用；可选
-  `git merge --ff-only origin/main` 更新当前 checkout；`make bootstrap` 再写入本机
-  托管配置。
+  `git merge --ff-only origin/main` 更新当前 checkout；`make sync` 先显示当前
+  checkout 与本机托管值的差异，只在确认后写入这些托管值。
 - **Risk / recovery**：merge 只允许已审核且可快进的范围；发现本地改动或范围不明
   时停止，不 stash、reset、clean 或覆盖它们。主机配置变更失败时按第 6 节修复并
   重新检查。
@@ -223,18 +223,24 @@ git status --short --branch
 # 审核 incoming commits 和本地改动后，按你的发布/更新决定执行更新
 # 例如干净且确认只需快进时：git merge --ff-only origin/main
 
-make bootstrap
+make sync
 make agent-sync-check
 make env-probe-check
 git config --local --get core.hooksPath
 test -x .githooks/pre-commit
 ```
 
+`make sync` 总是先执行只读 dry-run。全部为 `OK` 时不询问也不写入；出现
+`DRIFT` 时按组件显示真正变化的托管字段，并在确认前列出 `Changes to apply`；
+Codex/Claude SessionStart 和 Claude `statusLine` 的脚本 pin 会显示仓库值与已安装值。
+仅 `Y`/`y` 会应用，Enter、`N`/`n` 或其他输入都保持不变；出现 `ERROR` 时停止且
+不提供确认。`make agent-sync-check` 使用相同诊断但永不询问或写入。
+
 每一步的生效边界是：
 
-1. **仓库文件变更**：必须先让 checkout 包含目标提交，再运行 `make bootstrap`。
+1. **仓库文件变更**：必须先让 checkout 包含目标提交，再运行 `make sync`。
    只拉取或只编辑仓库文件，不会自动改写 `~/.codex`/`~/.claude`。
-2. **Codex 指导或配置变更**：`bootstrap` 成功后退出当前 Codex 会话并启动
+2. **Codex 指导或配置变更**：`sync` 成功后退出当前 Codex 会话并启动
    新会话，让新的 `AGENTS.md` 和配置从会话启动时加载。
 3. **Codex Hook 定义或 evaluator hash 变更**：在 Codex 中运行 `/hooks`，找到
    workspace-meta 的 SessionStart Hook，审查并信任新定义；然后再启动全新会话。
@@ -261,7 +267,7 @@ test -x .githooks/pre-commit
 ```bash
 git -C "$HOME/workspace" status --short --branch
 git -C "$HOME/workspace" fetch origin
-make -C "$HOME/workspace" agent-sync-check
+make -C "$HOME/workspace" sync
 make -C "$HOME/workspace" env-probe-check
 ```
 
@@ -275,7 +281,7 @@ checkout。workspace-meta 更新后重复第 7 节；项目更新则进入对应
 | 现象 | 处理 |
 |---|---|
 | `env-probe-check` 提示 missing/stale | 回到第 4 节的 action brief，运行 `make env-probe`，审核后再运行 check |
-| `agent-sync-check` 返回非零 | 先读它列出的具体目标；输入无效先修复主机 JSON/TOML，配置漂移按第 6 节重新 bootstrap |
+| `agent-sync-check` 返回非零 | 先读它列出的具体目标；输入无效先修复主机 JSON/TOML，配置漂移运行 `make sync` 审核并确认 |
 | Python/tomllib 不可用 | 安装 Python 3.11+；不要绕过同步器的解析校验 |
 | `mixed hook group` | 将 workspace-meta handler 与用户 handler 拆到不同 SessionStart group；不要删除未知的用户 handler |
 | Codex Hook 不触发 | 按第 6 节重新 bootstrap，再在 `/hooks` 审查/信任并启动新会话；同时检查 `AGENTS.override.md` 是否遮蔽全局指导 |

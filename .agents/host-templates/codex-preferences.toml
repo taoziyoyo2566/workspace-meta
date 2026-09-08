@@ -7,11 +7,12 @@ max_bytes = 5242880
 
 [tui]
 status_line = [
-  "model",
-  "context-remaining",
+  "project-name",
   "git-branch",
+  "pull-request-number",
+  "model-with-reasoning",
   "used-tokens",
-  "total-input-tokens",
-  "total-output-tokens",
+  "estimated-thread-cost",
+  "five-hour-limit",
   "weekly-limit",
 ]

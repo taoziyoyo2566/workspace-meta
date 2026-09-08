@@ -6,8 +6,9 @@
 
 ## 一句话模型
 
-Git 仓库保存“应当如何安装”的模板和脚本；`make bootstrap` 只收敛明确归
-workspace-meta 所有的配置面；用户目录中其余内容始终由当前主机维护。
+Git 仓库保存“应当如何安装”的模板和脚本；`make bootstrap` 和日常使用的
+`make sync` 只收敛明确归 workspace-meta 所有的配置面；用户目录中其余内容
+始终由当前主机维护。
 
 ## 配置分层
 
@@ -16,9 +17,10 @@ workspace-meta 所有的配置面；用户目录中其余内容始终由当前�
 | workspace-meta | `.agents/rules/` 中的跨项目方法、模板、安装器、状态评估器 | 本仓库 | 有意公开的 Git 远端；仅同步白名单中的可移植内容 |
 | 本机能力快照 | `.agents/env/<hostname -s>.yml` | 当前主机 | 本机 probe；Git 忽略 |
 | Claude 工作区适配器 | `~/workspace/CLAUDE.md` 中的紧凑路由与安全底线 | workspace-meta | 本仓库 Git |
-| Codex 全局指导 | `~/.codex/AGENTS.md` 中的路由与安全底线标记块 | workspace-meta + 主机 | `make bootstrap` 只替换标记块 |
-| Codex 全局配置 | `~/.codex/config.toml` 中的标记 hook 块和声明的偏好字段 | workspace-meta + 主机 | `make bootstrap` 只替换 hook 标记块并按字段收敛声明的偏好 |
-| Claude 全局配置 | `~/.claude/settings.json` 中一个专用 SessionStart 组和带标记的 `statusLine` | workspace-meta + 主机 | `make bootstrap` 收敛这两个字段，保留其他键和组；拒绝覆盖未知 status line |
+| Codex 全局指导 | `~/.codex/AGENTS.md` 中的路由与安全底线标记块 | workspace-meta + 主机 | `make bootstrap` / `make sync` 只替换标记块 |
+| Codex 全局配置 | `~/.codex/config.toml` 中的标记 hook 块和声明的偏好字段 | workspace-meta + 主机 | `make bootstrap` / `make sync` 只替换 hook 标记块并按字段收敛声明的偏好 |
+| Claude 全局配置 | `~/.claude/settings.json` 中一个专用 SessionStart 组和带标记的 `statusLine` | workspace-meta + 主机 | `make bootstrap` / `make sync` 收敛这两个字段，保留其他键和组；拒绝覆盖未知 status line |
+| Claude env-sync skill | `~/.claude/skills/env-sync/SKILL.md` | workspace-meta | `make bootstrap` / `make sync` 从版本化模板收敛整个文件 |
 | 项目配置 | `~/workspace/projects/<project>/` 中项目的 `AGENTS.md`、`.agents/`、`.codex/` | 项目仓库 | 项目自己的 Git |
 | 主机私有状态 | 凭据、未声明的模型/偏好、信任 hash、审批规则、历史数据、缓存、数据库 | 当前主机 | 不同步 |
 
@@ -68,7 +70,7 @@ workspace-meta 远端有意公开；可发布范围仍由反向白名单和现�
 | `scripts/workspace_status.py` | Claude/Codex 共用的状态评估策略 |
 | `scripts/claude_status_line.py` | 从 Claude 官方 stdin payload 渲染交互式状态栏 |
 | `scripts/check_documentation.py` | 校验入口、owner 路由、链接、truth lifecycle 和 runbook 结构 |
-| `scripts/sync_codex_config.py` | 渲染、迁移、校验并写入三个主机目标 |
+| `scripts/sync_codex_config.py` | 渲染、迁移、校验并按 check、交互或 bootstrap 模式收敛六个托管区域 |
 | `scripts/bootstrap-local.sh` | 一台机器的安装入口 |
 | `tests/test_workspace_status.py` | 状态顺序、离线降噪和输出契约测试 |
 | `tests/test_claude_status_line.py` | Claude 状态栏字段、颜色、格式与失败降噪测试 |
@@ -115,7 +117,7 @@ Git。默认策略如下：
 命令。启动时的小型 loader 先验证当前脚本：
 
 - hash 一致：执行评估器；
-- hash 不一致或文件不可读：不执行脚本，只提示重新运行 `make bootstrap`。
+- hash 不一致或文件不可读：不执行脚本，只提示重新运行 `make sync`。
 
 这样，Git pull 带来的评估器逻辑变化不会在旧的已信任命令下静默运行。
 重新 bootstrap 会产生新命令，Codex 因命令 hash 变化而要求在 `/hooks` 中
@@ -132,7 +134,8 @@ JSON 协议。版本化源码核验和 UI 探测属于 dated evidence，保存�
 
 ## 同步与迁移
 
-`scripts/sync_codex_config.py` 先在内存中完成三个目标的渲染和结构校验：
+`scripts/sync_codex_config.py` 先在内存中完成四个主机文件、六个报告区域的渲染
+和结构校验：
 
 1. Codex `AGENTS.md`：验证标记唯一且有序；替换旧标记块，或在首次安装时
    追加并保留现有用户指导。
@@ -144,8 +147,20 @@ JSON 协议。版本化源码核验和 UI 探测属于 dated evidence，保存�
 3. Claude `settings.json`：解析整个 JSON，移除完全归 workspace-meta 所有的
    旧组，在原位置插入一个新组，并收敛带 workspace-meta 标记的 `statusLine`
    对象，再序列化完整结果。若已有无法识别的 status line，拒绝写入所有目标。
+4. env-sync skill：将完整的 workspace-meta-owned skill 文件与版本化模板比较。
 
-只有三个目标全部通过校验后才开始原子写入。如果写入中途出现操作系统错误，
+报告层把 Claude `settings.json` 中的 SessionStart 和 `statusLine` 分为两个组件；
+Codex 和 Claude 的 hook/statusLine 漂移直接比较已解析结构中的 matcher、timeout、
+statusMessage、padding、脚本路径、命令目标、解释器、hash pin、hash 不匹配恢复命令
+和命令结构版本等托管字段。仅 pin 变化时会明确指出同步将信任当前仓库脚本；只有
+无法由这些字段解释的命令结构变化才保留原始 SHA-256 作为兜底证据。交互模式在
+确认提示前汇总本次将修改的组件或字段；Codex 原生 `tui.status_line` 继续使用已有的
+字段级列表比较。
+
+只有全部目标通过校验后才会在交互确认或 bootstrap 直接应用阶段开始原子写入。
+`make sync` 的 dry-run 和 `make agent-sync-check` 使用同一份内存渲染结果；前者只在
+存在漂移且没有错误时询问，后者始终只读。若确认前目标又发生变化，同步器拒绝
+应用并要求重新检查。如果写入中途出现操作系统错误，
 同步器会尽力恢复本轮已经写过的目标。它不是跨文件系统事务，但避免了已知的
 “先写 AGENTS、后发现 JSON/TOML 无效”的部分升级。
 
@@ -162,7 +177,7 @@ JSON 协议。版本化源码核验和 UI 探测属于 dated evidence，保存�
 - `history.persistence = "save-all"` 只改变每台主机是否保存自己的
   `history.jsonl`，不把已有对话历史带入仓库。
 - `history.max_bytes = 5242880` 使用官方样例中的 5 MiB 上限，超限时由 Codex
-  丢弃最旧条目；状态栏采用官方样例的 model/context/branch 组合。
+  丢弃最旧条目。
 - 源码定位器跨行跟踪多行字符串；渲染后会重新解析并验证所有托管字段及
   未托管 TOML 值，避免把字符串正文误认成 section 或赋值。
 
@@ -191,8 +206,9 @@ session，不扫描私有 transcript，也不写死某个模型的价格。具�
 值；额度窗口按剩余百分比加重置倒计时显示，payload 缺少该数据时整段省略。
 
 Codex 继续使用 `.agents/host-templates/codex-preferences.toml` 中的原生
-`tui.status_line`。当前配置覆盖 model、context、Git branch、session token totals
-和 weekly limit；没有已验证的原生成本项时不模拟美元金额。
+`tui.status_line`；该模板是项目与 Git、模型、用量和额度展示顺序的唯一 owner。
+原生字段在当前线程没有可用值时可不显示，缺少 pull request 或估算成本不是同步
+错误。
 
 ## 运维与治理入口
 

@@ -122,12 +122,15 @@ Full provenance: `feedback-register.md` entry **W-R26**.
   and report behind/ahead/dirty state. If the workspace rule layer is behind,
   review the exact update before changing the checkout; pulling stays deliberate
   so conflicts never happen unattended.
-  `make bootstrap` installs or upgrades the local integration. One synchronizer
-  prevalidates Claude JSON and Codex TOML, migrates legacy workspace-meta hook
-  groups, then atomically converges all three managed targets. Run
-  `make agent-sync-check` to report drift without writing host files. It requires
-  Python 3.11+ (`tomllib`). Changed Codex hooks must be reviewed again with
-  `/hooks`.
+  `make sync` is the daily host-configuration workflow: it first validates and
+  reports all managed areas, then applies drift only after an explicit `Y`.
+  `make agent-sync-check` reuses the same diagnostics without prompting or
+  writing. `make bootstrap` remains the full installation/upgrade entry point,
+  including repository-local Git hook initialization and identity checks. The
+  shared synchronizer prevalidates Claude JSON and Codex TOML, migrates legacy
+  workspace-meta hook groups, and atomically converges only changed managed
+  files. It requires Python 3.11+ (`tomllib`). Changed Codex hooks must be
+  reviewed again with `/hooks`.
 - **Commits follow W-R25**: Conventional Commits (`<type>(<scope>): <subject>`,
   subject = what, body = why); identity gate before committing
   (`git config --show-origin user.name user.email` must resolve from the
@@ -194,8 +197,7 @@ The bootstrap is idempotent and host-local. It:
 - installs a hash-pinned Claude `statusLine.command` that renders directory,
   branch, model, context use, five-hour remaining usage with reset countdown,
   current token/cache detail, and Claude's own session-cost estimate. Codex uses
-  its native `tui.status_line` item list for model, context, branch, token totals,
-  and weekly usage;
+  the native ordered item list owned by the repository preferences template;
 - installs the **env-sync skill** (`~/.claude/skills/env-sync/`) and synchronizes
   the workspace-wide Codex router/safety floor into a managed block in
   `~/.codex/AGENTS.md`. The versioned root `CLAUDE.md` is Claude's thin adapter;

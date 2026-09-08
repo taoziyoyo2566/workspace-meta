@@ -89,6 +89,7 @@ fi
 # ── Agent managed config (Claude settings + Codex AGENTS/config) ─────────────
 codex_home="${CODEX_HOME:-$HOME/.codex}"
 claude_settings="$HOME/.claude/settings.json"
+env_skill="$HOME/.claude/skills/env-sync/SKILL.md"
 [ "$warn_deprecated_codex_flag" = false ] || warn "--write-codex is deprecated; managed agent sync now runs by default."
 python_bin="$(bash "$repo_root/scripts/find_python.sh" || true)"
 if [ -n "$python_bin" ]; then
@@ -99,26 +100,23 @@ if [ -n "$python_bin" ]; then
     --preferences-template "$repo_root/.agents/host-templates/codex-preferences.toml" \
     --status-script "$repo_root/scripts/workspace_status.py" \
     --claude-status-line-script "$repo_root/scripts/claude_status_line.py" \
+    --env-skill-template "$repo_root/.agents/host-templates/env-sync-SKILL.md" \
     --codex-home "$codex_home" \
-    --claude-settings "$claude_settings"
+    --claude-settings "$claude_settings" \
+    --env-skill "$env_skill"
 else
   warn "Python 3.11+ with tomllib is unavailable; skipped safe agent configuration synchronization"
-fi
-
-# ── Claude host template (env-sync skill) ────────────────────────────────────
-install_template() {
-  # $1 = template path relative to repo_root, $2 = destination
-  local src="$repo_root/$1" dest="$2"
-  if [ ! -f "$src" ]; then warn "template missing: $src"; return; fi
-  mkdir -p "$(dirname "$dest")"
-  if [ ! -f "$dest" ]; then
-    cp "$src" "$dest"; info "installed template: $dest"
-  elif ! cmp -s "$src" "$dest"; then
-    cp "$src" "$dest"; info "refreshed template from repo: $dest"
+  skill_template="$repo_root/.agents/host-templates/env-sync-SKILL.md"
+  if [ -f "$skill_template" ]; then
+    mkdir -p "$(dirname "$env_skill")"
+    if [ ! -f "$env_skill" ] || ! cmp -s "$skill_template" "$env_skill"; then
+      cp "$skill_template" "$env_skill"
+      info "installed env-sync skill without agent configuration validation: $env_skill"
+    else
+      info "env-sync skill already current: $env_skill"
+    fi
   else
-    info "template up to date: $dest"
+    warn "template missing: $skill_template"
   fi
-}
-
-install_template ".agents/host-templates/env-sync-SKILL.md" "$HOME/.claude/skills/env-sync/SKILL.md"
+fi
 info "Bootstrap complete"

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Synchronize workspace-meta-owned guidance and hooks into host agent config."""
+"""Synchronize workspace-meta-owned host agent configuration."""
 
 from __future__ import annotations
 
 import argparse
 import copy
-from collections import namedtuple
+from collections import Counter, namedtuple
 import hashlib
 import json
 import os
@@ -25,6 +25,12 @@ HOOKS_END = "# END workspace-meta managed Codex hooks"
 COMMAND_PLACEHOLDER = "__WORKSPACE_META_STATUS_COMMAND__"
 MANAGED_HOOK_MARKER = "workspace-meta-managed-status-v1"
 MANAGED_CLAUDE_STATUS_LINE_MARKER = "workspace-meta-managed-claude-status-line-v1"
+MANAGED_HOOK_MARKER_PATTERN = re.compile(
+    r"workspace-meta-managed-status-v\d+(?=$|[^A-Za-z0-9_-])"
+)
+MANAGED_CLAUDE_STATUS_LINE_MARKER_PATTERN = re.compile(
+    r"workspace-meta-managed-claude-status-line-v\d+(?=$|[^A-Za-z0-9_-])"
+)
 LEGACY_AGENTS_SHA256 = "d0894e6420d4d168e08984172b2f3a22b2edc375fb6ea9f2404274c38771bbc2"
 LEGACY_HOOK_MARKERS = (
     "workspace-meta: governance rule layer",
@@ -43,7 +49,35 @@ HookRenderResult = namedtuple(
 )
 
 PreferenceRenderResult = namedtuple(
-    "PreferenceRenderResult", ("content", "action", "changed_paths")
+    "PreferenceRenderResult", ("content", "action", "changed_paths", "drift")
+)
+PreferenceDrift = namedtuple("PreferenceDrift", ("path", "current", "expected"))
+ManagedFieldDrift = namedtuple(
+    "ManagedFieldDrift", ("name", "current", "expected", "change")
+)
+ComponentDrift = namedtuple(
+    "ComponentDrift", ("name", "script_name", "fields", "pin_only")
+)
+
+
+ManagedArea = namedtuple(
+    "ManagedArea",
+    (
+        "label",
+        "path",
+        "drifted",
+        "managed_value",
+        "repository_value",
+        "current_value",
+        "preference_drift",
+        "hook_definition_changed",
+        "component_drift",
+    ),
+    defaults=((), False, None),
+)
+SyncPlan = namedtuple("SyncPlan", ("areas", "updates"))
+PlannedUpdate = namedtuple(
+    "PlannedUpdate", ("path", "existed", "current", "content")
 )
 
 PREFERENCE_ALLOWED_PATHS = {
@@ -56,7 +90,10 @@ MISSING = object()
 
 
 def read_text(path: Path) -> str:
-    return path.read_text(encoding="utf-8") if path.exists() else ""
+    try:
+        return path.read_text(encoding="utf-8") if path.exists() else ""
+    except UnicodeError as exc:
+        raise SyncError(f"file is not valid UTF-8: {path}") from exc
 
 
 def atomic_write(path: Path, content: str) -> None:
@@ -121,7 +158,7 @@ def build_status_command(agent: str, status_script: Path, python_bin: str = "pyt
         '"$p" 2>/dev/null || printf unavailable); '
         'if [ "$actual" != "$expected" ]; then '
         "printf '{\"systemMessage\":\"workspace-meta status evaluator changed or "
-        "is unavailable. Run: make -C ~/workspace bootstrap\"}\\n'; "
+        "is unavailable. Run: make -C ~/workspace sync\"}\\n'; "
         f'else {python_command} "$p" --agent {agent}; fi; : {MANAGED_HOOK_MARKER}'
     )
 
@@ -139,7 +176,7 @@ def build_claude_status_line_command(
         '"$p" 2>/dev/null || printf unavailable); '
         'if [ "$actual" != "$expected" ]; then '
         "printf '%s' 'workspace-meta status line changed or is unavailable; "
-        "run: make -C ~/workspace bootstrap'; "
+        "run: make -C ~/workspace sync'; "
         f'else exec {python_command} "$p"; fi; : {MANAGED_CLAUDE_STATUS_LINE_MARKER}'
     )
 
@@ -169,7 +206,6 @@ def session_start_groups(content: str) -> list[tuple[int, int]]:
 def remove_legacy_hooks(content: str) -> tuple[str, int]:
     lines = content.splitlines(keepends=True)
     removable: list[tuple[int, int]] = []
-    ownership_markers = (*LEGACY_HOOK_MARKERS, MANAGED_HOOK_MARKER)
     for start, end in session_start_groups(content):
         group = "".join(lines[start:end])
         command_lines = [
@@ -178,7 +214,8 @@ def remove_legacy_hooks(content: str) -> tuple[str, int]:
         owned = [
             line
             for line in command_lines
-            if any(marker in line for marker in ownership_markers)
+            if any(marker in line for marker in LEGACY_HOOK_MARKERS)
+            or MANAGED_HOOK_MARKER_PATTERN.search(line)
         ]
         if owned and len(owned) != len(command_lines):
             raise SyncError(
@@ -642,6 +679,7 @@ def render_preferences(
     targets = load_preferences(template_path)
     parsed = parse_codex_toml(current)
     changes: list[tuple[str, str, object, str]] = []
+    drift: list[PreferenceDrift] = []
 
     for (section, key), wanted in targets.items():
         section_value = parsed.get(section, MISSING)
@@ -652,11 +690,21 @@ def render_preferences(
         )
         if current_value is MISSING:
             changes.append((section, key, wanted, "missing"))
+            drift.append(
+                PreferenceDrift(f"{section}.{key}", MISSING, copy.deepcopy(wanted))
+            )
         elif current_value != wanted:
             changes.append((section, key, wanted, "different"))
+            drift.append(
+                PreferenceDrift(
+                    f"{section}.{key}",
+                    copy.deepcopy(current_value),
+                    copy.deepcopy(wanted),
+                )
+            )
 
     if not changes:
-        return PreferenceRenderResult(current, "already current", ())
+        return PreferenceRenderResult(current, "already current", (), ())
 
     lines = current.splitlines(keepends=True)
     offsets = _line_offsets(lines)
@@ -778,6 +826,7 @@ def render_preferences(
         result,
         "updated preferences: " + ", ".join(changed_paths),
         changed_paths,
+        tuple(drift),
     )
 
 
@@ -820,13 +869,17 @@ def render_claude_settings(
     if not isinstance(groups, list):
         raise SyncError("Claude SessionStart must be a JSON array")
 
-    markers = (*LEGACY_HOOK_MARKERS, MANAGED_HOOK_MARKER)
     retained: list[object] = []
     first_owned_index: int | None = None
     migrated = 0
     for group in groups:
         commands = hook_commands(group)
-        owned = [command for command in commands if any(m in command for m in markers)]
+        owned = [
+            command
+            for command in commands
+            if any(marker in command for marker in LEGACY_HOOK_MARKERS)
+            or MANAGED_HOOK_MARKER_PATTERN.search(command)
+        ]
         legacy_owned = [
             command
             for command in commands
@@ -875,8 +928,8 @@ def render_claude_settings(
                 "migrate it explicitly before bootstrap"
             )
         current_command = current_status_line.get("command", "")
-        if not isinstance(current_command, str) or (
-            MANAGED_CLAUDE_STATUS_LINE_MARKER not in current_command
+        if not isinstance(current_command, str) or not (
+            MANAGED_CLAUDE_STATUS_LINE_MARKER_PATTERN.search(current_command)
         ):
             raise SyncError(
                 "refusing to replace an unmanaged Claude statusLine; remove or "
@@ -919,15 +972,34 @@ def sync_claude_settings(
     return action
 
 
-def apply_prevalidated(updates: list[tuple[Path, str]]) -> None:
-    originals = {path: (path.exists(), read_text(path)) for path, _ in updates}
+def render_managed_file(template_path: Path, destination: Path) -> tuple[str, str]:
+    if not template_path.is_file():
+        raise SyncError(f"managed file template is missing: {template_path}")
+    result = read_text(template_path)
+    if not result:
+        raise SyncError(f"managed file template is empty: {template_path}")
+    return result, "already current" if result == read_text(destination) else "changed"
+
+
+def apply_prevalidated(updates: list[PlannedUpdate]) -> tuple[Path, ...]:
+    originals = {
+        update.path: (update.path.exists(), read_text(update.path))
+        for update in updates
+    }
+    for update in updates:
+        existed, current = originals[update.path]
+        if existed != update.existed or current != update.current:
+            raise SyncError(
+                f"managed target changed after the dry-run: {update.path}; rerun sync"
+            )
+
     written: list[Path] = []
     try:
-        for path, content in updates:
-            if content == originals[path][1]:
+        for update in updates:
+            if update.content == update.current:
                 continue
-            atomic_write(path, content)
-            written.append(path)
+            atomic_write(update.path, update.content)
+            written.append(update.path)
     except OSError:
         for path in reversed(written):
             existed, original = originals[path]
@@ -939,72 +1011,653 @@ def apply_prevalidated(updates: list[tuple[Path, str]]) -> None:
             except OSError:
                 pass
         raise
+    return tuple(written)
 
 
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--agents-template", required=True, type=Path)
-    parser.add_argument("--hooks-template", required=True, type=Path)
-    parser.add_argument("--preferences-template", required=True, type=Path)
-    parser.add_argument("--status-script", required=True, type=Path)
-    parser.add_argument("--claude-status-line-script", required=True, type=Path)
-    parser.add_argument("--codex-home", required=True, type=Path)
-    parser.add_argument("--claude-settings", required=True, type=Path)
-    parser.add_argument(
-        "--python",
-        default="python3",
-        help="Python interpreter to embed in generated SessionStart hook commands",
+def _sha256_value(content: str) -> str:
+    return f"SHA-256 {hashlib.sha256(content.encode()).hexdigest()}"
+
+
+def _marked_value(content: str, begin: str, end: str) -> str:
+    if content.count(begin) != 1 or content.count(end) != 1:
+        return "managed block not present"
+    start = content.index(begin)
+    finish = content.index(end, start) + len(end)
+    return _sha256_value(content[start:finish].strip())
+
+
+def _decode_shell_word(value: str) -> object:
+    try:
+        words = shlex.split(value)
+    except ValueError:
+        return MISSING
+    return words[0] if len(words) == 1 else MISSING
+
+
+def _command_semantics(command: object, agent: str | None) -> dict[str, object]:
+    if not isinstance(command, str):
+        return {
+            "script path": MISSING,
+            "expected script SHA-256": MISSING,
+            "command target": MISSING,
+            "command interpreter": MISSING,
+            "hash verifier interpreter": MISSING,
+            "hash-mismatch recovery command": MISSING,
+            "command structure version": MISSING,
+            "_command": command,
+            "_command_shape": command,
+        }
+
+    path_match = re.search(r'(?:^|; )p=(?P<value>[^;]+); expected=', command)
+    script_path = (
+        _decode_shell_word(path_match.group("value")) if path_match else MISSING
     )
-    parser.add_argument("--check", action="store_true")
-    return parser.parse_args()
+    pin_match = re.search(r'(?:^|; )expected="(?P<value>[^"]+)";', command)
+    script_pin = pin_match.group("value") if pin_match else MISSING
+    interpreter_match = re.search(
+        r"actual=\$\((?P<value>.+?) -c 'import hashlib,sys;", command
+    )
+    verifier_interpreter = (
+        _decode_shell_word(interpreter_match.group("value"))
+        if interpreter_match
+        else MISSING
+    )
+    if agent is None:
+        target_match = re.search(
+            r'else exec (?P<interpreter>.+?) "\$p"; fi;', command
+        )
+        command_agent = None
+    else:
+        target_match = re.search(
+            r'else (?P<interpreter>.+?) "\$p" --agent '
+            r'(?P<agent>[^; ]+); fi;',
+            command,
+        )
+        command_agent = target_match.group("agent") if target_match else None
+    command_interpreter = (
+        _decode_shell_word(target_match.group("interpreter"))
+        if target_match
+        else MISSING
+    )
+    if script_path is MISSING:
+        command_target = MISSING
+    elif agent is None:
+        command_target = script_path
+    elif command_agent is None:
+        command_target = MISSING
+    else:
+        command_target = f"{script_path} --agent {command_agent}"
+
+    recovery_match = re.search(
+        r"make -C ~/workspace (?P<value>[A-Za-z0-9_-]+)", command
+    )
+    recovery_command = (
+        f"make -C ~/workspace {recovery_match.group('value')}"
+        if recovery_match
+        else MISSING
+    )
+    marker_pattern = (
+        MANAGED_CLAUDE_STATUS_LINE_MARKER_PATTERN
+        if agent is None
+        else MANAGED_HOOK_MARKER_PATTERN
+    )
+    version_match = marker_pattern.search(command)
+    command_version = (
+        version_match.group(0).rsplit("-", 1)[1]
+        if version_match
+        else MISSING
+    )
+
+    shape = command
+    normalized_values = (
+        ("script-path", script_path),
+        ("script-pin", pin_match.group("value") if pin_match else MISSING),
+        ("command-interpreter", command_interpreter),
+        ("verifier-interpreter", verifier_interpreter),
+        ("agent", command_agent if command_agent is not None else MISSING),
+        ("recovery-command", recovery_command),
+        ("command-version", version_match.group(0) if version_match else MISSING),
+    )
+    for placeholder, value in normalized_values:
+        if value is not MISSING and isinstance(value, str):
+            shape = shape.replace(value, f"<{placeholder}>")
+
+    return {
+        "script path": script_path,
+        "expected script SHA-256": script_pin,
+        "command target": command_target,
+        "command interpreter": command_interpreter,
+        "hash verifier interpreter": verifier_interpreter,
+        "hash-mismatch recovery command": recovery_command,
+        "command structure version": command_version,
+        "_command": command,
+        "_command_shape": shape,
+    }
 
 
-def main() -> int:
-    args = parse_args()
+def _owned_session_start_snapshot(
+    settings: dict[str, object], agent: str
+) -> object:
+    hooks = settings.get("hooks", {})
+    groups = hooks.get("SessionStart", []) if isinstance(hooks, dict) else []
+    if not isinstance(groups, list):
+        raise SyncError(f"{agent} SessionStart must be an array")
+
+    owned: list[tuple[dict[str, object], list[dict[str, object]], list[str]]] = []
+    for group in groups:
+        if not isinstance(group, dict):
+            raise SyncError(f"{agent} SessionStart groups must be objects")
+        handlers = group.get("hooks", [])
+        if not isinstance(handlers, list) or not all(
+            isinstance(handler, dict) for handler in handlers
+        ):
+            raise SyncError(f"{agent} SessionStart handlers must be objects")
+        commands = [handler.get("command", "") for handler in handlers]
+        if any(command and not isinstance(command, str) for command in commands):
+            raise SyncError(f"{agent} SessionStart commands must be strings")
+        if any(
+            any(marker in command for marker in LEGACY_HOOK_MARKERS)
+            or MANAGED_HOOK_MARKER_PATTERN.search(command)
+            for command in commands
+            if isinstance(command, str)
+        ):
+            owned.append((group, handlers, commands))
+
+    if not owned:
+        return MISSING
+
+    group, handlers, commands = owned[0]
+    handler = handlers[0] if handlers else {}
+    command = commands[0] if commands else MISSING
+    component_name = (
+        "workspace-meta SessionStart"
+        if any(
+            MANAGED_HOOK_MARKER_PATTERN.search(candidate)
+            for _, _, owned_commands in owned
+            for candidate in owned_commands
+            if isinstance(candidate, str)
+        )
+        else "legacy workspace-meta SessionStart"
+    )
+    snapshot = {
+        "managed component": component_name,
+        "managed group count": len(owned),
+        "matcher": group.get("matcher", MISSING),
+        "handler count": sum(len(item[1]) for item in owned),
+        "type": handler.get("type", MISSING),
+        **_command_semantics(command, agent),
+        "timeout": handler.get("timeout", MISSING),
+        "statusMessage": handler.get("statusMessage", MISSING),
+        "additional group fields": {
+            key: value for key, value in group.items() if key not in {"matcher", "hooks"}
+        }
+        or MISSING,
+        "additional handler fields": {
+            key: value
+            for key, value in handler.items()
+            if key not in {"type", "command", "timeout", "statusMessage"}
+        }
+        or MISSING,
+    }
+    return snapshot
+
+
+def _owned_status_line_snapshot(settings: dict[str, object]) -> object:
+    status_line = settings.get("statusLine", MISSING)
+    if status_line is MISSING:
+        return MISSING
+    if not isinstance(status_line, dict):
+        raise SyncError("Claude statusLine must be an object")
+    command = status_line.get("command", "")
+    if not isinstance(command, str) or not (
+        MANAGED_CLAUDE_STATUS_LINE_MARKER_PATTERN.search(command)
+    ):
+        return MISSING
+    return {
+        "managed component": "workspace-meta statusLine",
+        "type": status_line.get("type", MISSING),
+        **_command_semantics(command, None),
+        "padding": status_line.get("padding", MISSING),
+        "additional statusLine fields": {
+            key: value
+            for key, value in status_line.items()
+            if key not in {"type", "command", "padding"}
+        }
+        or MISSING,
+    }
+
+
+def _semantic_component_drift(
+    name: str,
+    script_name: str,
+    current: object,
+    expected: dict[str, object],
+    extra_fields: tuple[ManagedFieldDrift, ...] = (),
+) -> ComponentDrift:
+    fields: list[ManagedFieldDrift] = []
+    current_values = {} if current is MISSING else current
+    if not isinstance(current_values, dict):
+        raise SyncError(f"{name} managed component could not be inspected")
+    for field_name, expected_value in expected.items():
+        if field_name.startswith("_"):
+            continue
+        current_value = current_values.get(field_name, MISSING)
+        if current_value == expected_value:
+            continue
+        if field_name == "expected script SHA-256" and current_value is not MISSING:
+            change = "~ expected script hash changed"
+        elif current_value is MISSING:
+            change = f"+ {field_name} will be set"
+        elif expected_value is MISSING:
+            change = f"- {field_name} will be removed"
+        else:
+            change = f"~ {field_name} changed"
+        fields.append(
+            ManagedFieldDrift(field_name, current_value, expected_value, change)
+        )
+
+    current_shape = current_values.get("_command_shape", MISSING)
+    expected_shape = expected.get("_command_shape", MISSING)
+    if current is not MISSING and current_shape != expected_shape:
+        current_command = current_values.get("_command", MISSING)
+        expected_command = expected.get("_command", MISSING)
+        fields.append(
+            ManagedFieldDrift(
+                "unparsed command structure SHA-256",
+                (
+                    _sha256_value(current_command)
+                    if isinstance(current_command, str)
+                    else MISSING
+                ),
+                (
+                    _sha256_value(expected_command)
+                    if isinstance(expected_command, str)
+                    else MISSING
+                ),
+                "~ unparsed command structure changed",
+            )
+        )
+
+    fields.extend(extra_fields)
+    pin_only = len(fields) == 1 and fields[0].name == "expected script SHA-256"
+    return ComponentDrift(name, script_name, tuple(fields), pin_only)
+
+
+def _render_area(label: str, operation):
+    try:
+        return operation()
+    except (OSError, SyncError, json.JSONDecodeError) as exc:
+        raise SyncError(f"{label}: {exc}") from exc
+
+
+def build_sync_plan(args: argparse.Namespace) -> SyncPlan:
     agents_path = args.codex_home / "AGENTS.md"
     codex_config_path = args.codex_home / "config.toml"
-    try:
-        agents_result, agents_action = render_agents(args.agents_template, agents_path)
-        hooks_rendered = render_hooks(
-            args.hooks_template, codex_config_path, args.status_script, args.python
-        )
-        preferences_rendered = render_preferences(
-            args.preferences_template, hooks_rendered.content
-        )
-        claude_result, claude_action = render_claude_settings(
+
+    agents_current = _render_area(
+        "Codex AGENTS.md", lambda: read_text(agents_path)
+    )
+    agents_result, _ = _render_area(
+        "Codex AGENTS.md",
+        lambda: render_agents(args.agents_template, agents_path),
+    )
+
+    config_current = _render_area(
+        "Codex SessionStart hook", lambda: read_text(codex_config_path)
+    )
+    hooks_rendered = _render_area(
+        "Codex SessionStart hook",
+        lambda: render_hooks(
+            args.hooks_template,
+            codex_config_path,
+            args.status_script,
+            args.python,
+        ),
+    )
+    preferences_rendered = _render_area(
+        "Codex preferences",
+        lambda: render_preferences(args.preferences_template, hooks_rendered.content),
+    )
+
+    claude_current = _render_area(
+        "Claude settings", lambda: read_text(args.claude_settings)
+    )
+    claude_result, _ = _render_area(
+        "Claude settings",
+        lambda: render_claude_settings(
             args.claude_settings,
             args.status_script,
             args.python,
             args.claude_status_line_script,
+        ),
+    )
+
+    env_skill_current = _render_area(
+        "env-sync skill", lambda: read_text(args.env_skill)
+    )
+    env_skill_result, _ = _render_area(
+        "env-sync skill",
+        lambda: render_managed_file(args.env_skill_template, args.env_skill),
+    )
+
+    current_agents_value = _marked_value(
+        agents_current, AGENTS_BEGIN, AGENTS_END
+    )
+    if (
+        current_agents_value == "managed block not present"
+        and hashlib.sha256(agents_current.encode()).hexdigest() == LEGACY_AGENTS_SHA256
+    ):
+        current_agents_value = "legacy workspace-meta guidance"
+
+    current_codex_hook = _owned_session_start_snapshot(
+        parse_codex_toml(config_current), "codex"
+    )
+    expected_codex_hook = _owned_session_start_snapshot(
+        parse_codex_toml(hooks_rendered.content), "codex"
+    )
+    if not isinstance(expected_codex_hook, dict):
+        raise SyncError("rendered Codex SessionStart hook is missing")
+    codex_boundary_drift: tuple[ManagedFieldDrift, ...] = ()
+    if hooks_rendered.state_normalized:
+        codex_boundary_drift = (
+            ManagedFieldDrift(
+                "managed boundary",
+                "host-owned hook state inside marker",
+                "host-owned hook state after marker",
+                "~ managed boundary will be normalized; host-owned state is preserved",
+            ),
         )
-    except (OSError, SyncError) as exc:
-        print(f"agent config sync failed: {exc}", file=sys.stderr)
-        return 1
+    codex_hook_drift = _semantic_component_drift(
+        "workspace-meta SessionStart",
+        f"scripts/{args.status_script.name}",
+        current_codex_hook,
+        expected_codex_hook,
+        codex_boundary_drift,
+    )
 
-    updates = [
-        (agents_path, agents_result),
-        (codex_config_path, preferences_rendered.content),
-        (args.claude_settings, claude_result),
-    ]
-    drifted = any(content != read_text(path) for path, content in updates)
-    if args.check:
-        print(f"Codex AGENTS.md: {agents_action}")
-        print(f"Codex hooks: {hooks_rendered.action}")
-        print(f"Codex preferences: {preferences_rendered.action}")
-        print(f"Claude hooks/status line: {claude_action}")
-        return 1 if drifted else 0
+    current_claude_settings = json.loads(claude_current) if claude_current else {}
+    expected_claude_settings = json.loads(claude_result)
+    current_claude_hook = _owned_session_start_snapshot(
+        current_claude_settings, "claude"
+    )
+    expected_claude_hook = _owned_session_start_snapshot(
+        expected_claude_settings, "claude"
+    )
+    if not isinstance(expected_claude_hook, dict):
+        raise SyncError("rendered Claude SessionStart hook is missing")
+    claude_hook_drift = _semantic_component_drift(
+        "workspace-meta SessionStart",
+        f"scripts/{args.status_script.name}",
+        current_claude_hook,
+        expected_claude_hook,
+    )
+    current_claude_status_line = _owned_status_line_snapshot(
+        current_claude_settings
+    )
+    expected_claude_status_line = _owned_status_line_snapshot(
+        expected_claude_settings
+    )
+    if not isinstance(expected_claude_status_line, dict):
+        raise SyncError("rendered Claude statusLine is missing")
+    claude_status_line_drift = _semantic_component_drift(
+        "workspace-meta statusLine",
+        f"scripts/{args.claude_status_line_script.name}",
+        current_claude_status_line,
+        expected_claude_status_line,
+    )
 
-    try:
-        apply_prevalidated(updates)
-    except OSError as exc:
-        print(f"agent config sync failed while writing: {exc}", file=sys.stderr)
-        return 1
+    areas = (
+        ManagedArea(
+            "Codex AGENTS.md",
+            agents_path,
+            agents_result != agents_current,
+            "workspace-meta marked guidance block",
+            _marked_value(agents_result, AGENTS_BEGIN, AGENTS_END),
+            current_agents_value,
+        ),
+        ManagedArea(
+            "Codex SessionStart hook",
+            codex_config_path,
+            bool(codex_hook_drift.fields),
+            "workspace-meta SessionStart",
+            "repository managed fields",
+            "current host managed fields",
+            hook_definition_changed=hooks_rendered.definition_changed,
+            component_drift=codex_hook_drift,
+        ),
+        ManagedArea(
+            "Codex preferences",
+            codex_config_path,
+            bool(preferences_rendered.drift),
+            "declared Codex preference fields",
+            "repository template values",
+            "current parsed host values",
+            preference_drift=preferences_rendered.drift,
+        ),
+        ManagedArea(
+            "Claude SessionStart hook",
+            args.claude_settings,
+            bool(claude_hook_drift.fields),
+            "workspace-meta SessionStart",
+            "repository managed fields",
+            "current host managed fields",
+            component_drift=claude_hook_drift,
+        ),
+        ManagedArea(
+            "Claude statusLine",
+            args.claude_settings,
+            bool(claude_status_line_drift.fields),
+            "workspace-meta statusLine",
+            "repository managed fields",
+            "current host managed fields",
+            component_drift=claude_status_line_drift,
+        ),
+        ManagedArea(
+            "env-sync skill",
+            args.env_skill,
+            env_skill_result != env_skill_current,
+            "workspace-meta-owned skill file",
+            _sha256_value(env_skill_result),
+            (
+                _sha256_value(env_skill_current)
+                if args.env_skill.exists()
+                else "managed file not present"
+            ),
+        ),
+    )
+    updates = (
+        PlannedUpdate(
+            agents_path, agents_path.exists(), agents_current, agents_result
+        ),
+        PlannedUpdate(
+            codex_config_path,
+            codex_config_path.exists(),
+            config_current,
+            preferences_rendered.content,
+        ),
+        PlannedUpdate(
+            args.claude_settings,
+            args.claude_settings.exists(),
+            claude_current,
+            claude_result,
+        ),
+        PlannedUpdate(
+            args.env_skill,
+            args.env_skill.exists(),
+            env_skill_current,
+            env_skill_result,
+        ),
+    )
+    return SyncPlan(areas, updates)
 
-    print(f"Codex AGENTS.md: {agents_action}")
-    print(f"Codex hooks: {hooks_rendered.action}")
-    print(f"Codex preferences: {preferences_rendered.action}")
-    print(f"Claude hooks/status line: {claude_action}")
-    if hooks_rendered.definition_changed:
+
+def print_area_statuses(
+    areas: tuple[ManagedArea, ...], updated_paths: tuple[Path, ...] = ()
+) -> None:
+    for area in areas:
+        if updated_paths and area.drifted and area.path in updated_paths:
+            status = "UPDATED"
+        else:
+            status = "DRIFT" if area.drifted else "OK"
+        print(f"{area.label + ':':<28}{status}")
+
+
+def _print_value(title: str, value: object) -> None:
+    print(f"    {title}:")
+    if value is MISSING:
+        print("      (missing)")
+    elif isinstance(value, list):
+        if not value:
+            print("      []")
+        for index, item in enumerate(value, start=1):
+            print(f"      {index}. {item}")
+    else:
+        print(f"      {json.dumps(value, ensure_ascii=False)}")
+
+
+def _list_change_summary(current: object, expected: object) -> list[str]:
+    if current is MISSING:
+        return ["+ repository value will be added"]
+    if not isinstance(current, list) or not isinstance(expected, list):
+        return ["~ managed value differs"]
+    repository_only = list((Counter(expected) - Counter(current)).elements())
+    host_only = list((Counter(current) - Counter(expected)).elements())
+    changes = []
+    if repository_only:
+        changes.append("+ repository only: " + ", ".join(repository_only))
+    if host_only:
+        changes.append("- host only: " + ", ".join(host_only))
+    common_expected = [item for item in expected if item in current]
+    common_current = [item for item in current if item in expected]
+    if common_expected != common_current:
+        changes.append("~ order changed")
+    return changes or ["~ order changed"]
+
+
+def print_drift_details(areas: tuple[ManagedArea, ...]) -> None:
+    print("\nDrift detected:")
+    for area in areas:
+        if not area.drifted:
+            continue
+        if area.preference_drift:
+            for drift in area.preference_drift:
+                print(f"\n  {drift.path}")
+                _print_value("Repository", drift.expected)
+                _print_value("Current host", drift.current)
+                print("    Changes:")
+                for change in _list_change_summary(drift.current, drift.expected):
+                    print(f"      {change}")
+            continue
+        if area.component_drift is not None:
+            component = area.component_drift
+            print(f"\n  {area.label}:")
+            print(f"    Script: {component.script_name}")
+            print("    Changes:")
+            for drift in component.fields:
+                repository = (
+                    "(missing)"
+                    if drift.expected is MISSING
+                    else json.dumps(drift.expected, ensure_ascii=False)
+                )
+                current = (
+                    "(missing)"
+                    if drift.current is MISSING
+                    else json.dumps(drift.current, ensure_ascii=False)
+                )
+                print(f"      {drift.change}")
+                print(f"        Installed: {current}")
+                print(f"        Repository: {repository}")
+            print("\n    Effect:")
+            print(f"      {_component_effect(component)}")
+            continue
+        print(f"\n  {area.label} — {area.managed_value}")
+        print(f"    Repository: {area.repository_value}")
+        print(f"    Current host: {area.current_value}")
+        if "not present" in area.current_value:
+            change = "+ managed value will be installed"
+        else:
+            change = "~ managed value will be replaced"
+        print(f"    Changes: {change}")
+
+
+def _component_effect(component: ComponentDrift) -> str:
+    script_name = Path(component.script_name).name
+    if component.pin_only:
+        managed_kind = (
+            "statusLine" if component.name.endswith("statusLine") else "hook"
+        )
+        return (
+            f"Refresh the managed {managed_kind} so it trusts the current "
+            f"repository version of {script_name}."
+        )
+    component_field = next(
+        (field for field in component.fields if field.name == "managed component"),
+        None,
+    )
+    if component_field is not None and component_field.current is MISSING:
+        return f"Install the repository-managed {component.name}."
+    field_names = {field.name for field in component.fields}
+    if field_names == {"hash-mismatch recovery command"}:
+        recovery = component.fields[0].expected
+        return (
+            "Use "
+            f"{recovery} when the managed script hash check fails."
+        )
+    if "unparsed command structure SHA-256" in field_names:
+        return (
+            "Replace the unrecognized managed command structure with the "
+            "repository definition."
+        )
+    return "Replace the listed managed properties with the repository values."
+
+
+def _component_change_summary(component: ComponentDrift) -> str:
+    script_name = Path(component.script_name).name
+    if component.pin_only:
+        return f"refresh {script_name} hash pin"
+    component_field = next(
+        (field for field in component.fields if field.name == "managed component"),
+        None,
+    )
+    if component_field is not None and component_field.current is MISSING:
+        return f"install {component.name}"
+    field_names = {field.name for field in component.fields}
+    if field_names == {"hash-mismatch recovery command"}:
+        return "update hash-mismatch recovery command"
+    if field_names == {"unparsed command structure SHA-256"}:
+        return "replace unrecognized command structure"
+    return "update " + ", ".join(field.name for field in component.fields)
+
+
+def print_changes_to_apply(areas: tuple[ManagedArea, ...]) -> None:
+    print("\nChanges to apply:")
+    for area in areas:
+        if not area.drifted:
+            continue
+        if area.preference_drift:
+            fields = ", ".join(drift.path for drift in area.preference_drift)
+            summary = f"replace {fields}"
+        elif area.component_drift is not None:
+            summary = _component_change_summary(area.component_drift)
+        elif "not present" in area.current_value:
+            summary = "install the managed value"
+        else:
+            summary = "replace the managed value"
+        print(f"  - {area.label}: {summary}")
+
+
+def _print_error(exc: Exception) -> None:
+    print("Managed configuration dry-run:", file=sys.stderr)
+    print(f"ERROR: {exc}", file=sys.stderr)
+    print("Result: synchronization cannot proceed safely.", file=sys.stderr)
+    print("No files were modified.", file=sys.stderr)
+
+
+def _warn_hook_and_override(plan: SyncPlan, args: argparse.Namespace) -> None:
+    hook_area = next(
+        area for area in plan.areas if area.label == "Codex SessionStart hook"
+    )
+    if hook_area.drifted and hook_area.hook_definition_changed:
         print(
             "WARNING: Codex hook definition changed; review and trust it with /hooks",
             file=sys.stderr,
@@ -1016,6 +1669,101 @@ def main() -> int:
             "AGENTS.md guidance is inactive",
             file=sys.stderr,
         )
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--agents-template", required=True, type=Path)
+    parser.add_argument("--hooks-template", required=True, type=Path)
+    parser.add_argument("--preferences-template", required=True, type=Path)
+    parser.add_argument("--status-script", required=True, type=Path)
+    parser.add_argument("--claude-status-line-script", required=True, type=Path)
+    parser.add_argument("--env-skill-template", required=True, type=Path)
+    parser.add_argument("--env-skill", required=True, type=Path)
+    parser.add_argument("--codex-home", required=True, type=Path)
+    parser.add_argument("--claude-settings", required=True, type=Path)
+    parser.add_argument(
+        "--python",
+        default="python3",
+        help="Python interpreter to embed in generated SessionStart hook commands",
+    )
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--check", action="store_true")
+    mode.add_argument("--interactive", action="store_true")
+    return parser.parse_args()
+
+
+def main() -> int:
+    args = parse_args()
+    try:
+        plan = build_sync_plan(args)
+    except (OSError, SyncError) as exc:
+        _print_error(exc)
+        return 1
+
+    drifted = any(area.drifted for area in plan.areas)
+    if args.check or args.interactive:
+        print("Managed configuration dry-run:")
+        print_area_statuses(plan.areas)
+        if drifted:
+            print_drift_details(plan.areas)
+        else:
+            print("\nResult: everything is already current.")
+            print("No files changed.")
+            return 0
+
+    if args.check:
+        print("\nResult: managed configuration drift detected.")
+        print("No files were modified.")
+        return 1
+
+    if args.interactive:
+        print_changes_to_apply(plan.areas)
+        print(
+            "\nWARNING:\n"
+            "  Applying workspace-meta will replace the current local values\n"
+            "  of the managed settings shown above.\n\n"
+            "  Unmanaged local configuration will be preserved.\n"
+        )
+        try:
+            answer = input("Apply these changes? [y/N]: ")
+        except EOFError:
+            answer = ""
+        if answer not in {"y", "Y"}:
+            print("\nNo changes applied.")
+            return 0
+
+    try:
+        written_paths = apply_prevalidated(list(plan.updates))
+    except (OSError, SyncError) as exc:
+        print(f"ERROR: managed configuration write failed: {exc}", file=sys.stderr)
+        return 1
+
+    try:
+        final_plan = build_sync_plan(args)
+    except (OSError, SyncError) as exc:
+        print(f"ERROR: post-apply validation failed: {exc}", file=sys.stderr)
+        return 1
+    remaining_drift = [area.label for area in final_plan.areas if area.drifted]
+    if remaining_drift:
+        print(
+            "ERROR: post-apply validation still found drift: "
+            + ", ".join(remaining_drift),
+            file=sys.stderr,
+        )
+        return 1
+
+    if args.interactive:
+        print("\nFinal managed configuration:")
+    print_area_statuses(plan.areas, written_paths)
+    updated_count = sum(
+        area.drifted and area.path in written_paths for area in plan.areas
+    )
+    print(
+        f"\nSync complete: {updated_count} updated, "
+        f"{len(plan.areas) - updated_count} unchanged."
+    )
+    _warn_hook_and_override(plan, args)
     return 0
 
 
