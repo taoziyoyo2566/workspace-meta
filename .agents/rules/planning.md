@@ -59,6 +59,17 @@ contract. In the last case, follow the material-deviation process below; that
 process determines whether to amend the existing Plan or approve a replacement
 contract rather than silently multiplying Plans.
 
+An independent capability is one whose goal no existing Plan's approved goal
+and scope covers. When it warrants persistent planning, it gets its own Plan
+file, even when it extends the same feature, touches the same files, or was
+requested during another workstream. Do not fold its design into another Plan
+as an added section, a "later changes" or "post-launch changes" entry, an
+implementation-record item, or an appendix evaluating unrelated options; link
+the related Plans to each other instead. Red flags: "it is a follow-up of the
+same feature", "the same reader will look there", "that Plan already has a
+changes section". A stable contract's approved-change log records changes to
+that contract; it is not a place to design a new capability either.
+
 A persistent Plan is the approved implementation intent and execution contract.
 It states the goal, approval-time current state, intended change,
 scope/exclusions, load-bearing prerequisites or assumptions, acceptance

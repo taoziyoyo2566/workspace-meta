@@ -34,7 +34,7 @@ Canonical sources: `git.md`, `authorization.md`, `git-publication.md`,
 | merge/integration or post-integration handling | `.agents/rules/authorization.md` + `.agents/rules/git.md` + `.agents/rules/git-integration.md` |
 | rewrite/discard/force/delete/amend/recovery | `.agents/rules/authorization.md` + `.agents/rules/git.md` + `.agents/rules/git-recovery.md` |
 | load-bearing premise validation, conflicting evidence, independent technical judgment, competing explanations, or diagnostic method | `.agents/rules/reasoning.md` |
-| non-trivial planning, evidence, approval scope, deviation, handoff | `.agents/rules/planning.md` |
+| non-trivial planning, a new capability's design or plan, evidence, approval scope, deviation, handoff | `.agents/rules/planning.md` |
 | implementation, configuration, refactoring, or artifact-structure change | `.agents/rules/implementation.md` |
 | project documentation authoring, restructuring, or lifecycle governance | `.agents/rules/documentation.md` |
 | change verification or blocked check | `.agents/rules/verification.md` |

@@ -130,6 +130,11 @@ Add a document only when it has a distinct audience/task, lifecycle, access
 boundary, or independently maintainable owner. Omit empty headings and
 speculative placeholders.
 
+Plans are the exception to updating an existing owner: a Plan's owner is its
+workstream. The design of an independent capability is a new Plan under
+`planning.md`, never a section of another Plan, even when the audience, topic,
+or files are the same.
+
 Use status metadata only where lifecycle ambiguity creates real risk, such as
 decisions, incidents, verification snapshots, migrations, or deprecated pages.
 Do not stamp every timeless guide with volatile status fields.
