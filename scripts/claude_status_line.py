@@ -209,6 +209,9 @@ def render(payload: dict[str, Any], *, home: str, color: bool = True) -> str:
         limit_color = level_color(used_share) if color else ""
         parts.append(f"{limit_color}{text}{colors['reset']}")
 
+    # The two trailing segments report different scopes: `current_usage` counts
+    # the last API call alone, while `total_cost_usd` accumulates the whole
+    # session. Each carries its scope so the pair cannot be read as one figure.
     if usage is not None:
         token_text = " ".join(
             (
@@ -218,10 +221,12 @@ def render(payload: dict[str, Any], *, home: str, color: bool = True) -> str:
                 f"out:{format_tokens(usage.get('output_tokens', 0))}",
             )
         )
-        parts.append(f"{colors['dim']}{token_text}{colors['reset']}")
+        parts.append(f"{colors['dim']}last {token_text}{colors['reset']}")
 
     if cost is not None:
-        parts.append(f"{colors['cost']}~${cost:.3f}{colors['reset']}")
+        parts.append(
+            f"{colors['dim']}sess {colors['cost']}~${cost:.3f}{colors['reset']}"
+        )
 
     return "  ".join(parts)
 

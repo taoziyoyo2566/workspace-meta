@@ -47,7 +47,20 @@ class ClaudeStatusLineTests(unittest.TestCase):
         self.assertEqual(
             rendered,
             "~/workspace:main  Sonnet  ctx:81%  "
-            "in:1.2k cw:2.00M cr:999 out:24.5k  ~$0.123",
+            "last in:1.2k cw:2.00M cr:999 out:24.5k  sess ~$0.123",
+        )
+
+    def test_scope_labels_separate_the_last_request_from_the_session_total(
+        self,
+    ) -> None:
+        with mock.patch.object(STATUS, "git_branch", return_value=""):
+            rendered = STATUS.render(self.payload(), home="/Users/test")
+
+        # Both scope labels are dim; only the cost value keeps the cost colour.
+        self.assertIn(f"{STATUS.DIM_COLOR}last in:1.2k", rendered)
+        self.assertIn(
+            f"{STATUS.DIM_COLOR}sess {STATUS.COST_COLOR}~$0.123{STATUS.RESET}",
+            rendered,
         )
 
     def test_model_id_is_used_for_a_gateway_model_without_a_display_name(self) -> None:
@@ -98,7 +111,7 @@ class ClaudeStatusLineTests(unittest.TestCase):
             STATUS, "_now", return_value=1_000_000.0
         ):
             rendered = STATUS.render(payload, home="/Users/test", color=False)
-        self.assertIn("ctx:81%  5h:73%(2h15m)  in:1.2k", rendered)
+        self.assertIn("ctx:81%  5h:73%(2h15m)  last in:1.2k", rendered)
 
     def test_five_hour_window_accepts_iso_reset_and_drops_a_past_reset(self) -> None:
         window = {"used_percentage": 10, "resets_at": "2026-09-06T05:30:00Z"}
@@ -267,7 +280,9 @@ class ClaudeStatusLineTests(unittest.TestCase):
             )
 
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(completed.stdout, "~  Sonnet  ctx:25%  ~$0.000")
+        self.assertEqual(
+            completed.stdout, "~  Sonnet  ctx:25%  sess ~$0.000"
+        )
         self.assertNotIn("\033", completed.stdout)
 
 
