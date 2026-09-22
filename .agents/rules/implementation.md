@@ -59,6 +59,15 @@ Extract shared code or data when it centralizes a real policy, prevents drift,
 or serves more than one consumer. Keep one-use orchestration inline when an
 abstraction would only move complexity into another file.
 
+A capability that gains another audience, language, or scope extends its
+existing implementation with parameters (the scope shown, a text table per
+language, optional sections) instead of gaining a parallel copy. Logic used by
+more than one deployable lives in a shared module that each of them includes,
+not inside one of them for the others to copy. Red flags: a new function that
+mirrors an existing one with other strings or fewer sections; one deployable
+copying another's source file; two places describing the same state
+differently.
+
 ## Write Durable Comments
 
 A local comment should explain a non-obvious reason, invariant, protocol rule,
