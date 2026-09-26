@@ -29,6 +29,7 @@ class GovernanceDocumentationTests(unittest.TestCase):
             ".agents/host-templates",
             "docs/architecture",
             "docs/runbooks",
+            "docs/standards",
             "docs/reviews",
         ):
             shutil.copytree(ROOT / relative, root / relative)
@@ -158,24 +159,26 @@ class GovernanceDocumentationTests(unittest.TestCase):
         )
 
     def test_checks_nested_current_documents(self) -> None:
-        temporary, root = self.fixture()
-        self.addCleanup(temporary.cleanup)
-        nested = root / "docs/architecture/nested/current.md"
-        nested.parent.mkdir()
-        nested.write_text("Observed 2026-07-11. [missing](missing.md)\n")
-        errors = DOCS.check(root)
-        self.assertTrue(
-            any(
-                "dated observation" in error and "nested/current.md" in error
-                for error in errors
-            )
-        )
-        self.assertTrue(
-            any(
-                "broken link" in error and "nested/current.md" in error
-                for error in errors
-            )
-        )
+        for directory in ("docs/architecture", "docs/standards"):
+            with self.subTest(directory=directory):
+                temporary, root = self.fixture()
+                self.addCleanup(temporary.cleanup)
+                nested = root / directory / "nested/current.md"
+                nested.parent.mkdir()
+                nested.write_text("Observed 2026-07-11. [missing](missing.md)\n")
+                errors = DOCS.check(root)
+                self.assertTrue(
+                    any(
+                        "dated observation" in error and "nested/current.md" in error
+                        for error in errors
+                    )
+                )
+                self.assertTrue(
+                    any(
+                        "broken link" in error and "nested/current.md" in error
+                        for error in errors
+                    )
+                )
 
     def test_rejects_a_missing_rule_route(self) -> None:
         temporary, root = self.fixture()
@@ -192,15 +195,18 @@ class GovernanceDocumentationTests(unittest.TestCase):
         )
 
     def test_rejects_a_missing_readme_index_target(self) -> None:
-        temporary, root = self.fixture()
-        self.addCleanup(temporary.cleanup)
-        readme = root / "README.md"
-        readme.write_text(
-            readme.read_text().replace("docs/runbooks/new-vps.md", "missing.md")
-        )
-        self.assertTrue(
-            any("README documentation map lacks" in error for error in DOCS.check(root))
-        )
+        for target in ("docs/runbooks/new-vps.md", "docs/standards/README.md"):
+            with self.subTest(target=target):
+                temporary, root = self.fixture()
+                self.addCleanup(temporary.cleanup)
+                readme = root / "README.md"
+                readme.write_text(readme.read_text().replace(target, "missing.md"))
+                self.assertTrue(
+                    any(
+                        "README documentation map lacks" in error
+                        for error in DOCS.check(root)
+                    )
+                )
 
     def test_rejects_a_missing_runbook_contract(self) -> None:
         temporary, root = self.fixture()

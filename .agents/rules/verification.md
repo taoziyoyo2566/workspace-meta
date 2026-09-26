@@ -22,6 +22,34 @@ A parser or linter does not substitute for functional execution. Documentation
 that gives commands, paths, links, or procedures verifies those references and
 executes safe representative commands when feasible.
 
+## Risk-Triggered Behavior Checks
+
+For a defect fix with material behavioral risk, add or reuse a regression case
+that exposes the original defect. Where safe and feasible, demonstrate failure
+before the fix and success after it. Review whether the assertions can detect
+the claimed error. Low-impact wording/format changes do not require new
+behavioral tests.
+
+When authentication, authorization, or resource ownership changes, test the
+relevant allowed and denied paths: unauthenticated callers, other users or
+tenants, and lower-privilege roles as applicable. Confirm denial exposes no
+protected data and causes no unauthorized business-state change. Validate
+expected defensive effects such as audit events, rate limits, or failure
+counters against the project contract. Projects own the actual role matrix and
+cases; a whole security checklist is not a per-change gate.
+
+## Release Evidence
+
+Associate release evidence with the source revision, build/artifact identifier,
+and relevant configuration version or non-secret fingerprint. Promote the same
+verified artifact across environments when artifacts exist. Rebuilding or
+changing dependencies requires re-verifying affected behavior. Source-based
+deployment can record the revision, locked dependencies, and build inputs.
+Execute the project's post-deployment smoke checks when deployment is authorized;
+pre-deployment evidence alone does not prove the live result. Projects own
+rollout, observation, and recovery thresholds; no universal release platform or
+new approval layer is required.
+
 ## Failure And Retry
 
 When a check fails:

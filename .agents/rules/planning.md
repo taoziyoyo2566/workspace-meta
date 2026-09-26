@@ -75,6 +75,20 @@ It states the goal, approval-time current state, intended change,
 scope/exclusions, load-bearing prerequisites or assumptions, acceptance
 criteria, risks, and follow-up handling in depth proportional to the decision.
 
+Describe the present problem, intended behavior, affected project entities, and
+implementation mechanism in concrete language. Explain consequential tradeoffs;
+do not invent alternatives merely to fill a template. Acceptance names the
+conditions, observable result, and evidence that can prove it. For phased work,
+name each phase's output and the prerequisites for the next phase. These are
+content requirements, not mandatory headings or additional documents.
+
+An implementation task names an action and its actual module, interface, data,
+or operational target, plus the check that makes it complete. Add dependencies,
+entry checks, and failure/recovery handling where they affect safe execution.
+Generic phase labels such as "implement, test, accept" do not by themselves
+make an executable task. Use project runbooks for exact operational commands;
+do not repeat portable development rules inside every task.
+
 Use `DRAFT` for an unapproved Plan, `APPROVED` for its executable frozen
 contract, and `COMPLETE` for verified closeout. `IN_PROGRESS` and `BLOCKED` are
 not required as normal durable Plan states; report ordinary execution or

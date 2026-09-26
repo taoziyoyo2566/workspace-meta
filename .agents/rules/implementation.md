@@ -68,6 +68,34 @@ mirrors an existing one with other strings or fewer sections; one deployable
 copying another's source file; two places describing the same state
 differently.
 
+## Code, Adjustable Data, And Contracts
+
+Code implements algorithms, workflow, validation, and policy enforcement.
+Operator- or product-adjustable settings and policy choices are data, including
+switches, thresholds, allowlists, and durations, regardless of change frequency.
+Choose files, a database, or another existing store by editing, access, audit,
+consistency, and activation needs. Each setting has one canonical source.
+Protocol constants and implementation details need not become configuration
+merely because they are literals.
+
+Configuration is an interface: define accepted values, missing/invalid-value
+behavior, change authority, activation, and compatibility. Configurability does
+not grant everyone permission to change policy. Sensitive material follows
+`secrets.md`; a database alone does not establish encryption or key management.
+
+For interface or data changes, account for existing consumers, stored data,
+retries/concurrency when relevant, and mixed-version operation. Name necessary
+migration and recovery behavior; an old binary is not proof of data rollback.
+
+## Dependency Changes
+
+For added or upgraded dependencies, retain traceable provenance and resolved
+versions; check maintenance, known vulnerabilities applicable to this use, and
+the ecosystem's integrity mechanisms. Check licensing when it affects intended
+use or distribution. Scope inspection to changed components and affected
+transitive dependencies. Reuse manifests, lockfiles, and tool results rather
+than creating a duplicate inventory or per-package approval process.
+
 ## Write Durable Comments
 
 A local comment should explain a non-obvious reason, invariant, protocol rule,

@@ -57,6 +57,15 @@ Routine progress, intermediate hypotheses, failed attempts, routine fixes,
 command output, retry loops, and intermediate verification belong in transient
 task context. Do not create another durable execution journal for them.
 
+When the user requests stepwise tracking or operational records, or continuity,
+audit, or recovery requires them, use the existing project task/evidence store
+or a separate compact checklist/record. Keep completion state and actual
+operation outcomes there, outside the frozen Plan. Retain only the target,
+revision, prerequisites, consequential actions, results, evidence locations,
+and unresolved work needed to resume or assess the operation; raw logs and
+secrets follow their existing owners. This conditional record does not create
+an additional Plan or Changelog per step.
+
 A Changelog is the final verified outcome record for a coherent workstream,
 created at content-complete, commit-ready closeout. Normally one Plan produces
 one final Changelog; implementation rounds, conversational turns, operator
@@ -130,10 +139,16 @@ Add a document only when it has a distinct audience/task, lifecycle, access
 boundary, or independently maintainable owner. Omit empty headings and
 speculative placeholders.
 
+Explain designs with connected prose and concrete examples. Add diagrams,
+tables, and separate decision records when they improve understanding or later
+retrieval. Judge sufficiency by whether the reader can explain what changes,
+why, and how to verify it, not by heading count. Optional templates illustrate
+the rules; they do not create another normative owner or mandatory artifact.
+
 Plans are the exception to updating an existing owner: a Plan's owner is its
-workstream. The design of an independent capability is a new Plan under
-`planning.md`, never a section of another Plan, even when the audience, topic,
-or files are the same.
+workstream. When proportional planning warrants a persistent Plan, the design
+of an independent capability gets its own Plan under `planning.md`, never a
+section of another Plan, even when the audience, topic, or files are the same.
 
 Use status metadata only where lifecycle ambiguity creates real risk, such as
 decisions, incidents, verification snapshots, migrations, or deprecated pages.

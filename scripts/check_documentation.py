@@ -40,6 +40,7 @@ def _current_documents(root: Path) -> list[Path]:
         ".agents/host-templates",
         "docs/architecture",
         "docs/runbooks",
+        "docs/standards",
     ):
         paths.extend(sorted((root / relative).rglob("*.md")))
     return [path for path in paths if path.is_file()]
@@ -196,6 +197,7 @@ def _check_index(root: Path, errors: list[str]) -> None:
         ".agents/host-templates/README-agents.md",
         "docs/architecture/codex-config-management.md",
         "docs/runbooks/new-vps.md",
+        "docs/standards/README.md",
         "docs/reviews/",
         "feedback-register.md",
     ):

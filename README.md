@@ -102,6 +102,9 @@ Full provenance: `feedback-register.md` entry **W-R26**.
 
 ## Documentation map
 
+- [Engineering standards handbook (中文)](docs/standards/README.md) explains
+  design, development, review, implementation, and delivery with short examples
+  and primary-source rationale. Shared rules remain the canonical owners.
 - [Configuration architecture](docs/architecture/codex-config-management.md)
   explains managed surfaces, ownership boundaries, and synchronization design.
 - [Agent configuration ownership](.agents/host-templates/README-agents.md)

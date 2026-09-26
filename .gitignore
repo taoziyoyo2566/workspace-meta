@@ -10,7 +10,17 @@
 !docs/architecture/codex-config-management.md
 !docs/runbooks/
 !docs/runbooks/new-vps.md
+!docs/standards/
+!docs/standards/README.md
+!docs/standards/design.md
+!docs/standards/development.md
+!docs/standards/delivery.md
+!docs/standards/templates.md
+!docs/standards/sources.md
 !docs/reviews/
+!docs/reviews/refactor-engineering-standards/
+!docs/reviews/refactor-engineering-standards/plan-engineering-standards-2026-09-26.md
+!docs/reviews/refactor-engineering-standards/changelog-engineering-standards-2026-09-26.md
 !docs/reviews/refactor-codex-sync/
 !docs/reviews/refactor-codex-sync/*.md
 !docs/reviews/feature-agent-status-line/
