@@ -24,6 +24,9 @@ BRANCH_COLOR = "\033[01;32m"
 MODEL_COLOR = "\033[38;5;66m"
 DIM_COLOR = "\033[38;5;243m"
 COST_COLOR = "\033[38;5;71m"
+# Fast mode draws from usage credits at a higher per-token rate even on a
+# subscription, so its marker stands apart from the muted model segment.
+FAST_COLOR = "\033[38;5;208m"
 # Shared by every 0-100 gauge on the line: the context window and the rolling
 # five-hour usage window. Both are keyed on the used fraction, so a full gauge
 # is red whether the line displays used or remaining.
@@ -164,6 +167,11 @@ def render(payload: dict[str, Any], *, home: str, color: bool = True) -> str:
     model_value = model_data.get("display_name") or model_data.get("id") or "unknown"
     model = model_value if isinstance(model_value, str) else "unknown"
 
+    effort_data = payload.get("effort")
+    effort_value = effort_data.get("level") if isinstance(effort_data, dict) else None
+    effort = effort_value if isinstance(effort_value, str) else ""
+    fast_mode = payload.get("fast_mode") is True
+
     context = payload.get("context_window")
     context = context if isinstance(context, dict) else {}
     used = _number(context.get("used_percentage"))
@@ -181,6 +189,7 @@ def render(payload: dict[str, Any], *, home: str, color: bool = True) -> str:
         "model": MODEL_COLOR,
         "dim": DIM_COLOR,
         "cost": COST_COLOR,
+        "fast": FAST_COLOR,
     }
     if not color:
         colors = {key: "" for key in colors}
@@ -193,7 +202,12 @@ def render(payload: dict[str, Any], *, home: str, color: bool = True) -> str:
         parts = [f"{dir_text}:{colors['branch']}{branch}{colors['reset']}"]
     else:
         parts = [dir_text]
-    parts.append(f"{colors['model']}{model}{colors['reset']}")
+    model_text = f"{colors['model']}{model}{colors['reset']}"
+    if effort:
+        model_text += f" {colors['dim']}{effort}{colors['reset']}"
+    if fast_mode:
+        model_text += f" {colors['fast']}fast{colors['reset']}"
+    parts.append(model_text)
 
     if used is not None:
         # Colour from the value the line actually prints, so "ctx:80%" is never

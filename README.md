@@ -198,9 +198,10 @@ The bootstrap is idempotent and host-local. It:
   therefore an auditable hook-command change instead of silently changing the
   meaning of an already trusted command;
 - installs a hash-pinned Claude `statusLine.command` that renders directory,
-  branch, model, context use, five-hour remaining usage with reset countdown,
-  current token/cache detail, and Claude's own session-cost estimate. Codex uses
-  the native ordered item list owned by the repository preferences template;
+  branch, model with its effort level and a fast-mode marker, context use,
+  five-hour remaining usage with reset countdown, current token/cache detail,
+  and Claude's own session-cost estimate. Codex uses the native ordered item
+  list owned by the repository preferences template;
 - installs the **env-sync skill** (`~/.claude/skills/env-sync/`) and synchronizes
   the workspace-wide Codex router/safety floor into a managed block in
   `~/.codex/AGENTS.md`. The versioned root `CLAUDE.md` is Claude's thin adapter;

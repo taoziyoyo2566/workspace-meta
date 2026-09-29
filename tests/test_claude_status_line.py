@@ -63,6 +63,44 @@ class ClaudeStatusLineTests(unittest.TestCase):
             rendered,
         )
 
+    def test_effort_and_fast_mode_follow_the_model(self) -> None:
+        payload = self.payload()
+        payload["effort"] = {"level": "xhigh"}
+        payload["fast_mode"] = True
+        with mock.patch.object(STATUS, "git_branch", return_value="main"):
+            plain = STATUS.render(payload, home="/Users/test", color=False)
+            colored = STATUS.render(payload, home="/Users/test")
+
+        self.assertTrue(plain.startswith("~/workspace:main  Sonnet xhigh fast  ctx:81%"))
+        self.assertIn(f"{STATUS.FAST_COLOR}fast{STATUS.RESET}", colored)
+
+    def test_effort_and_fast_mode_are_omitted_when_absent_or_malformed(self) -> None:
+        base = {
+            "workspace": {"current_dir": "/tmp/project"},
+            "model": {"display_name": "Opus"},
+        }
+        cases: list[dict[str, object]] = [
+            {},
+            {"fast_mode": False},
+            {"fast_mode": "true"},
+            {"fast_mode": 1},
+            {"effort": None},
+            {"effort": "xhigh"},
+            {"effort": {}},
+            {"effort": {"level": None}},
+            {"effort": {"level": 3}},
+            {"effort": {"level": ""}},
+        ]
+        with mock.patch.object(STATUS, "git_branch", return_value=""):
+            for extra in cases:
+                with self.subTest(extra=extra):
+                    self.assertEqual(
+                        STATUS.render(
+                            {**base, **extra}, home="/home/test", color=False
+                        ),
+                        "/tmp/project  Opus",
+                    )
+
     def test_model_id_is_used_for_a_gateway_model_without_a_display_name(self) -> None:
         payload = {
             "workspace": {"current_dir": "/tmp/project"},
