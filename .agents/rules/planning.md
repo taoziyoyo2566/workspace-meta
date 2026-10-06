@@ -5,9 +5,11 @@ scope, execution deviation, durable handoff, and closeout.
 
 ## Ownership
 
-This file owns generic planning, approval, material-deviation, handoff, and
+This file owns generic planning, discovery of earlier and concurrent work,
+recording of confirmed findings, approval, material-deviation, handoff, and
 Plan lifecycle behavior. `documentation.md` owns the durable content roles of
-Plans and Changelogs. Projects own plan filenames/directories, additional
+Plans, Changelogs, and investigation records. Projects own plan
+filenames/directories, where verified findings are recorded, additional
 metadata, architecture sources, branch gates, test commands, and live-resource
 fields.
 
@@ -28,6 +30,25 @@ from memory; use current primary/official sources. Environment facts follow
 
 Every material unknown names when/how it closes and what happens if evidence
 contradicts the proposed direction.
+
+Before an investigation, experiment, or persistent Plan, find what earlier and
+concurrent work already established about the same ground. Name the task's
+triggers: the paths and components, settings or keys, external dependencies
+with versions, and features it will change or rely on. Search the project's
+recorded findings, Plans, and investigation and review records for them,
+including uncommitted documents, other worktrees, and unmerged branches. Read
+in full every document that matches a setting or dependency exactly, and
+enough of the others to judge whether they apply. Link what the new work
+builds on, depends on, supersedes, or contradicts.
+
+Red flags: "only Plans with the same goal matter", "it is uncommitted, so
+nothing is decided yet", "that belongs to another feature", "I already know
+how this dependency behaves".
+
+A recorded conclusion bound to another dependency version, scope, or date is a
+lead to re-verify, not a current fact. Resolve a conflict between recorded
+documents, or between one and current evidence, under `reasoning.md`, and
+record the outcome as Record Findings When Confirmed describes.
 
 ## Proportional Shape
 
@@ -69,6 +90,13 @@ the related Plans to each other instead. Red flags: "it is a follow-up of the
 same feature", "the same reader will look there", "that Plan already has a
 changes section". A stable contract's approved-change log records changes to
 that contract; it is not a place to design a new capability either.
+
+Two active workstreams that depend on the same change to a shared component or
+dependency, such as one version upgrade, share that change as one capability
+with one owner: the existing Plan whose approved scope covers it, otherwise its
+own workstream. The dependent work links to it and neither redesigns nor
+executes the change separately. When ownership is disputed, the operator
+decides.
 
 A persistent Plan is the approved implementation intent and execution contract.
 It states the goal, approval-time current state, intended change,
@@ -140,8 +168,9 @@ and cannot prejudice the decision.
 ## Execution And Evidence
 
 Use approved scope and acceptance checks as the baseline. At each substantial
-phase, re-check repository state, current external behavior, environment
-capability, operator decisions, and live target scope when load-bearing.
+phase, re-check repository state, recorded findings and concurrent work on the
+task's triggers, current external behavior, environment capability, operator
+decisions, and live target scope when load-bearing.
 
 When reality contradicts the Plan, classify the mismatch and update its actual
 truth owner. Apply the material-deviation boundary above only when the
@@ -152,7 +181,32 @@ Phases are coherent implementation and verification units, not mandatory Git
 commit units. Their ordinary progress and intermediate evidence remain in task
 context. Evidence needed by another machine or agent must enter the normal
 publication flow, or another approved durable store, before handoff; no
-evidence-only administrative commit is required.
+evidence-only administrative commit is required. A verified finding that
+constrains other work is recorded earlier, as Record Findings When Confirmed
+describes.
+
+## Record Findings When Confirmed
+
+Write a verified conclusion to the project's durable record when it is
+confirmed if it constrains work beyond the current diff: a compatibility limit,
+a changed default, a refuted premise of another document, or dependency
+behavior that a Plan relies on. Use the owner the project names for verified
+findings, otherwise an investigation record, and include the evidence, the
+versions and scope it holds for, and a recheck condition when it rests on
+volatile external facts. Do not hold it for handoff or closeout; a concurrent
+session is not a handoff and sees only what is on disk. A conclusion about a
+shared component or dependency belongs in that component's record, which
+feature Plans link, not inside one feature's Plan. Routine attempts, command
+output, and unverified hypotheses remain transient.
+
+Do not edit a document that another session has left uncommitted unless the
+operator hands that document to your task. Otherwise record your finding in
+your own document, link the other one, mark a contradiction explicitly, and
+report the overlap to the operator.
+
+When the task does not authorize project writes, present the finding with its
+proposed record and ask once. A project may grant standing authority to write
+these records.
 
 ## Handoff And Closeout
 

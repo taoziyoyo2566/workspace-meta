@@ -36,6 +36,7 @@ of the truth classes conflict.
 | Understand design or tradeoffs | explanation or architecture | context, boundaries, relationships, rationale |
 | Preserve an accepted choice | decision record | status, context, decision, consequences, supersession links |
 | Preserve what happened or was observed | incident or verification record | date, scope, environment, evidence, outcome, follow-up links |
+| Preserve what was investigated or verified for later work | investigation record | question and scope, dated evidence, conclusions with the versions and scope they hold for, recheck conditions, supersession links |
 | Preserve approved implementation intent | Plan | goal, approval-time state, intended change, scope/non-goals, acceptance criteria, approved deviations, lifecycle status |
 | Preserve a verified implementation outcome | Changelog | Plan link, summary, meaningful changed surface, final verification, implemented deviations and residual gaps when relevant |
 | Track possible future work | issue or backlog | owner, status, acceptance boundary; never presented as current behavior |
@@ -55,7 +56,9 @@ reuse, approval, freeze, deviation, and completion workflow.
 
 Routine progress, intermediate hypotheses, failed attempts, routine fixes,
 command output, retry loops, and intermediate verification belong in transient
-task context. Do not create another durable execution journal for them.
+task context. Do not create another durable execution journal for them. A
+verified finding that constrains other work is not routine progress;
+`planning.md` requires recording it when it is confirmed.
 
 When the user requests stepwise tracking or operational records, or continuity,
 audit, or recovery requires them, use the existing project task/evidence store
