@@ -34,7 +34,7 @@ Canonical sources: `git.md`, `authorization.md`, `git-publication.md`,
 | merge/integration or post-integration handling | `.agents/rules/authorization.md` + `.agents/rules/git.md` + `.agents/rules/git-integration.md` |
 | rewrite/discard/force/delete/amend/recovery | `.agents/rules/authorization.md` + `.agents/rules/git.md` + `.agents/rules/git-recovery.md` |
 | load-bearing premise validation, conflicting evidence, independent technical judgment, competing explanations, or diagnostic method | `.agents/rules/reasoning.md` |
-| non-trivial planning, a new capability's design or plan, starting an investigation or experiment, a verified finding that affects other work, evidence, approval scope, deviation, handoff | `.agents/rules/planning.md` |
+| non-trivial planning, a new capability's design or plan, starting an investigation or experiment, a verified finding that affects other work, an operator decision on a workstream, reporting its status from memory or an earlier session, evidence, approval scope, deviation, handoff | `.agents/rules/planning.md` |
 | implementation, configuration, refactoring, or artifact-structure change | `.agents/rules/implementation.md` |
 | project documentation authoring, restructuring, or lifecycle governance | `.agents/rules/documentation.md` |
 | change verification or blocked check | `.agents/rules/verification.md` |
@@ -64,3 +64,17 @@ provenance in `feedback-register.md`. Project-only behavior stays in the
 project. Host credentials, trust, tool permissions, preferences, settings, and
 runtime state remain host-local; no `~/.claude/CLAUDE.md` is required as a
 portable owner.
+
+## Claude Auto-Memory
+
+Auto-memory is host-local recall. Save the operator's corrections and
+preferences about how to work when they are stated; a memory about a decision
+or workstream only points to the owner `planning.md` names. Change a topic file
+and its `MEMORY.md` line in consecutive Write/Edit calls, date today's events
+from the clock and earlier ones from their messages, and fix a stale entry when
+you find it. The `MEMORY.md` in context is the copy loaded at session start,
+resume, or compaction, subagents receive that copy, and a newer re-read copy
+replaces older ones; open the topic file before relying on a line. After a turn
+was stopped, for example by a safety classifier, the next turn first reports
+what the stopped turn wrote, what it left undone, and any queued operator
+message it had taken in.

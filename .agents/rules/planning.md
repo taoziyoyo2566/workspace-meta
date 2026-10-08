@@ -6,12 +6,12 @@ scope, execution deviation, durable handoff, and closeout.
 ## Ownership
 
 This file owns generic planning, discovery of earlier and concurrent work,
-recording of confirmed findings, approval, material-deviation, handoff, and
-Plan lifecycle behavior. `documentation.md` owns the durable content roles of
-Plans, Changelogs, and investigation records. Projects own plan
-filenames/directories, where verified findings are recorded, additional
-metadata, architecture sources, branch gates, test commands, and live-resource
-fields.
+recording of confirmed findings and operator decisions, approval,
+material-deviation, handoff, and Plan lifecycle behavior. `documentation.md`
+owns the durable content roles of Plans, Changelogs, and investigation records.
+Projects own plan filenames/directories, where verified findings are recorded,
+additional metadata, architecture sources, branch gates, test commands, and
+live-resource fields.
 
 ## Before Planning
 
@@ -208,15 +208,72 @@ When the task does not authorize project writes, present the finding with its
 proposed record and ask once. A project may grant standing authority to write
 these records.
 
+## Record Decisions When Made
+
+When the operator makes or changes a decision that alters what a living
+artifact says about a workstream, such as approving, deferring, dropping, or
+reordering work, changing its scope, or answering a question the artifact lists
+as open, record it in that artifact in the same turn, before any other task
+work except the reads that locate the record and confirm you may write it, so
+an interrupted turn still leaves it on disk. When the same message asks for an
+action the record would block, such as a deploy that needs a clean checkout, do
+that action first and record the decision right after it. For a Plan, the
+artifacts are its status and approval record and the project's progress owner;
+any other living document that still lists the question as open is updated in
+the same change. Record what was decided and its scope, the operator's words
+when wording matters, and the date it was made: today's date from the clock
+when you record it in the turn it was made, otherwise the date of the message
+that made it.
+
+Recording grants nothing the operator did not decide. For an `APPROVED` Plan, a
+deferral or drop is a concise dated record beside the approval, and the status
+line names it; other frozen content does not change. A decision that changes
+frozen content, such as the scope or acceptance criteria, is a material
+deviation: note it at once in the status and approval record as pending, state
+its impact in the same turn, and amend the content only through the steps in
+Approval Scope.
+
+A condition you can settle from evidence, such as "if it is not necessary", is
+yours to settle: record the decision with that reasoning. A statement whose
+condition only the operator can settle, or that is ambiguous, gets one question
+in the same turn, and the artifact states the open question with your
+recommendation until the operator answers.
+
+An operator decision about a workstream hands that workstream's status and
+approval record and its progress-owner entry to your task, even when another
+session left those documents uncommitted: change only those entries and report
+the overlap. Without write authority, present the exact proposed record and ask
+once, in the same turn and before other work, for permission to write it; the
+question is about the write, not the decision.
+
+Agent memory may point to the record. While a record waits for write
+permission, a memory entry may hold the decision marked as unrecorded, with its
+date and the owner it must reach; otherwise memory is never the only place a
+decision or a workstream's state lives.
+
+Red flags: "I'll update the Plan once the operator confirms" after the operator
+has decided; "memory has it for now"; "it is uncommitted anyway"; "the next
+session will pick it up"; "I'll do it at closeout".
+
 ## Handoff And Closeout
 
 Persist load-bearing handoff state in the existing owning artifact when one
 exists. Do not require the user to relay instructions between agents or
 sessions, and do not create a new artifact solely to hold a routine handoff.
+Agent memory is not an owning artifact: other agents and hosts do not see it,
+and the copy loaded into a session is a snapshot.
+
+Before reporting a workstream's status, a pending decision, or what the
+operator still owes from memory, a summary, or an earlier turn or session, read
+its owning artifact and the relevant Git state; a memory entry or summary line
+is a lead to open, not the answer. When they disagree, do not settle it by the
+kind of record: find which is current from dated evidence, such as the
+operator's own words or Git history, report that state and the disagreement,
+and bring the owning artifact up to date in the same turn or name it as a gap.
 
 When an in-scope change resolves a living source that still directs future
 work, update it in the same bounded content change or report the exact deferred
-owner/gap. Publication remains a separate Git transaction.
+owner/gap to the operator. Publication remains a separate Git transaction.
 
 Closeout compares the result and evidence with the approved goal, expected
 effect, scope, and acceptance criteria. Do not mark a Plan `COMPLETE` merely
