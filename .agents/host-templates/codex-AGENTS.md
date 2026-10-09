@@ -40,7 +40,7 @@ Canonical sources: `git.md`, `authorization.md`, `git-publication.md`,
 | project documentation authoring, restructuring, or lifecycle governance | `~/workspace/.agents/rules/documentation.md` |
 | change verification or blocked check | `~/workspace/.agents/rules/verification.md` |
 | review, audit, diagnosis, remediation assessment | `~/workspace/.agents/rules/review.md` |
-| capability selection or method failure | `~/workspace/.agents/rules/capabilities.md` + `~/workspace/.agents/rules/codex-runtime.md` when Codex mechanics are needed |
+| capability selection or method failure, or a command for the user to run in their own terminal | `~/workspace/.agents/rules/capabilities.md` + `~/workspace/.agents/rules/codex-runtime.md` when Codex mechanics are needed |
 | secret material or remediation | `~/workspace/.agents/rules/secrets.md` |
 | load-bearing host/environment claim | `~/workspace/.agents/rules/environment-truth.md` |
 | writing/refactoring agent rules or routing feedback | `~/workspace/.agents/rules/rule-authoring.md` |

@@ -4,10 +4,10 @@ Agent-neutral workspace rule for proportional capability and tool selection.
 
 ## Ownership
 
-This file owns generic selection triggers and recording behavior. Agent
-adapters own concrete tool discovery, delegation, connected applications, and
-runtime mechanics. Projects own their toolchain, commands, environments, and
-preferred adapters.
+This file owns generic selection triggers, recording behavior, and how a
+command is handed to the user to run. Agent adapters own concrete tool
+discovery, delegation, connected applications, and runtime mechanics.
+Projects own their toolchain, commands, environments, and preferred adapters.
 
 ## Observable Triggers
 
@@ -37,6 +37,26 @@ capability audit.
 - Use current official documentation for changed product/API behavior.
 - Prefer project scripts, test targets, environments, and adapters over manual
   reinvention.
+
+## Commands The User Runs
+
+When the user is to run a command in their own terminal and it is more than
+one simple line, write it to a script file and hand over only the one-line
+command that runs the file. Text copied from a chat or terminal view can gain
+trailing spaces or broken lines without showing it: a heredoc terminator stops
+matching, a continuation line runs on its own, or a quoted argument splits.
+
+- More than one simple line means several lines, a heredoc, a line
+  continuation, a multi-line loop or pipeline, or an interpreter `-c` argument
+  with nested quotes. A single simple command is given as it is.
+- A one-off script goes under `/tmp`, in a directory only the user can read,
+  not into a repository. A command that will be reused belongs in the project
+  as a tool, under the project's rules.
+- Before handing it over, check that the file parses, has no trailing
+  whitespace, is readable only by the user, and prints no secret value.
+- For a protected action, the request brief in `authorization.md` still
+  applies: its exact operation is the one-line command, with the script's
+  path so the user can read the script first.
 
 ## Recording
 
