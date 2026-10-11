@@ -45,13 +45,13 @@ Canonical sources: `git.md`, `authorization.md`, `git-publication.md`,
 | project documentation authoring, restructuring, or lifecycle governance | `~/workspace/.agents/rules/documentation.md` |
 | a created or changed file before it is called done, handed over, committed, or deployed | `~/workspace/.agents/rules/file-checks.md` |
 | change verification or blocked check | `~/workspace/.agents/rules/verification.md` |
-| review, audit, diagnosis, remediation assessment | `~/workspace/.agents/rules/review.md` |
+| review, audit, diagnosis, remediation assessment, or reporting which problems exist | `~/workspace/.agents/rules/review.md` |
 | proposing a procedure or practice, or reporting a handled problem | `~/workspace/.agents/rules/problem-follow-up.md` |
-| capability selection or method failure, or a command for the user to run in their own terminal | `~/workspace/.agents/rules/capabilities.md` + `~/workspace/.agents/rules/codex-runtime.md` when Codex mechanics are needed |
+| capability selection, method failure, slow or costly work, or a command for the user to run in their own terminal | `~/workspace/.agents/rules/capabilities.md` + `~/workspace/.agents/rules/codex-runtime.md` when Codex mechanics are needed |
 | secret material or remediation | `~/workspace/.agents/rules/secrets.md` |
 | creating temporary files, or temporary space full or filling | `~/workspace/.agents/rules/temporary-files.md` |
 | load-bearing host/environment claim | `~/workspace/.agents/rules/environment-truth.md` |
-| writing/refactoring agent rules or routing feedback | `~/workspace/.agents/rules/rule-authoring.md` |
+| writing/refactoring agent rules, routing feedback, or the operator correcting how you work or stating a preference about it | `~/workspace/.agents/rules/rule-authoring.md` |
 
 Project rules provide topology, artifact schema, commands, checks, live fields,
 secret locations, and stricter domain constraints. If a project repeats a

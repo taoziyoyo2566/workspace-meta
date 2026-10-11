@@ -37,13 +37,13 @@ configuration. It does not mirror either home directory.
 | documentation information architecture | `documentation.md` | project entry points, topic map, commands, domain constraints |
 | file checks by type | `file-checks.md` | commands per file class, accepted warnings, stricter gates |
 | verification | `verification.md` | commands, environments, thresholds, CI |
-| review | `review.md` | domain scenarios, baseline, risk refinements |
+| review and problem reports | `review.md` | domain scenarios, baseline, risk refinements |
 | proposals and problem follow-up | `problem-follow-up.md` | incident records and owners of deferred work |
-| capability selection | `capabilities.md` | project toolchain and adapters |
+| capability selection, quality before speed | `capabilities.md` | project toolchain and adapters |
 | secret safety | `secrets.md` | stores, paths, consumers, rotation, checks |
 | temporary files | `temporary-files.md` | ignored local directory for large data |
 | environment truth | `environment-truth.md` | project environment/command mapping |
-| rule authoring/feedback | `rule-authoring.md` | project-only owners and adapters |
+| feedback intake and rule authoring | `rule-authoring.md` | project-only owners and adapters |
 
 `codex-runtime.md` owns only Codex sandbox, execpolicy, deferred discovery, and
 configuration mechanics. Claude-specific mechanics remain in its adapter or

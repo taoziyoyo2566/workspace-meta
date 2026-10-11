@@ -44,13 +44,13 @@ Canonical sources: `git.md`, `authorization.md`, `git-publication.md`,
 | project documentation authoring, restructuring, or lifecycle governance | `.agents/rules/documentation.md` |
 | a created or changed file before it is called done, handed over, committed, or deployed | `.agents/rules/file-checks.md` |
 | change verification or blocked check | `.agents/rules/verification.md` |
-| review, audit, diagnosis, remediation assessment | `.agents/rules/review.md` |
+| review, audit, diagnosis, remediation assessment, or reporting which problems exist | `.agents/rules/review.md` |
 | proposing a procedure or practice, or reporting a handled problem | `.agents/rules/problem-follow-up.md` |
-| capability selection or method failure, or a command for the user to run in their own terminal | `.agents/rules/capabilities.md`; use only Claude mechanics actually available in the session |
+| capability selection, method failure, slow or costly work, or a command for the user to run in their own terminal | `.agents/rules/capabilities.md`; use only Claude mechanics actually available in the session |
 | secret material or remediation | `.agents/rules/secrets.md` |
 | creating temporary files, or temporary space full or filling | `.agents/rules/temporary-files.md` |
 | load-bearing host/environment claim | `.agents/rules/environment-truth.md` |
-| writing/refactoring agent rules or routing feedback | `.agents/rules/rule-authoring.md` |
+| writing/refactoring agent rules, routing feedback, or the operator correcting how you work or stating a preference about it | `.agents/rules/rule-authoring.md` |
 
 Read only the task-shaped owners. Project branch topology, artifact naming,
 commands, tests, live schemas, secret locations, and architecture remain with
@@ -76,13 +76,15 @@ portable owner.
 ## Claude Auto-Memory
 
 Auto-memory is host-local recall. Save the operator's corrections and
-preferences about how to work when they are stated; a memory about a decision
-or workstream only points to the owner `planning.md` names. Change a topic file
-and its `MEMORY.md` line in consecutive Write/Edit calls, date today's events
-from the clock and earlier ones from their messages, and fix a stale entry when
-you find it. The `MEMORY.md` in context is the copy loaded at session start,
-resume, or compaction, subagents receive that copy, and a newer re-read copy
-replaces older ones; open the topic file before relying on a line. After a turn
-was stopped, for example by a safety classifier, the next turn first reports
-what the stopped turn wrote, what it left undone, and any queued operator
-message it had taken in.
+preferences about how to work when they are stated, and classify each in the
+same reply under `rule-authoring.md` Feedback Intake: saving it does not route
+a cross-project one. A memory about a decision or workstream only points to the
+owner `planning.md` names. Change a topic file and its `MEMORY.md` line in
+consecutive Write/Edit calls, date today's events from the clock and earlier
+ones from their messages, and fix a stale entry when you find it. The
+`MEMORY.md` in context is the copy loaded at session start, resume, or
+compaction, subagents receive that copy, and a newer re-read copy replaces
+older ones; open the topic file before relying on a line. After a turn was
+stopped, for example by a safety classifier, the next turn first reports what
+the stopped turn wrote, what it left undone, and any queued operator message it
+had taken in.

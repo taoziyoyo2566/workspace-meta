@@ -1,13 +1,14 @@
 # Rule Authoring And Feedback
 
-Agent-neutral workspace rule for ownership, rule form, provenance, and
-recurrence-driven refactoring.
+Agent-neutral workspace rule for feedback intake, ownership, rule form,
+provenance, and recurrence-driven refactoring.
 
 ## Ownership
 
-This file owns the method for creating or changing portable behavior rules.
-Projects own project-only rules and adapters. Agent adapters own only their
-runtime mechanics and compact intentional safety floors. Host-local
+This file owns taking in operator feedback about how agents work, and the
+method for creating or changing portable behavior rules. Projects own
+project-only rules and adapters. Agent adapters own only their runtime
+mechanics and compact intentional safety floors. Host-local
 authorization/preferences remain in actual host configuration.
 
 ## Choose The Owner First
@@ -23,6 +24,35 @@ Classify every normative statement before writing it:
 
 Adapters route and may repeat only a compact safety floor that is tested against
 its canonical owner. They do not become a second procedural owner.
+
+## Feedback Intake
+
+When the operator corrects how you work or states a preference about it,
+classify it under Choose The Owner First in the reply that takes it in, and
+say which it is:
+
+- project-only: it stays with the project, under the project's rules;
+- cross-project, in a session whose task is workspace-meta governance: route
+  it as Provenance And Refactoring says;
+- cross-project, in any other session: hand it over in the same reply. Give
+  the command that starts a session at the workspace-meta root, as
+  `capabilities.md` Commands The User Runs says, or, when the operator names
+  an existing session and your runtime can message it, send it there. The
+  brief quotes the operator's words with their time, names the source
+  transcript and any memory note, and states what the operator has
+  authorized. Do not change workspace rules or `feedback-register.md` from
+  this session unless the operator asks.
+
+How an agent should work is behavior even when it names a setting; only a
+setting's value, such as a permission, credential, or model or display
+default, is host-local configuration. Agent memory, whether you write it or
+the runtime consolidates it, does not route feedback; a memory note of it says
+where it was handed. When unsure whether it is cross-project, say which you
+chose and why.
+
+Red flags: "it is saved in memory"; "it came up in this project, so it is
+project-only"; "this session does not handle workspace rules"; "I'll hand it
+over later".
 
 ## Edit The Whole Relevant Owner
 

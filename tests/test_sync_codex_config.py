@@ -1418,6 +1418,113 @@ class CodexConfigSyncTests(unittest.TestCase):
         self.assertNotIn("force-with-lease", integration)
         self.assertIn("force-with-lease", recovery)
 
+    def test_feedback_intake_problem_reports_and_quality_have_routed_owners(
+        self,
+    ) -> None:
+        # The rule text is the contract: each behavior has one owner section,
+        # both resident adapters route its trigger there, and the register
+        # keeps its provenance.
+        owners = {
+            "review.md": (
+                "## Problem Reports",
+                (
+                    "matters outside the asked scope are not problems",
+                    "is a lead",
+                    "counts once you have checked the evidence it cites",
+                    "from its definition",
+                    "establishes that claim itself",
+                ),
+                ("reporting which problems exist",),
+                "problem reports",
+                "W-R59",
+            ),
+            "capabilities.md": (
+                "## Quality Before Speed",
+                (
+                    "- work is slow or costly, or a change of method is "
+                    "considered to save time or usage; quality before speed "
+                    "applies",
+                    "keep the configured model, reasoning effort, and "
+                    "orchestration settings",
+                    "only when it also improves the result",
+                    "the operator decides",
+                    "let the operator decide before making it",
+                ),
+                ("slow or costly work",),
+                "quality before speed",
+                "W-R60",
+            ),
+            "rule-authoring.md": (
+                "## Feedback Intake",
+                (
+                    "in the reply that takes it in",
+                    "workspace-meta governance: route it as provenance and "
+                    "refactoring says",
+                    "hand it over in the same reply",
+                    "is behavior even when it names a setting",
+                    "does not route feedback",
+                ),
+                (
+                    "routing feedback",
+                    "the operator correcting how you work",
+                    "stating a preference about it",
+                ),
+                "feedback intake",
+                "W-R61",
+            ),
+        }
+        adapters = (
+            self.agents_template.read_text(),
+            (ROOT / "CLAUDE.md").read_text(),
+        )
+        owner_matrix = (
+            ROOT / ".agents/host-templates/README-agents.md"
+        ).read_text()
+        feedback = (ROOT / "feedback-register.md").read_text()
+
+        for name, owner in owners.items():
+            heading, invariants, triggers, domain, entry = owner
+            rule = (self.rules_dir / name).read_text()
+            self.assertEqual(rule.count(heading), 1, name)
+            normalized_rule = " ".join(rule.split()).lower()
+            for invariant in invariants:
+                self.assertIn(invariant, normalized_rule)
+
+            for adapter in adapters:
+                routes = [
+                    line
+                    for line in adapter.splitlines()
+                    if line.startswith("| ") and f"rules/{name}`" in line
+                ]
+                self.assertEqual(len(routes), 1, name)
+                route_trigger = routes[0].strip("|").split("|", 1)[0]
+                for trigger in triggers:
+                    self.assertIn(trigger, route_trigger)
+
+            matrix_rows = [
+                line
+                for line in owner_matrix.splitlines()
+                if f"| `{name}` |" in line
+            ]
+            self.assertEqual(len(matrix_rows), 1, name)
+            self.assertIn(domain, matrix_rows[0])
+
+            self.assertEqual(feedback.count(f"- **{entry} ("), 1)
+            provenance_rows = [
+                line
+                for line in feedback.splitlines()
+                if line.startswith(f"| `.agents/rules/{name}`")
+            ]
+            self.assertEqual(len(provenance_rows), 1, name)
+            self.assertIn(entry, provenance_rows[0])
+
+        claude = (ROOT / "CLAUDE.md").read_text()
+        auto_memory = claude.split("## Claude Auto-Memory", 1)[1]
+        auto_memory = auto_memory.split("\n## ", 1)[0]
+        normalized_memory = " ".join(auto_memory.split())
+        self.assertIn("`rule-authoring.md` Feedback Intake", normalized_memory)
+        self.assertIn("does not route a cross-project one", normalized_memory)
+
     def test_migrates_only_exact_legacy_agents_file(self) -> None:
         agents = self.codex_home / "AGENTS.md"
         agents.parent.mkdir(parents=True)

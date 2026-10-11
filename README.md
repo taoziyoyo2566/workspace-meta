@@ -77,7 +77,7 @@ Full provenance: `feedback-register.md` entry **W-R26**.
   `.agents/rules/`; agent runtime mechanics are explicit, and projects keep
   only topology, commands, schemas, operational constraints, and stricter
   deltas. Ownership matrix: `.agents/host-templates/README-agents.md`;
-  provenance: W-R32, W-R37, W-R38, W-R39, W-R43, and W-R53–W-R58.
+  provenance: W-R32, W-R37, W-R38, W-R39, W-R43, and W-R53–W-R61.
 - **Permission intent is portable; executable authorization is host-local** —
   the shared authorization owner says that native search, URL retrieval, remote
   read queries, and ordinary inspection need no conversational confirmation;

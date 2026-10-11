@@ -47,6 +47,8 @@
 !docs/reviews/refactor-public-repository-policy/*.md
 !docs/reviews/refactor-rule-gaps/
 !docs/reviews/refactor-rule-gaps/*.md
+!docs/reviews/refactor-feedback-intake/
+!docs/reviews/refactor-feedback-intake/*.md
 !.githooks/
 !.githooks/pre-commit
 !scripts/

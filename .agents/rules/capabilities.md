@@ -1,13 +1,15 @@
 # Capability Selection
 
-Agent-neutral workspace rule for proportional capability and tool selection.
+Agent-neutral workspace rule for proportional capability and tool selection,
+with result quality before speed.
 
 ## Ownership
 
-This file owns generic selection triggers, recording behavior, and how a
-command is handed to the user to run. Agent adapters own concrete tool
-discovery, delegation, connected applications, and runtime mechanics.
-Projects own their toolchain, commands, environments, and preferred adapters.
+This file owns generic selection triggers, the rule that quality comes before
+speed, recording behavior, and how a command is handed to the user to run.
+Agent adapters own concrete tool discovery, delegation, connected
+applications, and runtime mechanics. Projects own their toolchain, commands,
+environments, and preferred adapters.
 
 ## Observable Triggers
 
@@ -20,7 +22,9 @@ Do a lightweight capability check when:
   connected applications, or generated assets;
 - a plan, blocker, skipped check, or delegation depends on current runtime
   capability;
-- repeated failure suggests the execution method is wrong.
+- repeated failure suggests the execution method is wrong;
+- work is slow or costly, or a change of method is considered to save time or
+  usage; Quality Before Speed applies.
 
 Do not spend more effort discovering capabilities than the task warrants.
 Simple explanation/read-only questions, ordinary edits using visible tools, and
@@ -37,6 +41,22 @@ capability audit.
 - Use current official documentation for changed product/API behavior.
 - Prefer project scripts, test targets, environments, and adapters over manual
   reinvention.
+
+## Quality Before Speed
+
+The result's quality comes first. Keep the configured model, reasoning effort,
+and orchestration settings. Do not propose or apply a change that lowers
+quality to save time or usage, such as lower effort, fewer agents or
+verification passes, skipping evidence the decision needs, or a time limit
+that cuts work short. Propose a change of method only when it also improves
+the result, and say how; narrowing each delegated task to the points that
+decide the question, for example, removes noise as well as time.
+
+When the operator asks how to go faster, state what each option costs in
+quality; the operator decides. Once the operator has raised speed or cost,
+the same holds for any cut in depth, agents, or verification: state its
+quality cost and let the operator decide before making it. Proportional depth
+(`reasoning.md`) is set by what the decision needs, not by time.
 
 ## Commands The User Runs
 

@@ -1,17 +1,17 @@
 # Review
 
-Agent-neutral workspace rule for review and audit procedure, findings,
-remediation, severity, evidence reporting, and stopping conditions.
+Agent-neutral workspace rule for review and audit procedure, findings, problem
+reports, remediation, severity, evidence reporting, and stopping conditions.
 
 ## Ownership
 
-This file owns generic review and audit procedure, findings, remediation,
-severity, independent-review requirements, and stopping conditions. Technical
-premise and evidence evaluation, including diagnostic reasoning, follow
-`reasoning.md`; independent technical judgment does not itself require an
-independent reviewer. Projects own their architecture baseline, domain-specific
-scenarios, test matrix, artifact routing, and risk-specific severity
-refinements.
+This file owns generic review and audit procedure, findings, reports of which
+problems exist, remediation, severity, independent-review requirements, and
+stopping conditions. Technical premise and evidence evaluation, including
+diagnostic reasoning, follow `reasoning.md`; independent technical judgment
+does not itself require an independent reviewer. Projects own their
+architecture baseline, domain-specific scenarios, test matrix, artifact
+routing, and risk-specific severity refinements.
 
 Review, audit, and diagnosis requests are read-only by default. A request to fix
 findings or apply recommendations authorizes bounded working-tree remediation
@@ -75,6 +75,26 @@ and residual risk.
   does not block the requested outcome.
 
 Distinguish confirmed defects from questions and preferences.
+
+## Problem Reports
+
+When asked which problems exist or were found, or when reporting them unasked,
+list as a problem only a defect or risk that holds now and has an effect, with
+evidence you obtained yourself: a file and line, command output, or a log
+time. Order the list by severity.
+
+- Pending work, known limitations, planned phases, and matters outside the
+  asked scope are not problems. Mention one only when it matters, under its
+  own label. A check you could not run is a gap (`verification.md`).
+- A claim from another session or agent, a tool, or memory is a lead: verify
+  it first, or report it as that source's unverified claim (`reasoning.md`).
+  A finding from an agent you delegated to counts once you have checked the
+  evidence it cites.
+- Read a metric or status field from its definition before reporting it.
+- Call something confirmed only when a check you can name establishes that
+  claim itself. Ruling out one cause is an inference, not a confirmation.
+
+An empty list is a valid answer when it says what was checked.
 
 ## Completion
 
