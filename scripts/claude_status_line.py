@@ -144,10 +144,12 @@ def five_hour_segment(payload: dict[str, Any]) -> tuple[str, float] | None:
         return None
     remaining = max(0, min(100, round(100 - used)))
     # Key the gauge on the complement of the printed number, for the same
-    # reason the context gauge rounds first: a printed "5h:20%" must colour as
-    # 80% used, not as the unrounded 79.5 that produced it.
+    # reason the context gauge rounds first: a printed "5h:20%left" must colour
+    # as 80% used, not as the unrounded 79.5 that produced it.
     used_share = float(100 - remaining)
-    text = f"5h:{remaining}%"
+    # "left" because the context gauge beside it prints the used share in the
+    # same N% form; without it, 95% remaining reads as 95% used.
+    text = f"5h:{remaining}%left"
     resets_at = reset_epoch(window.get("resets_at"))
     if resets_at is not None:
         countdown = format_countdown(resets_at - _now())

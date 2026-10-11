@@ -149,7 +149,7 @@ class ClaudeStatusLineTests(unittest.TestCase):
             STATUS, "_now", return_value=1_000_000.0
         ):
             rendered = STATUS.render(payload, home="/Users/test", color=False)
-        self.assertIn("ctx:81%  5h:73%(2h15m)  last in:1.2k", rendered)
+        self.assertIn("ctx:81%  5h:73%left(2h15m)  last in:1.2k", rendered)
 
     def test_five_hour_window_accepts_iso_reset_and_drops_a_past_reset(self) -> None:
         window = {"used_percentage": 10, "resets_at": "2026-09-06T05:30:00Z"}
@@ -165,12 +165,12 @@ class ClaudeStatusLineTests(unittest.TestCase):
             with mock.patch.object(STATUS, "_now", return_value=reset - 2700):
                 self.assertEqual(
                     STATUS.render(payload, home="/home/test", color=False),
-                    "/tmp/project  Opus  5h:90%(45m)",
+                    "/tmp/project  Opus  5h:90%left(45m)",
                 )
             with mock.patch.object(STATUS, "_now", return_value=reset + 60):
                 self.assertEqual(
                     STATUS.render(payload, home="/home/test", color=False),
-                    "/tmp/project  Opus  5h:90%",
+                    "/tmp/project  Opus  5h:90%left",
                 )
 
     def test_five_hour_window_is_omitted_when_absent_or_malformed(self) -> None:
@@ -239,7 +239,7 @@ class ClaudeStatusLineTests(unittest.TestCase):
                             home="/home/test",
                             color=False,
                         ),
-                        "/tmp/project  Opus  5h:90%",
+                        "/tmp/project  Opus  5h:90%left",
                     )
 
     def test_five_hour_threshold_colors(self) -> None:
@@ -258,7 +258,7 @@ class ClaudeStatusLineTests(unittest.TestCase):
             self.assertIn(STATUS.LEVEL_RED, STATUS.render(payload, home="/tmp"))
 
     def test_five_hour_color_matches_the_printed_remainder(self) -> None:
-        # 79.6% used prints as "5h:20%", so the gauge must colour as 80% used.
+        # 79.6% used prints as "5h:20%left", so the gauge must colour as 80% used.
         window: dict[str, object] = {"used_percentage": 79.6}
         payload = {
             "workspace": {"current_dir": "/tmp/project"},
@@ -267,11 +267,11 @@ class ClaudeStatusLineTests(unittest.TestCase):
         }
         with mock.patch.object(STATUS, "git_branch", return_value=""):
             self.assertIn(
-                f"{STATUS.LEVEL_RED}5h:20%", STATUS.render(payload, home="/tmp")
+                f"{STATUS.LEVEL_RED}5h:20%left", STATUS.render(payload, home="/tmp")
             )
             window["used_percentage"] = 59.6
             self.assertIn(
-                f"{STATUS.LEVEL_YELLOW}5h:40%", STATUS.render(payload, home="/tmp")
+                f"{STATUS.LEVEL_YELLOW}5h:40%left", STATUS.render(payload, home="/tmp")
             )
 
     def test_missing_optional_usage_and_cost_are_omitted(self) -> None:
