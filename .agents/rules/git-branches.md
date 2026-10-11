@@ -1,27 +1,65 @@
 # Git Branches, Worktrees, And Stash
 
-Agent-neutral workspace rule for proportional branch-action review,
-branch/worktree isolation, conditional durable workstream contracts, and stash.
+Agent-neutral workspace rule for the change flow, proportional branch-action
+review, branch/worktree isolation, conditional durable workstream contracts,
+and stash.
 
 ## Ownership
 
-This file owns the cross-project branch/worktree/stash transaction and the
-conditions for a durable workstream contract. Projects add topology,
-relationships, checks, integration targets, archive tooling, and any dedicated
-contract carrier and schema. Publication/integration/recovery are separate
-modules.
+This file owns the change flow that every repository change follows, the
+cross-project branch/worktree/stash transaction, and the conditions for a
+durable workstream contract. Projects add topology, the main branch, type
+prefixes, the merge route, relationships, checks, integration targets, archive
+tooling, and any dedicated contract carrier and schema.
+Publication/integration/recovery are separate modules.
 
 Read `git.md` for the current state snapshot before using this module.
 
 Before asking the user to authorize or execute a branch, worktree, or stash
 operation, read `authorization.md` and present its `Protected-Action Request
 Brief` before the exact action. The branch-specific fields below supplement the
-brief; a command-only confirmation is insufficient for this transaction.
+brief; a command-only confirmation is insufficient for this transaction. The
+one exception is the additive worktree that Change Flow reports instead.
+
+## Change Flow
+
+Every repository change goes through a short-lived branch:
+
+- it starts from the main branch, and its name starts with its type from the
+  project's list, for example `docs/`, `fix/`, or `feat/`, followed by its
+  topic;
+- the change is made and its checks run on the branch (`file-checks.md`,
+  `verification.md`); then it is integrated into the main branch by the
+  project's route (`git-integration.md`);
+- nothing is committed directly to the main branch;
+- a fix follows it too; `releases.md` Fixes decides when a fix on an older
+  release line branches from that release's tag instead.
+
+The flow governs commits, not edits. Uncommitted edits may start in the current
+checkout; before the first commit at the latest, they move to the change's
+branch through a branch action that preserves the diff (Content
+Non-Interference). So an operator decision is still recorded in the same turn
+(`planning.md`), and authorized edits still proceed without another
+confirmation (`authorization.md`).
+
+Creating an additive worktree on a new branch from the main branch, for a
+change the user has already authorized, is part of that change when its path
+is outside the checkout or ignored by it and the action carries no uncommitted
+edits. Report the branch, its base, the worktree path, and the command when you
+create it, instead of asking first. Every other branch action keeps its review,
+including an in-place switch and moving uncommitted edits out of another
+checkout. Commit, integration, push, and retirement of the merged branch may
+then form one bundle (`git-publication.md`).
+
+Projects name the main branch, the type prefixes, the merge route
+(fast-forward, merge commit, or pull request), and the checks. A project that
+works on branches in its main checkout records that choice in its Project
+Facts; each in-place branch action there still goes through its review.
 
 ## Branch Action Review
 
-Review every branch or worktree mutation with only the facts needed for that
-action:
+Review every branch or worktree mutation, except the additive worktree that
+Change Flow reports, with only the facts needed for that action:
 
 - problem or immediate outcome;
 - exact branch name and base ref/OID;
@@ -59,8 +97,9 @@ only reliance on durable handoff, not a simple one-session branch action.
 
 ## Creation Transaction
 
-Before creation or switching, present the complete branch action review and the
-exact command in one transaction. If a durable contract is applicable, also
+Before creation or switching, except the additive worktree that Change Flow
+reports, present the complete branch action review and the exact command in one
+transaction. If a durable contract is applicable, also
 identify its already-approved content, canonical carrier, and schema.
 
 Authorization covers only the unchanged branch/worktree command and any

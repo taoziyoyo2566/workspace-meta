@@ -179,6 +179,11 @@ def _check_safety_floor(root: Path, errors: list[str]) -> None:
             "technical conclusions distinct from assumptions and operator decisions",
         ),
         ("verification.md", "cannot run", "checks that cannot"),
+        (
+            "file-checks.md",
+            "before it is reported done",
+            "before calling a created or changed file done",
+        ),
     )
     normalized_floor = _normalize(claude)
     for owner, owner_phrase, floor_phrase in source_checks:

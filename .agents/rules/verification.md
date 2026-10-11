@@ -4,7 +4,8 @@ Agent-neutral workspace rule for proving that a change works.
 
 ## Ownership
 
-This file owns the generic verification method. Projects own their command
+This file owns the generic verification method. `file-checks.md` owns the
+checks each created or changed file receives. Projects own their command
 matrix, environments, fixtures, acceptance thresholds, and required CI.
 
 ## Required Result
@@ -13,14 +14,19 @@ After a change, verify in proportion to the touched surface:
 
 1. **Direction** — compare request, scope, and diff; confirm the change is in the
    right owner and has the intended effect.
-2. **Syntax/static correctness** — parse, lint, type-check, or validate the
-   changed format and interfaces.
+2. **Static correctness** — each changed file passes its file-type checks
+   (`file-checks.md`); type checks and interface validation cover what spans
+   files.
 3. **Functional behavior** — execute the changed workflow or the closest
    project-provided behavioral test when feasible.
 
 A parser or linter does not substitute for functional execution. Documentation
 that gives commands, paths, links, or procedures verifies those references and
 executes safe representative commands when feasible.
+
+A run's result reports the warnings it newly shows against the last verified
+run of the same check. Each fails the run as a new warning fails a file check
+(`file-checks.md` Warnings).
 
 ## Risk-Triggered Behavior Checks
 

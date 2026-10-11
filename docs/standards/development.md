@@ -1,6 +1,6 @@
 # 开发与评审规范
 
-开发交付的是可理解、可验证、可维护的行为变化。主要规则由 [implementation.md](../../.agents/rules/implementation.md)、[verification.md](../../.agents/rules/verification.md) 和 [review.md](../../.agents/rules/review.md) 管理。
+开发交付的是可理解、可验证、可维护的行为变化。主要规则由 [implementation.md](../../.agents/rules/implementation.md)、[file-checks.md](../../.agents/rules/file-checks.md)、[verification.md](../../.agents/rules/verification.md) 和 [review.md](../../.agents/rules/review.md) 管理。
 
 ## 开始修改之前
 
@@ -22,6 +22,21 @@
 新增或升级依赖时，核查来源、维护状态、适用于当前用法的已知漏洞，以及生态已有的完整性校验。保留实际解析版本，例如锁文件或构建记录；复用工具输出，不手工维护第二份组件清单。许可或分发条件影响项目使用时，一并说明。
 
 接口和数据结构变化应检查旧调用方、已有数据及混合版本运行条件。破坏性变化需要明确迁移方式和调用方处理；数据库回退要验证数据兼容性，不能只写“回到旧版本”。配置变更同样应覆盖旧值、缺失值和无效值的处理。
+
+## 按文件类型检查
+
+每个新建或修改的文件，在说它做好、交出去、提交或部署之前，按类型依次检查：容器与字节、语法、严格格式、一致性、只针对本文件的安全。阶段和计数规则见 [file-checks.md](../../.agents/rules/file-checks.md)；下表只是常见做法，实际命令以项目为准。
+
+| 文件类型 | 语法 | 严格格式 | 一致性 | 安全 |
+|---|---|---|---|---|
+| YAML，含解密后的加密变量文件 | 解析器能读 | 重复键报错，例如 `yamllint` 的 `key-duplicates`；会保留最后一个重复键的加载器不算 | 使用方的语法检查或 dry run | 输出里没有值；文件权限不放宽 |
+| Shell 脚本 | `bash -n` | `shellcheck` | 在安全目标上试运行 | 变量加引号；不执行未固定版本的远程内容 |
+| Python | `py_compile` | 项目的 linter 和类型检查 | 相关单元测试 | 日志和异常里不带密钥 |
+| JSON、TOML | 解析器能读 | 检出重复键，例如 JSON 用 `object_pairs_hook` | 读取它的程序能接受 | 不含密钥原文 |
+| 服务配置（systemd、nginx 等） | 自带检查，例如 `systemd-analyze verify`、`nginx -t` | 未知指令报错 | 重载前的配置测试 | 监听地址和权限符合角色 |
+| Markdown 文档 | 能渲染 | 链接和锚点有效 | 入口指向正确的归属文件 | 不含密钥和主机私有信息 |
+
+检查要能发现它声称检查的问题：拿不准时，先用一个带缺陷的样本确认它会失败。报告每类文件一行，只展开失败、警告和缺口。
 
 ## 按风险选择测试
 

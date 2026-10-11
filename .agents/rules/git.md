@@ -12,6 +12,7 @@ preservation of unknown work. Task-specific mutation procedures live in:
 - `git-publication.md`
 - `git-integration.md`
 - `git-recovery.md`
+- `releases.md` for release tags
 
 Projects own topology, commit format, required checks/CI, and archive tooling.
 
@@ -32,8 +33,8 @@ canonical remote.
 
 ## Pre-Mutation State
 
-Before any branch/worktree/stash/publication/integration/recovery mutation,
-inspect:
+Before any branch/worktree/stash/publication/integration/recovery or
+release-tag mutation, inspect:
 
 - current branch and exact HEAD;
 - working-tree and index state, including untracked paths;

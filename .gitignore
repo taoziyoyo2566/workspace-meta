@@ -45,6 +45,8 @@
 !docs/reviews/refactor-plan-changelog-lifecycle/*.md
 !docs/reviews/refactor-public-repository-policy/
 !docs/reviews/refactor-public-repository-policy/*.md
+!docs/reviews/refactor-rule-gaps/
+!docs/reviews/refactor-rule-gaps/*.md
 !.githooks/
 !.githooks/pre-commit
 !scripts/
@@ -67,6 +69,11 @@
 !.agents/rules/codex-runtime.md
 !.agents/rules/documentation.md
 !.agents/rules/environment-truth.md
+!.agents/rules/file-checks.md
+!.agents/rules/deployment.md
+!.agents/rules/temporary-files.md
+!.agents/rules/problem-follow-up.md
+!.agents/rules/releases.md
 !.agents/rules/git.md
 !.agents/rules/git-branches.md
 !.agents/rules/git-integration.md

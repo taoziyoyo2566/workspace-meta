@@ -929,8 +929,10 @@ class CodexConfigSyncTests(unittest.TestCase):
             "authorization.md",
             "capabilities.md",
             "codex-runtime.md",
+            "deployment.md",
             "documentation.md",
             "environment-truth.md",
+            "file-checks.md",
             "git.md",
             "git-branches.md",
             "git-integration.md",
@@ -938,10 +940,13 @@ class CodexConfigSyncTests(unittest.TestCase):
             "git-recovery.md",
             "implementation.md",
             "planning.md",
+            "problem-follow-up.md",
             "reasoning.md",
+            "releases.md",
             "review.md",
             "rule-authoring.md",
             "secrets.md",
+            "temporary-files.md",
             "verification.md",
         ):
             self.assertIn(f"~/workspace/.agents/rules/{name}", result)
@@ -976,6 +981,7 @@ class CodexConfigSyncTests(unittest.TestCase):
             "git-publication.md",
             "git-integration.md",
             "git-recovery.md",
+            "releases.md",
         )
         for name in module_names:
             content = (self.rules_dir / name).read_text()
@@ -989,6 +995,10 @@ class CodexConfigSyncTests(unittest.TestCase):
             ("stage/commit/push/PR publication", "git-publication.md"),
             ("merge/integration or post-integration handling", "git-integration.md"),
             ("rewrite/discard/force/delete/amend/recovery", "git-recovery.md"),
+            (
+                "release, version tag or number, rollback target",
+                "releases.md",
+            ),
         )
         for adapter in (
             self.agents_template.read_text(),
@@ -1001,6 +1011,24 @@ class CodexConfigSyncTests(unittest.TestCase):
                 self.assertIn("authorization.md", line)
                 self.assertIn("git.md", line)
                 self.assertIn(module, line)
+
+    def test_deployment_route_requires_action_brief(self) -> None:
+        content = " ".join((self.rules_dir / "deployment.md").read_text().split())
+        self.assertIn("authorization.md", content)
+        self.assertIn("Protected-Action Request Brief", content)
+        self.assertIn("command-only", content)
+
+        for adapter in (
+            self.agents_template.read_text(),
+            (ROOT / "CLAUDE.md").read_text(),
+        ):
+            line = next(
+                line
+                for line in adapter.splitlines()
+                if line.startswith("| deploying, what may serve users")
+            )
+            self.assertIn("authorization.md", line)
+            self.assertIn("deployment.md", line)
 
     def test_canonical_authorization_rule_requires_action_context(self) -> None:
         result = (self.rules_dir / "authorization.md").read_text()
@@ -1033,8 +1061,10 @@ class CodexConfigSyncTests(unittest.TestCase):
             "authorization.md",
             "capabilities.md",
             "codex-runtime.md",
+            "deployment.md",
             "documentation.md",
             "environment-truth.md",
+            "file-checks.md",
             "git.md",
             "git-branches.md",
             "git-integration.md",
@@ -1042,10 +1072,13 @@ class CodexConfigSyncTests(unittest.TestCase):
             "git-recovery.md",
             "implementation.md",
             "planning.md",
+            "problem-follow-up.md",
             "reasoning.md",
+            "releases.md",
             "review.md",
             "rule-authoring.md",
             "secrets.md",
+            "temporary-files.md",
             "verification.md",
         ):
             content = (self.rules_dir / name).read_text()
@@ -1058,8 +1091,10 @@ class CodexConfigSyncTests(unittest.TestCase):
         portable = (
             "authorization.md",
             "capabilities.md",
+            "deployment.md",
             "documentation.md",
             "environment-truth.md",
+            "file-checks.md",
             "git.md",
             "git-branches.md",
             "git-integration.md",
@@ -1067,10 +1102,13 @@ class CodexConfigSyncTests(unittest.TestCase):
             "git-recovery.md",
             "implementation.md",
             "planning.md",
+            "problem-follow-up.md",
             "reasoning.md",
+            "releases.md",
             "review.md",
             "rule-authoring.md",
             "secrets.md",
+            "temporary-files.md",
             "verification.md",
         )
 

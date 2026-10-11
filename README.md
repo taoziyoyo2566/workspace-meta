@@ -69,14 +69,15 @@ Full provenance: `feedback-register.md` entry **W-R26**.
   `.agents/host-templates/README-agents.md`; provenance: W-R28.
 - **Portable agent rules are modular and have one owner** — the workspace
   `CLAUDE.md` and installed Codex AGENTS block are compact adapters. Shared
-  authorization, task-shaped Git, planning/handoff, technical reasoning,
-  implementation shape, documentation information architecture, verification,
-  review, capability selection, secret/environment safety, and rule authoring
-  live under `.agents/rules/`; agent runtime mechanics are explicit, and
-  projects keep only topology, commands, schemas, operational constraints, and
-  stricter deltas. Ownership matrix:
-  `.agents/host-templates/README-agents.md`; provenance: W-R32, W-R37, W-R38,
-  W-R39, and W-R43.
+  authorization, task-shaped Git including the change flow, releases and
+  versions, deployment, planning/handoff, technical reasoning, implementation
+  shape, documentation information architecture, file checks, verification,
+  review, proposals and problem follow-up, capability selection, temporary
+  files, secret/environment safety, and rule authoring live under
+  `.agents/rules/`; agent runtime mechanics are explicit, and projects keep
+  only topology, commands, schemas, operational constraints, and stricter
+  deltas. Ownership matrix: `.agents/host-templates/README-agents.md`;
+  provenance: W-R32, W-R37, W-R38, W-R39, W-R43, and W-R53–W-R58.
 - **Permission intent is portable; executable authorization is host-local** —
   the shared authorization owner says that native search, URL retrieval, remote
   read queries, and ordinary inspection need no conversational confirmation;
@@ -189,11 +190,13 @@ The bootstrap is idempotent and host-local. It:
 - installs one SessionStart handler for **each** of Claude Code and Codex. Both
   handlers invoke `scripts/workspace_status.py`, which evaluates in a stable order:
   repository availability and dirty state, bounded remote fetch, one post-fetch
-  ahead/behind snapshot, then environment-registry freshness;
+  ahead/behind snapshot, environment-registry freshness, then free space on the
+  agent's temporary filesystem;
 - emits no hook output when healthy and otherwise emits one JSON
-  `systemMessage`. Remote-unavailable warnings are rate-limited through
-  `~/.cache/workspace-meta/status.json`; behind, dirty/unpushed, and stale-registry
-  states remain visible;
+  `systemMessage`; a temporary-space warning also reaches the agent as
+  `hookSpecificOutput.additionalContext`. Remote-unavailable warnings are
+  rate-limited through `~/.cache/workspace-meta/status.json`; behind,
+  dirty/unpushed, and stale-registry states remain visible;
 - pins the evaluator SHA-256 in each installed command. An evaluator change is
   therefore an auditable hook-command change instead of silently changing the
   meaning of an already trusted command;

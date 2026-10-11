@@ -4,9 +4,11 @@ Agent-neutral workspace rule for staging, commit, push, and remote PR creation.
 
 ## Ownership
 
-This file owns ordinary publication review and execution. Projects add
-commit-message format, required checks/CI, PR template fields, and protected
-branch constraints. Integration and cleanup are separate transactions.
+This file owns ordinary publication review and execution, including the
+change-flow bundle. Projects add commit-message format, required checks/CI, PR
+template fields, and protected branch constraints. Integration and cleanup are
+separate transactions, except inside a disclosed change-flow bundle. Release
+tags follow `releases.md`.
 
 Read `git.md` for the current state snapshot before publication.
 
@@ -50,6 +52,28 @@ content. Review the complete staged diff.
 Resolve the operator identity from host global Git configuration. Stop on unset
 identity, repo-local override, or mismatch. Add no AI attribution,
 `Co-Authored-By`, or `Signed-off-by` trailers.
+
+## Change-Flow Bundle
+
+For a change on its own branch (`git-branches.md` Change Flow), one bundle
+under one brief may cover the whole disclosed sequence:
+
+1. the exact-path add and commit on the change branch;
+2. when the project only fast-forwards and the main branch has moved past the
+   change's base, a rebase of the change's own unpushed branch onto the main
+   tip disclosed in the brief, then the change's checks again; the pre-rebase
+   tip is reported as the recovery point;
+3. the project's merge into the main branch (`git-integration.md`);
+4. the push of the main branch;
+5. retirement of the merged change: removal of the worktree that Change Flow
+   created for it, then local deletion of its branch with `git branch -d`.
+
+The bundle shows the fields of Checkpoint B and of the integration review, and
+for step 5 the worktree's untracked and ignored files. It stops at the step
+where anything drifts, including the main tip moving after the brief; where a
+rebase or merge conflicts or cannot fast-forward; where a check fails; or where
+the worktree holds untracked or ignored files. Remote branch deletion stays a
+separately reviewed action (`git-recovery.md`).
 
 ## Execution Choices
 

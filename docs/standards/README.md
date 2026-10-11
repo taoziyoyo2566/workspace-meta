@@ -35,6 +35,11 @@
 | 验证选择、行为证据、发布物与检查结果 | [verification.md](../../.agents/rules/verification.md) |
 | 评审发现、严重性与停止条件 | [review.md](../../.agents/rules/review.md) |
 | 文档归属、任务与操作记录 | [documentation.md](../../.agents/rules/documentation.md) |
+| 按文件类型检查 | [file-checks.md](../../.agents/rules/file-checks.md) |
+| 改动的分支流程 | [git-branches.md](../../.agents/rules/git-branches.md) |
+| 部署、版本与回退目标 | [deployment.md](../../.agents/rules/deployment.md)、[releases.md](../../.agents/rules/releases.md) |
+| 提议前对照已有决定、问题处理后的跟进 | [problem-follow-up.md](../../.agents/rules/problem-follow-up.md) |
+| 临时文件 | [temporary-files.md](../../.agents/rules/temporary-files.md) |
 | 授权、Git、敏感信息与环境事实 | [authorization.md](../../.agents/rules/authorization.md)、[git.md](../../.agents/rules/git.md)、[secrets.md](../../.agents/rules/secrets.md)、[environment-truth.md](../../.agents/rules/environment-truth.md) |
 
 workspace-meta 保存跨项目方法；项目仓库保存自己的架构、方案、任务、操作命令和结果。采用本手册不需要把它复制进每个项目，也不会自动批准已有草案、部署或 Git 发布。

@@ -50,6 +50,28 @@ governance and its own review artifacts.
 - Treat a real Codex/Claude UI smoke test as manual host verification, not as a
   unit-test result.
 
+## Branches And Releases
+
+- The main branch is `main` on the canonical remote `origin`. Every change
+  follows the change flow in `git-branches.md` on a branch named
+  `<type>/<topic>`, where `<type>` is a Conventional Commits type such as
+  `feat`, `fix`, `docs`, `refactor`, `test`, or `chore`.
+- An additive worktree goes under `.worktrees/<type>-<topic>/`, which the
+  reverse whitelist ignores. Changes reach `main` by fast-forward only.
+- Workspace-meta releases the rules and host templates it syncs to hosts
+  (`releases.md`). "Released" means pushed to `main`, with `make sync` applied
+  and verified on each host. A closed batch or a fix released this way is
+  tagged; release tags are annotated, unsigned, and named
+  `v<MAJOR>.<MINOR>.<PATCH>`, and the first is `v1.0.0`.
+- Compatibility surface: the managed host surfaces (the marked Codex blocks,
+  the Claude SessionStart group and status line, the declared preference
+  fields), the `make` targets, and the rule file names that adapters and
+  projects route to. Rule wording inside an owner is not part of it.
+- Status surface: `git -C ~/workspace describe --match 'v[0-9]*'` on each
+  host. No rollback procedure is written yet: the notes name the target
+  release, and a bad release is fixed forward with a patch release that each
+  host syncs.
+
 ## Commit And Sync
 
 - Leave changes reviewable and report whether they are uncommitted or unpushed.

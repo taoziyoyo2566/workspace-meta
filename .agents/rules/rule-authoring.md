@@ -26,7 +26,7 @@ its canonical owner. They do not become a second procedural owner.
 
 ## Edit The Whole Relevant Owner
 
-When editing a rule/config/instruction owner:
+When editing an agent rule, adapter, or instruction owner:
 
 1. read the complete relevant owner;
 2. check fit, conflicts, duplication, dead text, trigger precision, and a
@@ -52,6 +52,7 @@ exception as its own observable condition, not a vague exemption clause.
 
 Portable feedback records the source incident and rationale in
 `feedback-register.md`, then routes the active behavior to the narrowest owner.
+The rule covers the class of problem; the incident stays in the register.
 Project-only feedback stays with the project. Do not invent a host prose file
 as a portable owner.
 

@@ -1,6 +1,6 @@
 # 实施与交付规范
 
-实施方案把已确定的设计拆成能执行、能检查、能接续的工作。具体任务保存在项目仓库。阶段与验收由 [planning.md](../../.agents/rules/planning.md) 管理，记录归属由 [documentation.md](../../.agents/rules/documentation.md) 管理，检查结论由 [verification.md](../../.agents/rules/verification.md) 管理。
+实施方案把已确定的设计拆成能执行、能检查、能接续的工作。具体任务保存在项目仓库。阶段与验收由 [planning.md](../../.agents/rules/planning.md) 管理，记录归属由 [documentation.md](../../.agents/rules/documentation.md) 管理，检查结论由 [verification.md](../../.agents/rules/verification.md) 管理。改动走的分支流程由 [git-branches.md](../../.agents/rules/git-branches.md) 管理，什么可以对用户提供服务由 [deployment.md](../../.agents/rules/deployment.md) 管理，版本号、发布标签和回退目标由 [releases.md](../../.agents/rules/releases.md) 管理。
 
 ## 把任务写到可以动手
 
@@ -47,6 +47,38 @@
 有条件时使用小批量或渐进发布，并定义暂停和恢复条件。单节点项目可以采用维护窗口、备份、冒烟检查和观察；不为满足通用规范强制建设复杂发布平台。
 
 发现目标、前置条件或实际行为与方案不符时，先停止依赖这些条件的步骤，记录事实并判断影响范围。检查没有执行、外部行为没有验证，应明确留为缺口，不能勾选通过。
+
+对用户提供服务的实例只运行已推送主分支上的提交。从其他分支部署属于临时部署，开始前写清目的、位置、负责人和结束条件，并按结束条件收尾。推送了会改变运行内容的提交后，尽快提议部署并验证，让失败对得上最近的改动。
+
+## 版本与发布说明
+
+一批功能或改进收尾、或一个修复发布时，在部署完成、发布后检查通过之后，马上在实际运行的提交上打带注释的版本标签；平时推送后的例行部署不打标签。一批功能或改进收尾升 MINOR，破坏兼容面升 MAJOR，修复升 PATCH。标签说明就是发布说明，按 [releases.md](../../.agents/rules/releases.md) 的七个部分写，Plan 和 Changelog 只链接、不复制。下面是一个示例项目的样例：
+
+```text
+v2.3.0 milestone, 2026-10-20, commit 1a2b3c4, previous v2.2.1
+
+Why: 主节点故障时，订阅服务自动切换到备用节点。
+
+How: 见 docs/reviews/feature-failover/plan-failover-2026-10-01.md
+和 docs/reviews/feature-failover/changelog-failover-2026-10-19.md。
+
+Scope: console、subs 两个组件。v2.2.1..v2.3.0 共 14 个提交，
+另含 fix/heartbeat-timeout 的 2 个提交和 3 个文档提交。
+
+Inspect:
+  git show v2.3.0
+  git log --oneline v2.2.1..v2.3.0
+  git diff --stat v2.2.1..v2.3.0
+  make status    # 每个实例运行的版本
+
+Verification: 部署后冒烟 6/6 通过；故障切换演练 1 次通过。
+缺口：没有演练跨区域网络分区。
+
+Rollback: 目标 v2.2.1。范围内有一次数据库结构变更（新增可空列，
+v2.2.1 仍能读取），没有密钥轮换。按 docs/runbooks/rollback.md 执行。
+```
+
+说明里不写任何密钥值。打标签和推送标签都需要先给出授权说明；已推送的标签不移动也不删除，打错了就发下一个 PATCH 版本。
 
 ## 完成与后续维护
 

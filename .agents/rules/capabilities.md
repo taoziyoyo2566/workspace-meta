@@ -50,10 +50,12 @@ matching, a continuation line runs on its own, or a quoted argument splits.
   continuation, a multi-line loop or pipeline, or an interpreter `-c` argument
   with nested quotes. A single simple command is given as it is.
 - A one-off script goes under `/tmp`, in a directory only the user can read,
-  not into a repository. A command that will be reused belongs in the project
-  as a tool, under the project's rules.
-- Before handing it over, check that the file parses, has no trailing
-  whitespace, is readable only by the user, and prints no secret value.
+  not into a repository; its removal follows `temporary-files.md`. A command
+  that will be reused belongs in the project as a tool, under the project's
+  rules.
+- Before handing it over, run its file checks (`file-checks.md`): it parses,
+  has no trailing whitespace, is readable only by the user, and prints no
+  secret value.
 - For a protected action, the request brief in `authorization.md` still
   applies: its exact operation is the one-line command, with the script's
   path so the user can read the script first.

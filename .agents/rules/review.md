@@ -85,7 +85,8 @@ the reviewed change unready; they do not make the report incomplete.
 
 Authorized remediation closes when no in-scope P0/P1 remains, required checks
 pass or accepted gaps are explicit, P2 items are classified, and closeout
-states what changed and remains.
+states what changed and remains. A handled problem that meets
+`problem-follow-up.md` also gets its follow-up report.
 
 Normal cadence is one broad audit, one authorized implementation pass, and one
 targeted re-audit. Stop when the targeted re-audit finds no new in-scope P0/P1

@@ -5,9 +5,10 @@
 This file is the sole portable owner for project-documentation roles,
 information architecture, truth lifecycles, and migration boundaries.
 `planning.md` owns approved scope and handoff, `implementation.md` owns the
-shape of changed artifacts generally, and `verification.md` owns executed
-checks. Projects add only their audience map, canonical topic owners, commands,
-domain constraints, and stricter requirements.
+shape of changed artifacts generally, `file-checks.md` owns the checks each
+changed file receives, and `verification.md` owns executed checks. Projects add
+only their audience map, canonical topic owners, commands, domain constraints,
+and stricter requirements.
 
 ## Start With The Retrieval Task
 
@@ -83,7 +84,8 @@ command-by-command transcripts, per-file diaries where Git already owns exact
 history, duplicated Plan goal/scope/risk text, or a copied verification
 procedure. Preserve an intermediate failure only when it explains a lasting
 limitation or material final correction. `verification.md` continues to own
-check execution and verdicts.
+check execution and verdicts. Release notes (`releases.md`) link the Changelog
+and never copy it.
 
 Before the workstream result is committed, a legitimate pre-commit closeout
 correction under `planning.md` may revise the existing Changelog because it has

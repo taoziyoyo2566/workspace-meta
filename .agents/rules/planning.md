@@ -227,7 +227,8 @@ that made it.
 
 Recording grants nothing the operator did not decide. For an `APPROVED` Plan, a
 deferral or drop is a concise dated record beside the approval, and the status
-line names it; other frozen content does not change. A decision that changes
+line names it; other frozen content does not change. A deferral names its owner
+and the condition that restarts it. A decision that changes
 frozen content, such as the scope or acceptance criteria, is a material
 deviation: note it at once in the status and approval record as pending, state
 its impact in the same turn, and amend the content only through the steps in
@@ -247,9 +248,10 @@ once, in the same turn and before other work, for permission to write it; the
 question is about the write, not the decision.
 
 Agent memory may point to the record. While a record waits for write
-permission, a memory entry may hold the decision marked as unrecorded, with its
-date and the owner it must reach; otherwise memory is never the only place a
-decision or a workstream's state lives.
+permission, or a deferred proposal waits for the operator to name its owner
+(`problem-follow-up.md`), a memory entry may hold it marked as unrecorded, with
+its date and the owner it must reach or the lack of one; otherwise memory is
+never the only place a decision or a workstream's state lives.
 
 Red flags: "I'll update the Plan once the operator confirms" after the operator
 has decided; "memory has it for now"; "it is uncommitted anyway"; "the next
@@ -307,4 +309,5 @@ discarding, or otherwise rewriting Git history is a separate Git transaction
 and is not authorized by this lifecycle rule.
 
 Plan completion, implementation completion, publication, integration, release,
-and archival are distinct facts.
+and archival are distinct facts. A release and its tag follow `releases.md`,
+whose notes link the Changelog.

@@ -90,8 +90,15 @@ Claude 和 Codex 各安装一个 SessionStart handler。两个 handler 只在容
 2. 在 8 秒上限内执行非交互式 `git fetch --quiet --no-tags origin`。
 3. 基于同一次 fetch 后的引用计算相对 `origin/main` 的 behind/ahead 数。
 4. 执行 `scripts/env_probe.sh --check` 检查当前主机能力快照。
-5. 健康时不输出；异常时只输出一个
-   `{"systemMessage":"workspace-meta: ..."}` JSON 对象。
+5. 用 `statvfs` 检查 agent 临时目录所在文件系统：优先用 hook 输入里的
+   `scratchpad_dir`（Claude 提供），否则用 `TMPDIR`，再否则用 `/tmp`。
+   使用率达到 80% 或剩余空间低于 256 MiB 时给出警告，并指向
+   `.agents/rules/temporary-files.md`。阈值可用 `--temp-used-percent` 和
+   `--temp-min-free-mb` 调整。
+6. 健康时不输出；异常时只输出一个
+   `{"systemMessage":"workspace-meta: ..."}` JSON 对象。临时空间警告还会
+   写进 `hookSpecificOutput.additionalContext`，让 agent 也看到；其他提示
+   仍只给操作者看。
 
 单一评估器解决了旧模型的两个问题：三个并发 handler 可能看到不同的远端
 引用状态；Claude 与 Codex 的离线行为可能分叉。现在顺序、措辞和降噪策略
@@ -128,7 +135,9 @@ Codex 可能把 `[hooks.state]` 写入 inline managed block 的结束标记之�
 
 当前官方 hooks 文档定义 `SessionStart` 的 JSON `systemMessage` 为 UI 或事件流
 warning，而纯文本 stdout 会进入额外 developer context。本项目因此统一使用
-JSON 协议。版本化源码核验和 UI 探测属于 dated evidence，保存在
+JSON 协议。两家文档都把 `hookSpecificOutput.additionalContext`（配合
+`hookEventName: "SessionStart"`）定义为给模型的额外上下文，临时空间警告用它
+同时到达 agent。版本化源码核验和 UI 探测属于 dated evidence，保存在
 [hook 同步验证记录](../reviews/refactor-codex-sync/round1-2026-07-11.changelog.md)，
 不嵌入当前架构说明。
 

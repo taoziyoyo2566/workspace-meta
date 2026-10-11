@@ -39,5 +39,8 @@ rules. A project should define canonical store/ignore/encryption boundary,
 consumers/least-access path, redacted examples, rotation owner, and
 non-revealing verification.
 
+Check a file that holds secret material under `file-checks.md`, whose stages
+print no values.
+
 Record only identifiers, locations, ownership, and lifecycle evidence needed
 for reproducibility. Never record the secret itself.

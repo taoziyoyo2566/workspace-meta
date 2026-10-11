@@ -9,7 +9,8 @@ owners below.
 ## Safety Floor
 
 Canonical sources: `git.md`, `authorization.md`, `git-publication.md`,
-`secrets.md`, `environment-truth.md`, `reasoning.md`, and `verification.md`.
+`secrets.md`, `environment-truth.md`, `reasoning.md`, `file-checks.md`, and
+`verification.md`.
 
 - Preserve unrelated and unrecognized work; never reset, clean, overwrite,
   switch away from, move, hide, or delete it for convenience.
@@ -21,6 +22,8 @@ Canonical sources: `git.md`, `authorization.md`, `git-publication.md`,
   `Co-Authored-By`, or `Signed-off-by` trailers.
 - Validate load-bearing premises proportionally; keep technical conclusions
   distinct from assumptions and operator decisions.
+- Before calling a created or changed file done, including one changed in a
+  step you direct, run its file-type checks.
 - Treat environment/remote claims as snapshots and report checks that cannot
   run as gaps, never as passed.
 
@@ -30,18 +33,23 @@ Canonical sources: `git.md`, `authorization.md`, `git-publication.md`,
 |---|---|
 | first write, permission/scope question, external/host/live mutation | `~/workspace/.agents/rules/authorization.md` |
 | Git inspection or freshness | `~/workspace/.agents/rules/git.md` |
-| branch/worktree/stash action | `~/workspace/.agents/rules/authorization.md` + `~/workspace/.agents/rules/git.md` + `~/workspace/.agents/rules/git-branches.md` |
+| branch/worktree/stash action, or starting a repository change | `~/workspace/.agents/rules/authorization.md` + `~/workspace/.agents/rules/git.md` + `~/workspace/.agents/rules/git-branches.md` |
 | stage/commit/push/PR publication | `~/workspace/.agents/rules/authorization.md` + `~/workspace/.agents/rules/git.md` + `~/workspace/.agents/rules/git-publication.md` |
 | merge/integration or post-integration handling | `~/workspace/.agents/rules/authorization.md` + `~/workspace/.agents/rules/git.md` + `~/workspace/.agents/rules/git-integration.md` |
 | rewrite/discard/force/delete/amend/recovery | `~/workspace/.agents/rules/authorization.md` + `~/workspace/.agents/rules/git.md` + `~/workspace/.agents/rules/git-recovery.md` |
+| release, version tag or number, rollback target, or fixing a released version | `~/workspace/.agents/rules/authorization.md` + `~/workspace/.agents/rules/git.md` + `~/workspace/.agents/rules/releases.md` |
+| deploying, what may serve users, a temporary deployment, or an instance outside the inventory | `~/workspace/.agents/rules/authorization.md` + `~/workspace/.agents/rules/deployment.md` |
 | load-bearing premise validation, conflicting evidence, independent technical judgment, competing explanations, or diagnostic method | `~/workspace/.agents/rules/reasoning.md` |
 | non-trivial planning, a new capability's design or plan, starting an investigation or experiment, a verified finding that affects other work, an operator decision on a workstream, reporting its status from memory or an earlier session, evidence, approval scope, deviation, handoff | `~/workspace/.agents/rules/planning.md` |
 | implementation, configuration, refactoring, or artifact-structure change | `~/workspace/.agents/rules/implementation.md` |
 | project documentation authoring, restructuring, or lifecycle governance | `~/workspace/.agents/rules/documentation.md` |
+| a created or changed file before it is called done, handed over, committed, or deployed | `~/workspace/.agents/rules/file-checks.md` |
 | change verification or blocked check | `~/workspace/.agents/rules/verification.md` |
 | review, audit, diagnosis, remediation assessment | `~/workspace/.agents/rules/review.md` |
+| proposing a procedure or practice, or reporting a handled problem | `~/workspace/.agents/rules/problem-follow-up.md` |
 | capability selection or method failure, or a command for the user to run in their own terminal | `~/workspace/.agents/rules/capabilities.md` + `~/workspace/.agents/rules/codex-runtime.md` when Codex mechanics are needed |
 | secret material or remediation | `~/workspace/.agents/rules/secrets.md` |
+| creating temporary files, or temporary space full or filling | `~/workspace/.agents/rules/temporary-files.md` |
 | load-bearing host/environment claim | `~/workspace/.agents/rules/environment-truth.md` |
 | writing/refactoring agent rules or routing feedback | `~/workspace/.agents/rules/rule-authoring.md` |
 

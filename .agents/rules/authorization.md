@@ -10,8 +10,10 @@ requirements for their live systems, external resources, historical evidence,
 or other project risks. Agent adapters own their sandbox/tool mechanics.
 
 Git procedures are owned by the task-shaped `git-*.md` modules. Secret response
-is owned by `secrets.md`. This file does not define project topology, commands,
-deployment targets, or live-resource schemas.
+is owned by `secrets.md`. What may serve users and how deployments proceed is
+owned by `deployment.md`; the brief before each deployment stays here. This file
+does not define project topology, commands, deployment targets, or
+live-resource schemas.
 
 ## Keep Four Decisions Separate
 
