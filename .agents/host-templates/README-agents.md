@@ -31,7 +31,7 @@ configuration. It does not mirror either home directory.
 | releases and version tags | `releases.md` | starting version, prefix, compatibility surface, status surface, rollback procedure |
 | deployment: what may serve users, cadence, temporary deployments, rollback checks | `deployment.md` | main deployment branch, deploy targets and inventory, entry points and guards, deployment record, environment tiers |
 | recovery/destructive Git | `git-recovery.md` | stricter ref/archive tooling |
-| planning/handoff | `planning.md` | artifact schema, sources, where verified findings are recorded, branch/live gates |
+| planning/handoff, understanding the request | `planning.md` | artifact schema, sources, where verified findings are recorded, branch/live gates |
 | technical reasoning: premises, knowledge states, evidence, competing explanations/probes, independent judgment, uncertainty | `reasoning.md` | domain evidence sources, diagnostic commands/surfaces, thresholds, invariants, and safer probes |
 | implementation shape | `implementation.md` | language/framework conventions and architecture |
 | documentation information architecture | `documentation.md` | project entry points, topic map, commands, domain constraints |

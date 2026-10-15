@@ -1418,6 +1418,95 @@ class CodexConfigSyncTests(unittest.TestCase):
         self.assertNotIn("force-with-lease", integration)
         self.assertIn("force-with-lease", recovery)
 
+    def test_request_reading_and_lasting_rule_content_have_routed_owners(
+        self,
+    ) -> None:
+        # Examples in a request are not requirements (W-R63); rules, register
+        # entries and memory notes keep only lasting guidance (W-R64).
+        planning = (self.rules_dir / "planning.md").read_text()
+        self.assertEqual(planning.count("## Understand The Request"), 1)
+        normalized_planning = " ".join(planning.split()).lower()
+        for invariant in (
+            "an example shows one case of the need",
+            "list the usage scenarios",
+            "carry each requirement you derived as an assumption",
+            "judge options scenario by scenario",
+            "show it with the conflict named",
+        ):
+            self.assertIn(invariant, normalized_planning)
+
+        reasoning = (self.rules_dir / "reasoning.md").read_text()
+        self.assertIn(
+            "an example in a request, or a requirement derived from one, is "
+            "not an operator decision",
+            " ".join(reasoning.split()).lower(),
+        )
+
+        authoring = (self.rules_dir / "rule-authoring.md").read_text()
+        normalized_authoring = " ".join(authoring.split()).lower()
+        self.assertIn("only lasting guidance", normalized_authoring)
+        self.assertIn("one line of source", normalized_authoring)
+        self.assertNotIn("says where it was handed", normalized_authoring)
+
+        claude = (ROOT / "CLAUDE.md").read_text()
+        for adapter in (self.agents_template.read_text(), claude):
+            routes = [
+                line
+                for line in adapter.splitlines()
+                if line.startswith("| ") and "rules/planning.md`" in line
+            ]
+            self.assertEqual(len(routes), 1)
+            self.assertIn(
+                "a request that describes a need through examples", routes[0]
+            )
+        auto_memory = claude.split("## Claude Auto-Memory", 1)[1]
+        auto_memory = auto_memory.split("\n## ", 1)[0]
+        self.assertIn(
+            "only lasting guidance", " ".join(auto_memory.split()).lower()
+        )
+
+        matrix = (ROOT / ".agents/host-templates/README-agents.md").read_text()
+        planning_row = next(
+            line for line in matrix.splitlines() if "| `planning.md` |" in line
+        )
+        self.assertIn("understanding the request", planning_row)
+
+        feedback = (ROOT / "feedback-register.md").read_text()
+        for entry, owner in (
+            ("W-R63", "planning.md"),
+            ("W-R63", "reasoning.md"),
+            ("W-R64", "rule-authoring.md"),
+        ):
+            self.assertEqual(feedback.count(f"- **{entry} ("), 1)
+            row = next(
+                line
+                for line in feedback.splitlines()
+                if line.startswith(f"| `.agents/rules/{owner}`")
+            )
+            self.assertIn(entry, row)
+
+        # From W-R63 on, an entry is the rule plus one line of source.
+        entries: dict[int, list[str]] = {}
+        current = None
+        for line in feedback.splitlines():
+            match = re.match(r"- \*\*W-R(\d+) \(", line)
+            if match:
+                current = int(match.group(1))
+                entries[current] = []
+            elif current is not None and line.startswith("    "):
+                entries[current].append(line)
+            elif line.strip():
+                current = None
+        new_entries = {
+            number: lines for number, lines in entries.items() if number >= 63
+        }
+        self.assertGreaterEqual(len(new_entries), 2)
+        for number, lines in new_entries.items():
+            self.assertEqual(len(lines), 1, f"W-R{number}")
+            self.assertTrue(
+                lines[0].startswith("    - Source: "), f"W-R{number}"
+            )
+
     def test_feedback_intake_problem_reports_and_quality_have_routed_owners(
         self,
     ) -> None:

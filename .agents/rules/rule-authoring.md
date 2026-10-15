@@ -5,8 +5,9 @@ provenance, and recurrence-driven refactoring.
 
 ## Ownership
 
-This file owns taking in operator feedback about how agents work, and the
-method for creating or changing portable behavior rules. Projects own
+This file owns taking in operator feedback about how agents work, the method
+for creating or changing portable behavior rules, and what a rule, a register
+entry, or a memory note of feedback may contain. Projects own
 project-only rules and adapters. Agent adapters own only their runtime
 mechanics and compact intentional safety floors. Host-local
 authorization/preferences remain in actual host configuration.
@@ -46,9 +47,8 @@ say which it is:
 How an agent should work is behavior even when it names a setting; only a
 setting's value, such as a permission, credential, or model or display
 default, is host-local configuration. Agent memory, whether you write it or
-the runtime consolidates it, does not route feedback; a memory note of it says
-where it was handed. When unsure whether it is cross-project, say which you
-chose and why.
+the runtime consolidates it, does not route feedback. When unsure whether it is
+cross-project, say which you chose and why.
 
 Red flags: "it is saved in memory"; "it came up in this project, so it is
 project-only"; "this session does not handle workspace rules"; "I'll hand it
@@ -80,11 +80,16 @@ exception as its own observable condition, not a vague exemption clause.
 
 ## Provenance And Refactoring
 
-Portable feedback records the source incident and rationale in
-`feedback-register.md`, then routes the active behavior to the narrowest owner.
-The rule covers the class of problem; the incident stays in the register.
-Project-only feedback stays with the project. Do not invent a host prose file
-as a portable owner.
+Portable feedback gets one entry in `feedback-register.md`: the rule in one
+sentence and one line of source giving the date, the project, and the cause in
+one sentence. The active behavior goes to the narrowest owner, and the rule
+covers the class of problem. Project-only feedback stays with the project. Do
+not invent a host prose file as a portable owner.
+
+A rule, an adapter, a register entry, and an agent memory note of feedback hold
+only lasting guidance: what to do, when, and why in general terms. Leave out
+what is true only for one session or task, such as exact times, temporary
+paths, routing or progress status, quotes, and the story of an incident.
 
 A later real recurrence is refactor evidence: revisit owner, trigger, and rule
 form before amplifying wording. Constructed pressure scenarios are optional for

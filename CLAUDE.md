@@ -39,7 +39,7 @@ Canonical sources: `git.md`, `authorization.md`, `git-publication.md`,
 | release, version tag or number, rollback target, or fixing a released version | `.agents/rules/authorization.md` + `.agents/rules/git.md` + `.agents/rules/releases.md` |
 | deploying, what may serve users, a temporary deployment, or an instance outside the inventory | `.agents/rules/authorization.md` + `.agents/rules/deployment.md` |
 | load-bearing premise validation, conflicting evidence, independent technical judgment, competing explanations, or diagnostic method | `.agents/rules/reasoning.md` |
-| non-trivial planning, a new capability's design or plan, starting an investigation or experiment, a verified finding that affects other work, an operator decision on a workstream, reporting its status from memory or an earlier session, evidence, approval scope, deviation, handoff | `.agents/rules/planning.md` |
+| non-trivial planning, a new capability's design or plan, starting an investigation, comparison of options, or experiment, a request that describes a need through examples, a verified finding that affects other work, an operator decision on a workstream, reporting its status from memory or an earlier session, evidence, approval scope, deviation, handoff | `.agents/rules/planning.md` |
 | implementation, configuration, refactoring, or artifact-structure change | `.agents/rules/implementation.md` |
 | project documentation authoring, restructuring, or lifecycle governance | `.agents/rules/documentation.md` |
 | a created or changed file before it is called done, handed over, committed, or deployed | `.agents/rules/file-checks.md` |
@@ -78,7 +78,9 @@ portable owner.
 Auto-memory is host-local recall. Save the operator's corrections and
 preferences about how to work when they are stated, and classify each in the
 same reply under `rule-authoring.md` Feedback Intake: saving it does not route
-a cross-project one. A memory about a decision or workstream only points to the
+a cross-project one. Such a note holds only lasting guidance
+(`rule-authoring.md` Provenance And Refactoring). A memory about a decision or
+workstream only points to the
 owner `planning.md` names. Change a topic file and its `MEMORY.md` line in
 consecutive Write/Edit calls, date today's events from the clock and earlier
 ones from their messages, and fix a stale entry when you find it. The

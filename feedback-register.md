@@ -1,14 +1,15 @@
 # Workspace Feedback Register (provenance archive — NOT resident context)
 
 This file is the **non-resident provenance archive** for the portable rules routed by
-`~/workspace/CLAUDE.md` and the installed Codex AGENTS block. It holds the original rule
-statement, rationale (Why), how-to-apply, and source incident for every distilled cross-project
-rule `W-R<N>`.
+`~/workspace/CLAUDE.md` and the installed Codex AGENTS block. Each distilled cross-project rule
+`W-R<N>` has one entry. From W-R63 on, an entry is the rule in one sentence plus one line of
+source: the date, the project, and the cause in one sentence (`rule-authoring.md` Provenance
+And Refactoring). Earlier entries keep their original form, with rationale (Why), how-to-apply,
+and the source incident.
 
 **Why this file exists separately**: the agent adapters are loaded into every session, so they
-carry only safety floors and task routes. Forensic detail (dates, PR numbers, file:line, user
-quotes) is read only when a rule is disputed or re-derived; it does not belong in resident
-context.
+carry only safety floors and task routes. The register is read only when a rule is disputed or
+re-derived; it does not belong in resident context.
 
 **IDs are stable**: scripts, changelogs, memories, and project `CLAUDE.md` reference `W-R<N>` by
 number. Never renumber. Numbering accumulates; mark replacements rather than deleting.
@@ -23,8 +24,8 @@ number. Never renumber. Numbering accumulates; mark replacements rather than del
 | `.agents/rules/git-publication.md` | W-R25, W-R30 refined by W-R31, change-flow bundle W-R58 |
 | `.agents/rules/git-integration.md` | W-R21 and the accepted W-R32 terminal-evidence refinement, refined by W-R54, W-R57 and W-R58 |
 | `.agents/rules/git-recovery.md` | W-R19–W-R20, refined by W-R57 and W-R58 |
-| `.agents/rules/planning.md` | W-R1–W-R7, W-R12, W-R18 and accepted W-R32 refinements, refined by W-R44, W-R46, W-R47, W-R50, W-R51, W-R56 and W-R57 |
-| `.agents/rules/reasoning.md` | W-R43 |
+| `.agents/rules/planning.md` | W-R1–W-R7, W-R12, W-R18 and accepted W-R32 refinements, refined by W-R44, W-R46, W-R47, W-R50, W-R51, W-R56 and W-R57, understanding the request W-R63 |
+| `.agents/rules/reasoning.md` | W-R43, refined by W-R63 |
 | `.agents/rules/implementation.md` | W-R37 refined by W-R44, W-R48 and W-R53 |
 | `.agents/rules/documentation.md` | W-R38 refined by W-R39, W-R41 entry-point loadability refined by W-R42, Plan/Changelog lifecycle refined by W-R44, W-R46 and W-R47, investigation records refined by W-R50, seams for W-R53 and W-R57 |
 | `.agents/rules/verification.md` | W-R15–W-R17, refined by W-R53 |
@@ -37,7 +38,7 @@ number. Never renumber. Numbering accumulates; mark replacements rather than del
 | `.agents/rules/secrets.md` | W-R13, refined by W-R53 |
 | `.agents/rules/temporary-files.md` | W-R55 |
 | `.agents/rules/environment-truth.md` | W-R24 refined by W-R44 |
-| `.agents/rules/rule-authoring.md` | W-R8–W-R14, W-R27–W-R28, W-R32, refined by W-R53 and W-R56, feedback intake W-R61 |
+| `.agents/rules/rule-authoring.md` | W-R8–W-R14, W-R27–W-R28, W-R32, refined by W-R53 and W-R56, feedback intake W-R61, lasting content and one-line sources W-R64 |
 
 Earlier entries intentionally retain incident-era terminology and recipes. When an earlier
 “How to apply” conflicts with a later disposition or a canonical module, the later disposition
@@ -227,3 +228,7 @@ Distilled cross-project rules. Numbering accumulates — do not delete old rules
 - **W-R61 (2026-10-11)** — **When the operator corrects how an agent works or states a preference about it, the agent classifies it as project-only or cross-project in the reply that takes it in and says which; a cross-project one is routed by a workspace-meta governance session or, from any other session, handed over in that same reply. Saving it to memory does not route it.**
     - **Why**: the reality-ops coordination session saved the corrections behind W-R59 (12:38 JST on 2026-10-11, "这次的纠正已记进记忆") and W-R60 (14:17) only to its host-local Claude memory. At 14:28 the operator: "刚才修改的是属于workspace的通用规则吧，是不是应该让他去独立的session来处理？"; at 14:30: "为什么刚才不给出另开session的处理方式？". The session answered that it had followed only the Claude Auto-Memory instruction to save corrections, had not classified them, and had not connected its own coordination note that workspace matters belong to another session. At 14:34: "请改进规则，不要出现这类问题。我目前啥也没做"; at 14:37 the session started a workspace session for it. The workspace `CLAUDE.md` gave the save as the immediate step and put routing in a separate paragraph with no moment or predicate; both adapters routed "routing feedback", which fires only once routing has started; `rule-authoring.md` said how portable feedback is recorded but not when it is classified or how another session hands it over; the Codex adapter had only that route row while Codex memories are enabled on this host. The operator had to name a correction as cross-project before: W-R52 ("…这应该属于workspace-meta的规则") and W-R58 ("这个是通用规则，为什么放到reality-ops里面的agents？"). Source: the coordination session's transcript `~/.claude/projects/-home-spartan-workspace-projects-reality-ops/405e0bf7-3b47-4bc5-9c16-662baf99ec75.jsonl` (timestamps UTC, given here in JST), and that project's host memory `coordination-2026-10-11.md`. Form: an omitted step at an observable moment, conditional on the session's task, with red flags from the incident.
     - **How to apply**: `rule-authoring.md` Feedback Intake owns it: in the reply that takes a correction or preference in, classify it under Choose The Owner First and say which; project-only stays with the project; cross-project in a workspace-meta governance session is routed by Provenance And Refactoring; cross-project in any other session is handed over in the same reply, by a launch command per `capabilities.md` Commands The User Runs or by a message to an existing session the operator names, with a brief that quotes the words with their time, names the source transcript and any memory note, and states the operator's authorization; that session does not change workspace rules or the register unless asked. How an agent should work is behavior even when it names a setting; only a setting's value is host-local configuration. Agent memory, written or runtime-consolidated, does not route feedback, and a memory note says where it was handed. Both adapters route "writing/refactoring agent rules, routing feedback, or the operator correcting how you work or stating a preference about it" to it; the Claude adapter's Auto-Memory paragraph classifies each saved correction under Feedback Intake. A Claude hook after a feedback memory write is deferred; owner workspace-meta; restart condition: the class recurs after Feedback Intake lands.
+- **W-R63 (2026-10-15)** — **Read a request for its goal: an example shows one case of the need and is not a requirement; an investigation, comparison, or design states the goal and usage scenarios first, carries derived requirements as assumptions, and judges options per scenario.**
+    - Source: 2026-10-15, workspace-meta: a survey of existing tools scored candidates against a checklist built from the operator's examples and missed the answer the operator wanted; similar misreadings had happened before.
+- **W-R64 (2026-10-15)** — **Rules, adapters, register entries, and memory notes of feedback hold only lasting guidance; a register entry is the rule in one sentence plus one line of source.**
+    - Source: 2026-10-15, workspace-meta: a feedback memory note and a planned register entry carried session times, a temporary path, and routing status.

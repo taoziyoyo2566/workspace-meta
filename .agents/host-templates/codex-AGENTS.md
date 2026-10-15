@@ -40,7 +40,7 @@ Canonical sources: `git.md`, `authorization.md`, `git-publication.md`,
 | release, version tag or number, rollback target, or fixing a released version | `~/workspace/.agents/rules/authorization.md` + `~/workspace/.agents/rules/git.md` + `~/workspace/.agents/rules/releases.md` |
 | deploying, what may serve users, a temporary deployment, or an instance outside the inventory | `~/workspace/.agents/rules/authorization.md` + `~/workspace/.agents/rules/deployment.md` |
 | load-bearing premise validation, conflicting evidence, independent technical judgment, competing explanations, or diagnostic method | `~/workspace/.agents/rules/reasoning.md` |
-| non-trivial planning, a new capability's design or plan, starting an investigation or experiment, a verified finding that affects other work, an operator decision on a workstream, reporting its status from memory or an earlier session, evidence, approval scope, deviation, handoff | `~/workspace/.agents/rules/planning.md` |
+| non-trivial planning, a new capability's design or plan, starting an investigation, comparison of options, or experiment, a request that describes a need through examples, a verified finding that affects other work, an operator decision on a workstream, reporting its status from memory or an earlier session, evidence, approval scope, deviation, handoff | `~/workspace/.agents/rules/planning.md` |
 | implementation, configuration, refactoring, or artifact-structure change | `~/workspace/.agents/rules/implementation.md` |
 | project documentation authoring, restructuring, or lifecycle governance | `~/workspace/.agents/rules/documentation.md` |
 | a created or changed file before it is called done, handed over, committed, or deployed | `~/workspace/.agents/rules/file-checks.md` |
