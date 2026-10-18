@@ -44,18 +44,50 @@ class CodexConfigSyncTests(unittest.TestCase):
         )["tui"]["status_line"]
         self.status_script = ROOT / "scripts" / "workspace_status.py"
         self.claude_status_line_script = ROOT / "scripts" / "claude_status_line.py"
-        self.env_skill_template = (
-            ROOT / ".agents" / "host-templates" / "env-sync-SKILL.md"
-        )
-        self.env_skill = (
-            Path(self.temp_dir.name) / ".claude" / "skills" / "env-sync" / "SKILL.md"
+        self.claude_dir = Path(self.temp_dir.name) / ".claude"
+        # The same template set the Makefile passes, so direct and make runs
+        # converge to one state.
+        self.skill_templates = tuple(
+            sorted((ROOT / ".agents" / "host-templates").glob("*-SKILL.md"))
         )
         self.rules_dir = ROOT / ".agents" / "rules"
 
     def tearDown(self) -> None:
         self.temp_dir.cleanup()
 
-    def sync_cli(self, mode: str | None = None, input_text: str | None = None):
+    def skill_names(self) -> tuple[str, ...]:
+        return tuple(
+            template.name.removesuffix("-SKILL.md")
+            for template in self.skill_templates
+        )
+
+    def skill_path(self, name: str, directory: Path | None = None) -> Path:
+        return (directory or self.claude_dir) / "skills" / name / "SKILL.md"
+
+    def template_for(self, name: str) -> Path:
+        return dict(zip(self.skill_names(), self.skill_templates))[name]
+
+    @staticmethod
+    def claude_labels(directory: str = "~/.claude", skills=()) -> tuple[str, ...]:
+        return (
+            f"Claude SessionStart [{directory}]",
+            f"Claude statusLine [{directory}]",
+            *(f"skill {name} [{directory}]" for name in skills),
+        )
+
+    def all_labels(self) -> tuple[str, ...]:
+        return (
+            "Codex AGENTS.md",
+            "Codex SessionStart hook",
+            "Codex preferences",
+            *self.claude_labels(skills=self.skill_names()),
+        )
+
+    def sync_args(
+        self,
+        claude_config_dirs: tuple[Path, ...] | None = None,
+        skill_templates: tuple[Path, ...] | None = None,
+    ) -> list[str]:
         args = [
             sys.executable,
             str(ROOT / "scripts" / "sync_codex_config.py"),
@@ -71,15 +103,25 @@ class CodexConfigSyncTests(unittest.TestCase):
             str(self.status_script),
             "--claude-status-line-script",
             str(self.claude_status_line_script),
-            "--env-skill-template",
-            str(self.env_skill_template),
             "--codex-home",
             str(self.codex_home),
-            "--claude-settings",
-            str(Path(self.temp_dir.name) / ".claude" / "settings.json"),
-            "--env-skill",
-            str(self.env_skill),
         ]
+        for template in (
+            self.skill_templates if skill_templates is None else skill_templates
+        ):
+            args.extend(("--claude-skill-template", str(template)))
+        for directory in claude_config_dirs or (self.claude_dir,):
+            args.extend(("--claude-config-dir", str(directory)))
+        return args
+
+    def sync_cli(
+        self,
+        mode: str | None = None,
+        input_text: str | None = None,
+        claude_config_dirs: tuple[Path, ...] | None = None,
+        skill_templates: tuple[Path, ...] | None = None,
+    ):
+        args = self.sync_args(claude_config_dirs, skill_templates)
         if mode:
             args.append(mode)
         return subprocess.run(
@@ -87,30 +129,58 @@ class CodexConfigSyncTests(unittest.TestCase):
             input=input_text,
             capture_output=True,
             check=False,
+            env=self.isolated_env(claude_config_dirs),
             text=True,
         )
 
-    def make_target(self, target: str, input_text: str | None = None):
+    def isolated_env(
+        self, claude_config_dirs: tuple[Path, ...] | None = None
+    ) -> dict[str, str]:
+        # A session's own CLAUDE_CONFIG_DIR and CLAUDE_CONFIG_DIRS name real
+        # config dirs; replace both so no run can reach this host's config.
         env = os.environ.copy()
+        env.pop("CLAUDE_CONFIG_DIR", None)
         env["HOME"] = self.temp_dir.name
         env["CODEX_HOME"] = str(self.codex_home)
+        env["CLAUDE_CONFIG_DIRS"] = ":".join(
+            str(path) for path in claude_config_dirs or (self.claude_dir,)
+        )
         env["PYTHON"] = sys.executable
+        return env
+
+    def make_target(
+        self,
+        target: str,
+        input_text: str | None = None,
+        env: dict[str, str] | None = None,
+    ):
         return subprocess.run(
             ["make", target],
             cwd=ROOT,
-            env=env,
+            env=self.isolated_env() if env is None else env,
             input=input_text,
             capture_output=True,
             check=False,
             text=True,
         )
 
-    def managed_paths(self) -> tuple[Path, ...]:
+    def managed_paths(
+        self, claude_config_dirs: tuple[Path, ...] | None = None
+    ) -> tuple[Path, ...]:
         return (
             self.codex_home / "AGENTS.md",
             self.codex_home / "config.toml",
-            Path(self.temp_dir.name) / ".claude" / "settings.json",
-            self.env_skill,
+            *(
+                path
+                for directory in claude_config_dirs or (self.claude_dir,)
+                for path in (
+                    directory / "settings.json",
+                    *(
+                        directory / "skills" / name / "SKILL.md"
+                        for name in self.skill_names()
+                    ),
+                )
+            ),
         )
 
     @staticmethod
@@ -120,6 +190,19 @@ class CodexConfigSyncTests(unittest.TestCase):
             path.read_bytes() if path.exists() else None,
             path.stat().st_mtime_ns if path.exists() else None,
         )
+
+    @staticmethod
+    def design_map_entry(owner: str) -> str:
+        # The design map is the one domain -> owner catalog; return the
+        # normalized, lowercased domain entry whose Owner bullet names owner.
+        design_map = (ROOT / "docs" / "architecture" / "design-map.md").read_text()
+        entries = [
+            section.split("\n## ", 1)[0]
+            for section in design_map.split("\n### ")[1:]
+            if f"- **Owner**: [`{owner}`]" in section
+        ]
+        assert len(entries) == 1, (owner, len(entries))
+        return " ".join(entries[0].split()).lower()
 
     def install_current_managed_state(self) -> None:
         completed = self.sync_cli()
@@ -145,14 +228,7 @@ class CodexConfigSyncTests(unittest.TestCase):
         self.assertNotIn("Apply these changes?", completed.stdout)
         self.assertIn("Result: everything is already current.", completed.stdout)
         self.assertIn("No files changed.", completed.stdout)
-        for label in (
-            "Codex AGENTS.md",
-            "Codex SessionStart hook",
-            "Codex preferences",
-            "Claude SessionStart hook",
-            "Claude statusLine",
-            "env-sync skill",
-        ):
+        for label in self.all_labels():
             self.assertRegex(completed.stdout, rf"(?m)^{re.escape(label)}:\s+OK$")
         self.assertEqual(
             before,
@@ -217,15 +293,15 @@ class CodexConfigSyncTests(unittest.TestCase):
         self.assertRegex(
             completed.stdout, r"(?m)^Codex preferences:\s+UPDATED$"
         )
-        for label in (
-            "Codex AGENTS.md",
-            "Codex SessionStart hook",
-            "Claude SessionStart hook",
-            "Claude statusLine",
-            "env-sync skill",
-        ):
+        unchanged_labels = tuple(
+            label for label in self.all_labels() if label != "Codex preferences"
+        )
+        for label in unchanged_labels:
             self.assertRegex(completed.stdout, rf"(?m)^{re.escape(label)}:\s+OK$")
-        self.assertIn("Sync complete: 1 updated, 5 unchanged.", completed.stdout)
+        self.assertIn(
+            f"Sync complete: 1 updated, {len(unchanged_labels)} unchanged.",
+            completed.stdout,
+        )
         self.assertEqual(tomllib.loads(config.read_text())["model"], "host-model")
         self.assertEqual(
             unchanged_before,
@@ -265,6 +341,460 @@ class CodexConfigSyncTests(unittest.TestCase):
             before,
             {path: self.path_snapshot(path) for path in self.managed_paths()},
         )
+
+    def test_two_claude_config_dirs_converge_in_one_run(self) -> None:
+        team_dir = Path(self.temp_dir.name) / ".claude-work"
+        claude_dirs = (self.claude_dir, team_dir)
+        env = self.isolated_env(claude_dirs)
+
+        completed = self.make_target("sync", "Y\n", env)
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        # The resolved list comes before the dry-run and the prompt.
+        self.assertIn(
+            "Claude config dirs (CLAUDE_CONFIG_DIRS):\n"
+            "  ~/.claude\n"
+            "  ~/.claude-work\n",
+            completed.stdout,
+        )
+        self.assertLess(
+            completed.stdout.index("  ~/.claude-work\n"),
+            completed.stdout.index("Managed configuration dry-run:"),
+        )
+        labels = (
+            *self.claude_labels("~/.claude", self.skill_names()),
+            *self.claude_labels("~/.claude-work", self.skill_names()),
+        )
+        for label in labels:
+            self.assertRegex(
+                completed.stdout, rf"(?m)^{re.escape(label)}:\s+UPDATED$"
+            )
+        settings = [
+            json.loads((directory / "settings.json").read_text())
+            for directory in claude_dirs
+        ]
+        self.assertEqual(settings[0], settings[1])
+        self.assertIn(
+            SYNC.MANAGED_HOOK_MARKER,
+            settings[1]["hooks"]["SessionStart"][0]["hooks"][0]["command"],
+        )
+        self.assertIn(
+            SYNC.MANAGED_CLAUDE_STATUS_LINE_MARKER,
+            settings[1]["statusLine"]["command"],
+        )
+
+        before = {
+            path: self.path_snapshot(path)
+            for path in self.managed_paths(claude_dirs)
+        }
+        second = self.sync_cli(claude_config_dirs=claude_dirs)
+        self.assertEqual(second.returncode, 0, second.stderr)
+        self.assertIn(
+            f"Sync complete: 0 updated, {3 + len(labels)} unchanged.",
+            second.stdout,
+        )
+        self.assertEqual(
+            before,
+            {
+                path: self.path_snapshot(path)
+                for path in self.managed_paths(claude_dirs)
+            },
+        )
+
+    def test_skill_templates_fan_out_to_every_claude_config_dir(self) -> None:
+        templates_dir = Path(self.temp_dir.name) / "templates"
+        templates_dir.mkdir()
+        templates = (
+            templates_dir / "alpha-SKILL.md",
+            templates_dir / "beta-two-SKILL.md",
+        )
+        for template in templates:
+            template.write_text(
+                f"{SYNC.SKILL_OWNERSHIP_MARKER}\n# {template.name}\n"
+            )
+        claude_dirs = (self.claude_dir, Path(self.temp_dir.name) / ".claude-work")
+
+        completed = self.sync_cli(
+            claude_config_dirs=claude_dirs, skill_templates=templates
+        )
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        for directory, shown in zip(claude_dirs, ("~/.claude", "~/.claude-work")):
+            for name, template in (("alpha", templates[0]), ("beta-two", templates[1])):
+                self.assertRegex(
+                    completed.stdout,
+                    rf"(?m)^{re.escape(f'skill {name} [{shown}]')}:\s+UPDATED$",
+                )
+                self.assertEqual(
+                    (directory / "skills" / name / "SKILL.md").read_text(),
+                    template.read_text(),
+                )
+
+        templates[0].write_text(f"{SYNC.SKILL_OWNERSHIP_MARKER}\n# alpha, revised\n")
+        drift = self.sync_cli(
+            "--check", claude_config_dirs=claude_dirs, skill_templates=templates
+        )
+        self.assertEqual(drift.returncode, 1)
+        for shown in ("~/.claude", "~/.claude-work"):
+            self.assertRegex(
+                drift.stdout,
+                rf"(?m)^{re.escape(f'skill alpha [{shown}]')}:\s+DRIFT$",
+            )
+            self.assertRegex(
+                drift.stdout,
+                rf"(?m)^{re.escape(f'skill beta-two [{shown}]')}:\s+OK$",
+            )
+
+    def test_skill_template_names_are_validated_before_any_write(self) -> None:
+        templates_dir = Path(self.temp_dir.name) / "templates"
+        (templates_dir / "other").mkdir(parents=True)
+        marked = f"---\nname: skill\n---\n{SYNC.SKILL_OWNERSHIP_MARKER}\n# skill\n"
+        for bad, content, message in (
+            ((templates_dir / "env-sync.md",), marked, "lowercase hyphenated name"),
+            ((templates_dir / "Upper-SKILL.md",), marked, "lowercase hyphenated name"),
+            (
+                (
+                    templates_dir / "twin-SKILL.md",
+                    templates_dir / "other" / "twin-SKILL.md",
+                ),
+                marked,
+                "both install twin",
+            ),
+            # Installed without the marker, it would be kept as foreign next run.
+            (
+                (templates_dir / "unmarked-SKILL.md",),
+                "---\nname: unmarked\n---\n# skill\n",
+                "ownership marker",
+            ),
+        ):
+            with self.subTest(templates=[path.name for path in bad]):
+                for template in bad:
+                    template.write_text(content)
+
+                completed = self.sync_cli(skill_templates=bad)
+
+                self.assertEqual(completed.returncode, 1)
+                self.assertIn(message, completed.stderr)
+                self.assertIn("No files were modified.", completed.stderr)
+                self.assertFalse(self.claude_dir.exists())
+                self.assertFalse(self.codex_home.exists())
+
+    def test_skill_ownership_marker_is_the_first_line_after_frontmatter(
+        self,
+    ) -> None:
+        marker = SYNC.SKILL_OWNERSHIP_MARKER
+        for content, expected in (
+            (f"---\nname: x\n---\n{marker}\n\n# x\n", True),
+            (f"---\r\nname: x\r\n---\r\n{marker}\r\n# x\r\n", True),
+            (f"{marker}\n# x\n", True),
+            (f"---\nname: x\n---\n\n{marker}\n# x\n", False),
+            (f"---\nname: x\n---\n# x\n\n{marker}\n", False),
+            (f"---\nname: x\n{marker}\n", False),
+            (f"---\nname: x\n---\n{marker} \n", False),
+            ("", False),
+        ):
+            with self.subTest(content=content):
+                self.assertIs(SYNC.has_skill_ownership_marker(content), expected)
+        for template in self.skill_templates:
+            with self.subTest(template=template.name):
+                self.assertTrue(
+                    SYNC.has_skill_ownership_marker(template.read_text())
+                )
+
+    def test_fresh_skill_install_writes_the_marker_and_is_idempotent(
+        self,
+    ) -> None:
+        completed = self.sync_cli()
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        for name, template in zip(self.skill_names(), self.skill_templates):
+            installed = self.skill_path(name).read_text()
+            self.assertEqual(installed, template.read_text())
+            self.assertTrue(SYNC.has_skill_ownership_marker(installed))
+            self.assertRegex(
+                completed.stdout,
+                rf"(?m)^{re.escape(f'skill {name} [~/.claude]')}:\s+UPDATED$",
+            )
+
+        before = {path: self.path_snapshot(path) for path in self.managed_paths()}
+        second = self.sync_cli()
+        self.assertEqual(second.returncode, 0, second.stderr)
+        self.assertIn(
+            f"Sync complete: 0 updated, {len(self.all_labels())} unchanged.",
+            second.stdout,
+        )
+        self.assertEqual(
+            before, {path: self.path_snapshot(path) for path in self.managed_paths()}
+        )
+
+    def test_foreign_skill_is_kept_while_other_areas_apply(self) -> None:
+        # The operator's own skill of the same name belongs to the operator.
+        foreign_name = "interview"
+        self.assertIn(foreign_name, self.skill_names())
+        foreign = self.skill_path(foreign_name)
+        foreign.parent.mkdir(parents=True)
+        foreign_text = (
+            "---\nname: interview\ndescription: my own interview skill\n---\n\n"
+            "# my interview, private-body-text\n"
+        )
+        foreign.write_text(foreign_text)
+        kept_label = f"skill {foreign_name} [~/.claude]"
+        kept_line = (
+            rf"(?m)^{re.escape(kept_label)}:\s+"
+            r"kept: skill owned outside workspace-meta$"
+        )
+
+        # A bare run applies without a prompt, as make bootstrap does.
+        completed = self.sync_cli()
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertRegex(completed.stdout, kept_line)
+        self.assertNotIn("private-body-text", completed.stdout + completed.stderr)
+        self.assertEqual(foreign.read_text(), foreign_text)
+        for name, template in zip(self.skill_names(), self.skill_templates):
+            if name == foreign_name:
+                continue
+            self.assertEqual(self.skill_path(name).read_bytes(), template.read_bytes())
+        settings = json.loads((self.claude_dir / "settings.json").read_text())
+        self.assertIn(
+            SYNC.MANAGED_HOOK_MARKER,
+            settings["hooks"]["SessionStart"][0]["hooks"][0]["command"],
+        )
+        self.assertTrue((self.codex_home / "AGENTS.md").is_file())
+
+        check = self.sync_cli("--check")
+        self.assertEqual(check.returncode, 0, check.stdout + check.stderr)
+        self.assertRegex(check.stdout, kept_line)
+        self.assertIn("Result: everything is already current.", check.stdout)
+
+        interactive = self.make_target("sync", "Y\n")
+        self.assertEqual(interactive.returncode, 0, interactive.stderr)
+        self.assertNotIn("Apply these changes?", interactive.stdout)
+        self.assertEqual(foreign.read_text(), foreign_text)
+
+    def test_marked_skill_with_stale_content_converges(self) -> None:
+        self.install_current_managed_state()
+        name = "project-bootstrap"
+        installed = self.skill_path(name)
+        stale = installed.read_text() + "\nA line from an older template.\n"
+        installed.write_text(stale)
+        self.assertTrue(SYNC.has_skill_ownership_marker(stale))
+
+        drift = self.sync_cli("--check")
+        self.assertEqual(drift.returncode, 1)
+        self.assertRegex(
+            drift.stdout, rf"(?m)^{re.escape(f'skill {name} [~/.claude]')}:\s+DRIFT$"
+        )
+        self.assertEqual(installed.read_text(), stale)
+
+        completed = self.sync_cli()
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertRegex(
+            completed.stdout,
+            rf"(?m)^{re.escape(f'skill {name} [~/.claude]')}:\s+UPDATED$",
+        )
+        self.assertEqual(installed.read_text(), self.template_for(name).read_text())
+        second = self.sync_cli()
+        self.assertIn("Sync complete: 0 updated,", second.stdout)
+
+    def test_legacy_unmarked_env_sync_converges_and_gains_the_marker(self) -> None:
+        # Hosts synced before the marker existed hold an unmarked env-sync.
+        self.assertEqual(SYNC.LEGACY_UNMARKED_SKILLS, ("env-sync",))
+        template_text = self.template_for("env-sync").read_text()
+        legacy = template_text.replace(f"{SYNC.SKILL_OWNERSHIP_MARKER}\n", "", 1)
+        self.assertNotEqual(legacy, template_text)
+        installed = self.skill_path("env-sync")
+        installed.parent.mkdir(parents=True)
+        installed.write_text(legacy)
+        label = re.escape("skill env-sync [~/.claude]")
+
+        drift = self.sync_cli("--check")
+        self.assertEqual(drift.returncode, 1)
+        self.assertRegex(drift.stdout, rf"(?m)^{label}:\s+DRIFT$")
+        self.assertIn("Current host: legacy unmarked workspace-meta skill", drift.stdout)
+
+        completed = self.sync_cli()
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertRegex(completed.stdout, rf"(?m)^{label}:\s+UPDATED$")
+        self.assertEqual(installed.read_text(), template_text)
+        self.assertTrue(SYNC.has_skill_ownership_marker(installed.read_text()))
+
+        before = self.path_snapshot(installed)
+        second = self.sync_cli()
+        self.assertEqual(second.returncode, 0, second.stderr)
+        self.assertIn("Sync complete: 0 updated,", second.stdout)
+        self.assertEqual(self.path_snapshot(installed), before)
+
+    def test_default_claude_config_dirs_include_relocated_dirs_only(self) -> None:
+        home = Path(self.temp_dir.name)
+        # Copy words match whole name parts, so a word inside a longer part
+        # ("gold", "origin", "holder") does not mark a copy.
+        relocated = (
+            ".claude-work",
+            ".claude-a b",
+            ".claude-gold",
+            ".claude-origin",
+            ".claude-holder",
+        )
+        for name in relocated:
+            (home / name).mkdir()
+            (home / name / ".claude.json").write_text("{}")
+        # A copy of a relocated dir keeps its .claude.json, so its name is
+        # what marks it; discovery skips it and says why.
+        copies = {
+            ".claude-work.bak-20261017": 'name has the part "bak"',
+            ".claude-work-20261017": "name ends in a date",
+            ".claude-work-2026-10-17": "name ends in a date",
+            ".claude-old": 'name has the part "old"',
+            ".claude-work-backup": 'name has the part "backup"',
+            ".claude-x.orig": 'name has the part "orig"',
+        }
+        for name in copies:
+            (home / name).mkdir()
+            (home / name / ".claude.json").write_text("{}")
+        # A backup of ~/.claude has settings but no .claude.json of its own,
+        # and ~/.claude.json is the default dir's state file, not a dir.
+        (home / ".claude-backup").mkdir()
+        (home / ".claude-backup" / "settings.json").write_text("{}")
+        (home / ".claude.json").write_text("{}")
+        env = self.isolated_env()
+        env.pop("CLAUDE_CONFIG_DIRS")
+        self.assertEqual(env["HOME"], str(home))
+
+        completed = self.make_target("agent-sync-check", env=env)
+
+        self.assertNotEqual(completed.returncode, 0)
+        skipped = "".join(
+            f"  ~/{name}: {copies[name]}\n" for name in sorted(copies)
+        )
+        self.assertIn(
+            "Claude config dirs (CLAUDE_CONFIG_DIRS):\n"
+            "  ~/.claude\n"
+            "  ~/.claude-a b\n"
+            "  ~/.claude-gold\n"
+            "  ~/.claude-holder\n"
+            "  ~/.claude-origin\n"
+            "  ~/.claude-work\n"
+            "Skipped as a likely copy or backup "
+            "(name it in CLAUDE_CONFIG_DIRS to manage it):\n"
+            f"{skipped}\n",
+            completed.stdout,
+        )
+        self.assertNotIn(".claude-backup", completed.stdout)
+        for name in relocated:
+            shown = f"~/{name}"
+            self.assertRegex(
+                completed.stdout,
+                rf"(?m)^{re.escape(f'Claude SessionStart [{shown}]')}:\s+DRIFT$",
+            )
+        self.assertFalse((home / ".claude").exists())
+        for name in (*relocated, *copies):
+            self.assertEqual(
+                [path.name for path in (home / name).iterdir()], [".claude.json"]
+            )
+        self.assertEqual(
+            [path.name for path in (home / ".claude-backup").iterdir()],
+            ["settings.json"],
+        )
+        # Nothing was created from a mis-split name in the repository.
+        self.assertFalse((ROOT / "b").exists())
+
+    def test_discovery_writes_only_discovered_dirs(self) -> None:
+        home = Path(self.temp_dir.name)
+        for name in (".claude-a b", ".claude-work.bak-20261017"):
+            (home / name).mkdir()
+            (home / name / ".claude.json").write_text("{}")
+        env = self.isolated_env()
+        env.pop("CLAUDE_CONFIG_DIRS")
+
+        completed = self.make_target("sync", "Y\n", env)
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertLess(
+            completed.stdout.index(
+                '~/.claude-work.bak-20261017: name has the part "bak"'
+            ),
+            completed.stdout.index("Apply these changes?"),
+        )
+        for directory in (home / ".claude", home / ".claude-a b"):
+            self.assertTrue((directory / "settings.json").is_file())
+            for name in self.skill_names():
+                self.assertTrue((directory / "skills" / name / "SKILL.md").is_file())
+        self.assertEqual(
+            [path.name for path in (home / ".claude-work.bak-20261017").iterdir()],
+            [".claude.json"],
+        )
+
+    def test_copy_name_reason_matches_whole_name_parts(self) -> None:
+        for name, reason in (
+            (".claude-gold", None),
+            (".claude-origin", None),
+            (".claude-holder", None),
+            (".claude-copyist", None),
+            (".claude-tmpl", None),
+            (".claude-work", None),
+            (".claude-work.bak2", 'name has the part "bak2"'),
+            (".claude-work_backups", 'name has the part "backups"'),
+            (".claude-work_tmp", 'name has the part "tmp"'),
+            (".claude-Team.COPY", 'name has the part "copy"'),
+            (".claude-work~", 'name contains "~"'),
+            (".claude-work.20261017", "name ends in a date"),
+        ):
+            with self.subTest(name=name):
+                self.assertEqual(SYNC.copy_name_reason(name), reason)
+
+    def test_explicit_colon_list_keeps_spaces_and_skips_discovery(self) -> None:
+        home = Path(self.temp_dir.name)
+        # Discovery would add this dir; an explicit list replaces discovery.
+        (home / ".claude-work").mkdir()
+        (home / ".claude-work" / ".claude.json").write_text("{}")
+        spaced = home / ".claude-a b"
+        backup = home / ".claude-work.bak"
+        env = self.isolated_env()
+        env["CLAUDE_CONFIG_DIRS"] = f"~/.claude-a b::{backup}:"
+
+        completed = self.make_target("sync", "Y\n", env)
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn(
+            "Claude config dirs (CLAUDE_CONFIG_DIRS):\n"
+            "  ~/.claude-a b\n"
+            "  ~/.claude-work.bak\n\n",
+            completed.stdout,
+        )
+        self.assertNotIn("Skipped", completed.stdout)
+        for directory in (spaced, backup):
+            self.assertTrue((directory / "settings.json").is_file())
+        self.assertFalse((home / ".claude").exists())
+        self.assertEqual(
+            [path.name for path in (home / ".claude-work").iterdir()],
+            [".claude.json"],
+        )
+
+    def test_relative_or_space_separated_config_dirs_fail_before_any_write(
+        self,
+    ) -> None:
+        home = Path(self.temp_dir.name)
+        for value in (
+            "relative/.claude",
+            f"{home}/.claude:work",
+            "~root/.claude",
+            f"{home}/.claude {home}/.claude-work",
+            "~/.claude ~/.claude-work",
+        ):
+            with self.subTest(value=value):
+                env = self.isolated_env()
+                env["CLAUDE_CONFIG_DIRS"] = value
+
+                completed = self.make_target("sync", "Y\n", env)
+
+                self.assertNotEqual(completed.returncode, 0)
+                self.assertIn("ERROR: Claude config dir", completed.stderr)
+                self.assertIn("No files were modified.", completed.stderr)
+                self.assertNotIn("Apply these changes?", completed.stdout)
+                self.assertEqual(sorted(path.name for path in home.iterdir()), [])
+                self.assertFalse((ROOT / "relative").exists())
+                self.assertFalse((ROOT / "work").exists())
 
     def test_codex_pin_only_drift_reports_the_script_pin_semantically(self) -> None:
         self.install_current_managed_state()
@@ -357,10 +887,11 @@ class CodexConfigSyncTests(unittest.TestCase):
         completed = self.sync_cli("--interactive", "N\n")
 
         self.assertEqual(completed.returncode, 0, completed.stderr)
+        hook_label, status_line_label = self.claude_labels()
         for label, script in (
             ("Codex SessionStart hook", "scripts/workspace_status.py"),
-            ("Claude SessionStart hook", "scripts/workspace_status.py"),
-            ("Claude statusLine", "scripts/claude_status_line.py"),
+            (hook_label, "scripts/workspace_status.py"),
+            (status_line_label, "scripts/claude_status_line.py"),
         ):
             details = completed.stdout.split(f"  {label}:", 1)[1]
             details = details.split("\n\n  ", 1)[0]
@@ -451,13 +982,16 @@ class CodexConfigSyncTests(unittest.TestCase):
         completed = self.sync_cli("--check")
 
         self.assertEqual(completed.returncode, 1)
+        hook_label, status_line_label = self.claude_labels()
         self.assertRegex(
-            completed.stdout, r"(?m)^Claude SessionStart hook:\s+DRIFT$"
+            completed.stdout, rf"(?m)^{re.escape(hook_label)}:\s+DRIFT$"
         )
-        self.assertRegex(completed.stdout, r"(?m)^Claude statusLine:\s+DRIFT$")
-        hook_details = completed.stdout.split("  Claude SessionStart hook:", 1)[1]
+        self.assertRegex(
+            completed.stdout, rf"(?m)^{re.escape(status_line_label)}:\s+DRIFT$"
+        )
+        hook_details = completed.stdout.split(f"  {hook_label}:", 1)[1]
         hook_details = hook_details.split("\n\n  ", 1)[0]
-        status_details = completed.stdout.split("  Claude statusLine:", 1)[1]
+        status_details = completed.stdout.split(f"  {status_line_label}:", 1)[1]
         status_details = status_details.split("\n\n  ", 1)[0]
         self.assertIn("~ expected script hash changed", hook_details)
         self.assertIn("workspace_status.py", hook_details)
@@ -483,9 +1017,10 @@ class CodexConfigSyncTests(unittest.TestCase):
         completed = self.sync_cli("--check")
 
         self.assertEqual(completed.returncode, 1)
-        hook_details = completed.stdout.split("  Claude SessionStart hook:", 1)[1]
+        hook_label, status_line_label = self.claude_labels()
+        hook_details = completed.stdout.split(f"  {hook_label}:", 1)[1]
         hook_details = hook_details.split("\n\n  ", 1)[0]
-        status_details = completed.stdout.split("  Claude statusLine:", 1)[1]
+        status_details = completed.stdout.split(f"  {status_line_label}:", 1)[1]
         status_details = status_details.split("\n\n  ", 1)[0]
         self.assertIn("~ matcher changed", hook_details)
         self.assertIn("~ timeout changed", hook_details)
@@ -810,10 +1345,9 @@ class CodexConfigSyncTests(unittest.TestCase):
             preferences_template=self.preferences_template,
             status_script=self.status_script,
             claude_status_line_script=self.claude_status_line_script,
-            env_skill_template=self.env_skill_template,
-            env_skill=self.env_skill,
+            claude_skill_templates=list(self.skill_templates),
             codex_home=self.codex_home,
-            claude_settings=settings,
+            claude_config_dirs=[settings.parent],
             python="python3",
             check=True,
             interactive=False,
@@ -886,10 +1420,9 @@ class CodexConfigSyncTests(unittest.TestCase):
             preferences_template=self.preferences_template,
             status_script=changed_status,
             claude_status_line_script=self.claude_status_line_script,
-            env_skill_template=self.env_skill_template,
-            env_skill=self.env_skill,
+            claude_skill_templates=list(self.skill_templates),
             codex_home=self.codex_home,
-            claude_settings=settings,
+            claude_config_dirs=[settings.parent],
             python="python3",
             check=False,
             interactive=False,
@@ -943,6 +1476,7 @@ class CodexConfigSyncTests(unittest.TestCase):
             "problem-follow-up.md",
             "reasoning.md",
             "releases.md",
+            "requests.md",
             "review.md",
             "rule-authoring.md",
             "secrets.md",
@@ -950,6 +1484,7 @@ class CodexConfigSyncTests(unittest.TestCase):
             "verification.md",
         ):
             self.assertIn(f"~/workspace/.agents/rules/{name}", result)
+        self.assertNotIn("claude-runtime.md", result)
 
         self.assertIn("Project rules provide topology", normalized)
         self.assertIn("technical permission only", normalized)
@@ -1060,6 +1595,7 @@ class CodexConfigSyncTests(unittest.TestCase):
         for name in (
             "authorization.md",
             "capabilities.md",
+            "claude-runtime.md",
             "codex-runtime.md",
             "deployment.md",
             "documentation.md",
@@ -1075,6 +1611,7 @@ class CodexConfigSyncTests(unittest.TestCase):
             "problem-follow-up.md",
             "reasoning.md",
             "releases.md",
+            "requests.md",
             "review.md",
             "rule-authoring.md",
             "secrets.md",
@@ -1105,6 +1642,7 @@ class CodexConfigSyncTests(unittest.TestCase):
             "problem-follow-up.md",
             "reasoning.md",
             "releases.md",
+            "requests.md",
             "review.md",
             "rule-authoring.md",
             "secrets.md",
@@ -1116,9 +1654,18 @@ class CodexConfigSyncTests(unittest.TestCase):
             self.assertIn(name, codex)
             self.assertIn(name, claude)
 
-        self.assertIn("codex-runtime.md", codex)
-        self.assertNotIn("codex-runtime.md", claude)
-        self.assertIn("no `~/.claude/CLAUDE.md` is required", claude)
+        # Each runtime module is routed only by its own runtime's adapter.
+        for runtime_module, own, other in (
+            ("codex-runtime.md", codex, claude),
+            ("claude-runtime.md", claude, codex),
+        ):
+            self.assertIn(runtime_module, own)
+            self.assertNotIn(runtime_module, other)
+        self.assertIn(
+            "no user-level `CLAUDE.md` in any Claude config dir is required as a "
+            "portable owner",
+            " ".join(claude.split()),
+        )
 
         codex_floor = codex.split("## Safety Floor", 1)[1].split(
             "## Direct Task Routing", 1
@@ -1198,15 +1745,7 @@ class CodexConfigSyncTests(unittest.TestCase):
             ):
                 self.assertNotIn(routed_detail, normalized_adapter)
 
-        owner_matrix = (
-            ROOT / ".agents/host-templates/README-agents.md"
-        ).read_text()
-        owner_rows = [
-            line
-            for line in owner_matrix.splitlines()
-            if "| `reasoning.md` |" in line
-        ]
-        self.assertEqual(len(owner_rows), 1)
+        domain_entry = self.design_map_entry("reasoning.md")
         for phrase in (
             "premises",
             "knowledge states",
@@ -1216,7 +1755,7 @@ class CodexConfigSyncTests(unittest.TestCase):
             "independent judgment",
             "uncertainty",
         ):
-            self.assertIn(phrase, owner_rows[0])
+            self.assertIn(phrase, domain_entry)
 
         feedback = (ROOT / "feedback-register.md").read_text()
         provenance_rows = [
@@ -1228,7 +1767,7 @@ class CodexConfigSyncTests(unittest.TestCase):
         self.assertIn("W-R43", provenance_rows[0])
         self.assertEqual(feedback.count("- **W-R43 ("), 1)
 
-        readme = (ROOT / "README.md").read_text()
+        readme = " ".join((ROOT / "README.md").read_text().split())
         self.assertIn("technical reasoning", readme)
         self.assertIn("W-R43", readme)
 
@@ -1421,24 +1960,43 @@ class CodexConfigSyncTests(unittest.TestCase):
     def test_request_reading_and_lasting_rule_content_have_routed_owners(
         self,
     ) -> None:
-        # Examples in a request are not requirements (W-R63); rules, register
-        # entries and memory notes keep only lasting guidance (W-R64).
-        planning = (self.rules_dir / "planning.md").read_text()
-        self.assertEqual(planning.count("## Understand The Request"), 1)
-        normalized_planning = " ".join(planning.split()).lower()
+        # Every request is read for its goal before work starts (W-R71);
+        # examples in it are not requirements (W-R63); rules, register entries
+        # and memory notes keep only lasting guidance (W-R64).
+        requests = (self.rules_dir / "requests.md").read_text()
+        for heading in (
+            "## Ownership",
+            "## Understand The Request",
+            "## Ask Or Proceed",
+            "## Similar Problems",
+        ):
+            self.assertEqual(requests.count(heading), 1, heading)
+        normalized_requests = " ".join(requests.split()).lower()
         for invariant in (
             "an example shows one case of the need",
             "list the usage scenarios",
             "carry each requirement you derived as an assumption",
             "judge options scenario by scenario",
             "show it with the conflict named",
+            "state what done means",
+            "find the similar problems the request stands for",
+            "ask in one round",
+            "when the operator said they will be away",
+            "say where you looked, also when nothing turned up",
         ):
-            self.assertIn(invariant, normalized_planning)
+            self.assertIn(invariant, normalized_requests)
+
+        planning = (self.rules_dir / "planning.md").read_text()
+        self.assertNotIn("## Understand The Request", planning)
+        self.assertIn(
+            "read the request first (`requests.md`)",
+            " ".join(planning.split()).lower(),
+        )
 
         reasoning = (self.rules_dir / "reasoning.md").read_text()
         self.assertIn(
             "an example in a request, or a requirement derived from one, is "
-            "not an operator decision",
+            "not an operator decision (`requests.md`",
             " ".join(reasoning.split()).lower(),
         )
 
@@ -1453,28 +2011,39 @@ class CodexConfigSyncTests(unittest.TestCase):
             routes = [
                 line
                 for line in adapter.splitlines()
-                if line.startswith("| ") and "rules/planning.md`" in line
+                if line.startswith("| ") and "rules/requests.md`" in line
             ]
             self.assertEqual(len(routes), 1)
-            self.assertIn(
-                "a request that describes a need through examples", routes[0]
-            )
+            route_trigger = routes[0].strip("|").split("|", 1)[0]
+            for trigger in (
+                "starting work on a request",
+                "a need described through examples",
+                "asking the operator or proceeding on assumptions",
+            ):
+                self.assertIn(trigger, route_trigger)
+            planning_routes = [
+                line
+                for line in adapter.splitlines()
+                if line.startswith("| ") and "rules/planning.md`" in line
+            ]
+            self.assertEqual(len(planning_routes), 1)
+            self.assertNotIn("through examples", planning_routes[0])
         auto_memory = claude.split("## Claude Auto-Memory", 1)[1]
         auto_memory = auto_memory.split("\n## ", 1)[0]
         self.assertIn(
             "only lasting guidance", " ".join(auto_memory.split()).lower()
         )
 
-        matrix = (ROOT / ".agents/host-templates/README-agents.md").read_text()
-        planning_row = next(
-            line for line in matrix.splitlines() if "| `planning.md` |" in line
+        self.assertIn(
+            "how a request is read before work starts",
+            self.design_map_entry("requests.md"),
         )
-        self.assertIn("understanding the request", planning_row)
 
         feedback = (ROOT / "feedback-register.md").read_text()
         for entry, owner in (
-            ("W-R63", "planning.md"),
+            ("W-R63", "requests.md"),
             ("W-R63", "reasoning.md"),
+            ("W-R71", "requests.md"),
             ("W-R64", "rule-authoring.md"),
         ):
             self.assertEqual(feedback.count(f"- **{entry} ("), 1)
@@ -1566,9 +2135,6 @@ class CodexConfigSyncTests(unittest.TestCase):
             self.agents_template.read_text(),
             (ROOT / "CLAUDE.md").read_text(),
         )
-        owner_matrix = (
-            ROOT / ".agents/host-templates/README-agents.md"
-        ).read_text()
         feedback = (ROOT / "feedback-register.md").read_text()
 
         for name, owner in owners.items():
@@ -1580,23 +2146,19 @@ class CodexConfigSyncTests(unittest.TestCase):
                 self.assertIn(invariant, normalized_rule)
 
             for adapter in adapters:
-                routes = [
-                    line
+                route_triggers = [
+                    line.strip("|").split("|", 1)[0]
                     for line in adapter.splitlines()
                     if line.startswith("| ") and f"rules/{name}`" in line
                 ]
-                self.assertEqual(len(routes), 1, name)
-                route_trigger = routes[0].strip("|").split("|", 1)[0]
-                for trigger in triggers:
-                    self.assertIn(trigger, route_trigger)
+                matching = [
+                    route_trigger
+                    for route_trigger in route_triggers
+                    if all(trigger in route_trigger for trigger in triggers)
+                ]
+                self.assertEqual(len(matching), 1, name)
 
-            matrix_rows = [
-                line
-                for line in owner_matrix.splitlines()
-                if f"| `{name}` |" in line
-            ]
-            self.assertEqual(len(matrix_rows), 1, name)
-            self.assertIn(domain, matrix_rows[0])
+            self.assertIn(domain, self.design_map_entry(name))
 
             self.assertEqual(feedback.count(f"- **{entry} ("), 1)
             provenance_rows = [
@@ -1613,6 +2175,134 @@ class CodexConfigSyncTests(unittest.TestCase):
         normalized_memory = " ".join(auto_memory.split())
         self.assertIn("`rule-authoring.md` Feedback Intake", normalized_memory)
         self.assertIn("does not route a cross-project one", normalized_memory)
+
+    def test_delegation_allocation_has_routed_owners(self) -> None:
+        # Delegated work gets a model and effort per subtask (W-R72): the
+        # portable allocation lives in capabilities.md, the Claude settings
+        # that apply it in claude-runtime.md.
+        capabilities = (self.rules_dir / "capabilities.md").read_text()
+        self.assertEqual(capabilities.count("## Delegation"), 1)
+        normalized = " ".join(capabilities.split()).lower()
+        for invariant in (
+            "survey the subtasks first",
+            "give each agent the model and reasoning effort its demand needs",
+            "judgment work and the final synthesis keep at least the configured "
+            "model and effort",
+            "mechanical work whose result is checked may use a lighter model or "
+            "a lower effort",
+            "subagents cannot ask, so settle the open points first",
+            "report the allocation with the result",
+            "under delegation applies them, it does not lower them",
+        ):
+            self.assertIn(invariant, normalized)
+
+        runtime = (self.rules_dir / "claude-runtime.md").read_text()
+        for heading in (
+            "## Ownership",
+            "## Configuration Layers",
+            "## Project Entry Files",
+            "## Memory",
+            "## Asking The Operator",
+            "## Delegation",
+            "## Long Unattended Runs",
+        ):
+            self.assertEqual(runtime.count(heading), 1, heading)
+        normalized_runtime = " ".join(runtime.split()).lower()
+        for invariant in (
+            "where it and a shared owner differ, the shared owner governs",
+            "set both explicitly on every delegated agent",
+            "each config dir keeps its own memory",
+            "subagents cannot ask",
+            "`/goal` does not change permissions",
+        ):
+            self.assertIn(invariant, normalized_runtime)
+
+        claude = (ROOT / "CLAUDE.md").read_text()
+        self.assertIn(
+            "set each agent's model and effort", " ".join(claude.split()).lower()
+        )
+        for adapter, runtime_module in (
+            (self.agents_template.read_text(), "codex-runtime.md"),
+            (claude, "claude-runtime.md"),
+        ):
+            routes = [
+                line
+                for line in adapter.splitlines()
+                if line.startswith("| ")
+                and "delegating work to subagents or a workflow" in line
+            ]
+            self.assertEqual(len(routes), 1)
+            self.assertIn("rules/capabilities.md`", routes[0])
+            self.assertIn(f"rules/{runtime_module}`", routes[0])
+
+    def test_project_bootstrap_has_routed_owners(self) -> None:
+        # Projects get their missing agent entry files without asking (W-R73).
+        documentation = (self.rules_dir / "documentation.md").read_text()
+        self.assertEqual(documentation.count("## Project Bootstrap"), 1)
+        self.assertLess(
+            documentation.index("## Make Agent Instructions Loadable"),
+            documentation.index("## Project Bootstrap"),
+        )
+        loadable = documentation.split("## Make Agent Instructions Loadable", 1)[1]
+        loadable = " ".join(loadable.split("\n## ", 1)[0].split()).lower()
+        self.assertIn(
+            "every additional entry file is a thin adapter that imports that "
+            "owner and states no rule of its own",
+            loadable,
+        )
+        bootstrap = documentation.split("## Project Bootstrap", 1)[1]
+        bootstrap = " ".join(bootstrap.split("\n## ", 1)[0].split()).lower()
+        for invariant in (
+            "the canonical owner of the project's agent facts is `agents.md`",
+            "add its entry file as a thin adapter that imports the owner",
+            "a runtime that cannot import gets no adapter: report the owner move",
+            "write only the runtime's local entry file",
+            "exclude it through the clone's own git exclude list, never its "
+            "tracked `.gitignore`",
+            "never overwrite or rewrite an existing entry file",
+            "leave what you created uncommitted and report it",
+            "is bootstrapped only when the operator asks",
+            "a linked worktree without entry files of its own is not "
+            "bootstrapped itself: its main checkout is",
+            "a delegated agent, and any task whose operator instruction or brief "
+            "forbids writes, reports the missing entry file instead of creating it",
+        ):
+            self.assertIn(invariant, bootstrap)
+
+        authorization = (self.rules_dir / "authorization.md").read_text()
+        allowed = authorization.split(
+            "## Work That Proceeds Without Another Confirmation", 1
+        )[1].split("\n## ", 1)[0]
+        self.assertIn(
+            "creating a missing project entry file as `documentation.md` "
+            "project bootstrap describes",
+            " ".join(allowed.split()).lower(),
+        )
+
+        runtime = (self.rules_dir / "claude-runtime.md").read_text()
+        entry_files = runtime.split("## Project Entry Files", 1)[1]
+        entry_files = " ".join(entry_files.split("\n## ", 1)[0].split())
+        # The same import lines the session-start readiness check accepts.
+        for invariant in (
+            "`CLAUDE.md` at the project root, holding the line `@AGENTS.md`",
+            "so the line is `@../AGENTS.md` in `.claude/CLAUDE.md`",
+            "only `CLAUDE.local.md`, listed in the clone's exclude file",
+        ):
+            self.assertIn(invariant, entry_files)
+
+        for adapter in (
+            self.agents_template.read_text(),
+            (ROOT / "CLAUDE.md").read_text(),
+        ):
+            route = next(
+                line
+                for line in adapter.splitlines()
+                if line.startswith("| project documentation authoring")
+            )
+            self.assertIn(
+                "a project without an entry file for the runtime in use", route
+            )
+            self.assertIn("documentation.md", route)
 
     def test_migrates_only_exact_legacy_agents_file(self) -> None:
         agents = self.codex_home / "AGENTS.md"
@@ -1823,60 +2513,83 @@ class CodexConfigSyncTests(unittest.TestCase):
 
         self.assertEqual(settings.read_text(), original)
 
-    def test_claude_refuses_unmanaged_status_line(self) -> None:
+    def test_claude_keeps_status_line_owned_outside_workspace_meta(self) -> None:
         settings = self.codex_home.parent / ".claude" / "settings.json"
         settings.parent.mkdir(parents=True)
-        for command in (
-            "~/.claude/personal-status-line.sh",
-            f"echo {SYNC.MANAGED_CLAUDE_STATUS_LINE_MARKER}-custom",
+        for status_line in (
+            {"type": "command", "command": "~/.claude/personal-status-line.sh"},
+            {
+                "type": "command",
+                "command": f"echo {SYNC.MANAGED_CLAUDE_STATUS_LINE_MARKER}-custom",
+            },
+            "not an object",
         ):
-            with self.subTest(command=command):
-                original = json.dumps(
-                    {
-                        "theme": "dark",
-                        "statusLine": {
-                            "type": "command",
-                            "command": command,
-                        },
-                    }
+            with self.subTest(status_line=status_line):
+                settings.write_text(
+                    json.dumps({"theme": "dark", "statusLine": status_line})
                 )
-                settings.write_text(original)
 
-                with self.assertRaisesRegex(
-                    SYNC.SyncError,
-                    "refusing to replace an unmanaged Claude statusLine",
-                ):
-                    SYNC.sync_claude_settings(settings, self.status_script)
+                SYNC.sync_claude_settings(settings, self.status_script)
 
-                self.assertEqual(settings.read_text(), original)
+                parsed = json.loads(settings.read_text())
+                self.assertEqual(parsed["statusLine"], status_line)
+                self.assertEqual(parsed["theme"], "dark")
+                self.assertIn(
+                    SYNC.MANAGED_HOOK_MARKER,
+                    parsed["hooks"]["SessionStart"][0]["hooks"][0]["command"],
+                )
+                self.assertEqual(
+                    SYNC.sync_claude_settings(settings, self.status_script),
+                    "already current",
+                )
 
-    def test_sync_explains_unmanaged_status_line_without_writing(self) -> None:
-        self.install_current_managed_state()
-        settings = self.codex_home.parent / ".claude" / "settings.json"
-        parsed = json.loads(settings.read_text())
-        manual_command = "bash ~/.claude/statusline-command.sh"
-        parsed["statusLine"] = {
+    def test_foreign_status_line_is_kept_while_other_areas_apply(self) -> None:
+        # A per-account wrapper such as the TEAM badge belongs to another tool.
+        team_dir = Path(self.temp_dir.name) / ".claude-work"
+        claude_dirs = (self.claude_dir, team_dir)
+        team_settings = team_dir / "settings.json"
+        team_settings.parent.mkdir(parents=True)
+        wrapper = {
             "type": "command",
-            "command": manual_command,
+            "command": "printf ' TEAM '; : claude-work-statusline-v1",
+            "padding": 0,
         }
-        settings.write_text(json.dumps(parsed, indent=2) + "\n")
-        before = {path: self.path_snapshot(path) for path in self.managed_paths()}
-
-        completed = self.make_target("sync", "Y\n")
-        output = completed.stdout + completed.stderr
-
-        self.assertNotEqual(completed.returncode, 0)
-        self.assertIn("refusing to replace an unmanaged Claude statusLine", output)
-        self.assertIn(str(settings), output)
-        self.assertIn("remove only the statusLine field", output)
-        self.assertIn("then rerun synchronization", output)
-        self.assertNotIn(manual_command, output)
-        self.assertNotIn("Apply these changes?", output)
-        self.assertIn("No files were modified.", output)
-        self.assertEqual(
-            before,
-            {path: self.path_snapshot(path) for path in self.managed_paths()},
+        team_settings.write_text(
+            json.dumps({"theme": "dark", "statusLine": wrapper}, indent=2) + "\n"
         )
+        env = self.isolated_env(claude_dirs)
+
+        completed = self.make_target("sync", "Y\n", env)
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        kept_label = self.claude_labels("~/.claude-work")[1]
+        self.assertRegex(
+            completed.stdout,
+            rf"(?m)^{re.escape(kept_label)}:\s+"
+            r"kept: statusLine owned outside workspace-meta$",
+        )
+        self.assertNotIn(f"- {kept_label}", completed.stdout)
+        self.assertNotIn(wrapper["command"], completed.stdout + completed.stderr)
+        parsed = json.loads(team_settings.read_text())
+        self.assertEqual(parsed["statusLine"], wrapper)
+        self.assertEqual(parsed["theme"], "dark")
+        self.assertIn(
+            SYNC.MANAGED_HOOK_MARKER,
+            parsed["hooks"]["SessionStart"][0]["hooks"][0]["command"],
+        )
+        for name, template in zip(self.skill_names(), self.skill_templates):
+            self.assertEqual(
+                (team_dir / "skills" / name / "SKILL.md").read_bytes(),
+                template.read_bytes(),
+            )
+        personal = json.loads((self.claude_dir / "settings.json").read_text())
+        self.assertIn(
+            SYNC.MANAGED_CLAUDE_STATUS_LINE_MARKER, personal["statusLine"]["command"]
+        )
+
+        second = self.make_target("agent-sync-check", env=env)
+        self.assertEqual(second.returncode, 0, second.stdout + second.stderr)
+        self.assertIn("Result: everything is already current.", second.stdout)
 
     def test_claude_status_line_loader_preserves_stdin_and_runs_renderer(self) -> None:
         home = Path(self.temp_dir.name) / "home"
@@ -1997,46 +2710,34 @@ class CodexConfigSyncTests(unittest.TestCase):
         self.assertEqual(completed.stdout.strip(), str(python_link))
 
     def test_invalid_claude_json_prevents_all_main_writes(self) -> None:
+        # Prevalidation is all-or-nothing across every managed target: one bad
+        # config dir blocks the Codex files and every other config dir too.
         agents = self.codex_home / "AGENTS.md"
         config = self.codex_home / "config.toml"
-        claude = self.codex_home.parent / ".claude" / "settings.json"
+        team_dir = Path(self.temp_dir.name) / ".claude-work"
+        claude_dirs = (self.claude_dir, team_dir)
         self.codex_home.mkdir(parents=True)
-        claude.parent.mkdir(parents=True)
+        team_dir.mkdir()
         agents.write_text("# Personal\n")
         config.write_text('model = "host-model"\n')
-        claude.write_text('{"hooks":')
-        before = (agents.read_bytes(), config.read_bytes(), claude.read_bytes())
+        (team_dir / "settings.json").write_text('{"hooks":')
+        before = {
+            path: self.path_snapshot(path)
+            for path in self.managed_paths(claude_dirs)
+        }
 
-        completed = subprocess.run(
-            [
-                sys.executable,
-                str(ROOT / "scripts" / "sync_codex_config.py"),
-                "--agents-template",
-                str(self.agents_template),
-                "--hooks-template",
-                str(self.hooks_template),
-                "--preferences-template",
-                str(self.preferences_template),
-                "--status-script",
-                str(self.status_script),
-                "--claude-status-line-script",
-                str(self.claude_status_line_script),
-                "--env-skill-template",
-                str(self.env_skill_template),
-                "--codex-home",
-                str(self.codex_home),
-                "--claude-settings",
-                str(claude),
-                "--env-skill",
-                str(self.env_skill),
-            ],
-            capture_output=True,
-            check=False,
-            text=True,
-        )
+        completed = self.sync_cli(claude_config_dirs=claude_dirs)
 
         self.assertEqual(completed.returncode, 1)
-        self.assertEqual(before, (agents.read_bytes(), config.read_bytes(), claude.read_bytes()))
+        self.assertIn("Claude settings [~/.claude-work]", completed.stderr)
+        self.assertIn("No files were modified.", completed.stderr)
+        self.assertEqual(
+            before,
+            {
+                path: self.path_snapshot(path)
+                for path in self.managed_paths(claude_dirs)
+            },
+        )
 
 
 if __name__ == "__main__":

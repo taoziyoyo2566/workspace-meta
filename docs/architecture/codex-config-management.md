@@ -19,16 +19,41 @@ Git 仓库保存“应当如何安装”的模板和脚本；`make bootstrap` �
 | Claude 工作区适配器 | `~/workspace/CLAUDE.md` 中的紧凑路由与安全底线 | workspace-meta | 本仓库 Git |
 | Codex 全局指导 | `~/.codex/AGENTS.md` 中的路由与安全底线标记块 | workspace-meta + 主机 | `make bootstrap` / `make sync` 只替换标记块 |
 | Codex 全局配置 | `~/.codex/config.toml` 中的标记 hook 块和声明的偏好字段 | workspace-meta + 主机 | `make bootstrap` / `make sync` 只替换 hook 标记块并按字段收敛声明的偏好 |
-| Claude 全局配置 | `~/.claude/settings.json` 中一个专用 SessionStart 组和带标记的 `statusLine` | workspace-meta + 主机 | `make bootstrap` / `make sync` 收敛这两个字段，保留其他键和组；拒绝覆盖未知 status line |
-| Claude env-sync skill | `~/.claude/skills/env-sync/SKILL.md` | workspace-meta | `make bootstrap` / `make sync` 从版本化模板收敛整个文件 |
-| 项目配置 | `~/workspace/projects/<project>/` 中项目的 `AGENTS.md`、`.agents/`、`.codex/` | 项目仓库 | 项目自己的 Git |
-| 主机私有状态 | 凭据、未声明的模型/偏好、信任 hash、审批规则、历史数据、缓存、数据库 | 当前主机 | 不同步 |
+| Claude 配置目录设置 | `CLAUDE_CONFIG_DIRS` 中每个 Claude 配置目录的 `settings.json`：一个专用 SessionStart 组和 `statusLine` | workspace-meta + 主机 | `make bootstrap` / `make sync` 对每个目录收敛 SessionStart 组，保留其他键和组；`statusLine` 缺失时安装、带 workspace-meta 标记时收敛，不带标记时视为其他 owner 所有，保持不变并报告 |
+| Claude 托管 skills | 每个 Claude 配置目录的 `skills/<name>/SKILL.md`（`env-sync`、`project-bootstrap`、`interview`） | workspace-meta（带所有权标记的文件） | `make bootstrap` / `make sync` 从 `.agents/host-templates/<name>-SKILL.md` 收敛整个文件；缺失时安装，带 workspace-meta 所有权标记时收敛，同名但不带标记的 `SKILL.md` 视为其他 owner 所有，保持不变并报告 |
+| 项目配置 | `~/workspace/projects/<project>/` 中项目的 `AGENTS.md`（项目 agent 事实的 canonical owner）、导入它的 `CLAUDE.md` 薄适配器、`.claude/`、`.agents/`、`.codex/` | 项目仓库 | 项目自己的 Git；缺失的入口文件由 agent 在首次实质工作时按 `documentation.md` Project Bootstrap 创建，不提交 |
+| 项目本地个人文件 | 项目内的 `CLAUDE.local.md`、`.claude/settings.local.json` | 该 checkout 的使用者 | 不进入 Git；不属于 operator 的 clone 只得到这类本地文件 |
+| 主机私有状态 | 每个配置目录各自的凭据、未声明的模型/effort/偏好、permissions 与 auto mode、插件、MCP server、信任 hash、审批规则、auto memory、历史数据、缓存、数据库 | 当前主机的对应配置目录 | 不同步 |
 
 workspace-meta 远端有意公开；可发布范围仍由反向白名单和现有安全/发布规则
 决定。仓库公开不等于工作区、独立项目或主机运行时状态公开。
 
 “混合所有权”不是复制整个文件。它表示 workspace-meta 只拥有文件中一个可
 识别的区域，安装器必须保留区域外的内容。
+
+Claude 的用户层按配置目录划分：`~/.claude` 和 `CLAUDE_CONFIG_DIR` 指向的每个
+目录（例如第二个账号使用的 `~/.claude-<account>`）各是一份独立的用户层，分别保存
+设置、skills、trust、auto memory 和登录状态。workspace-meta 把托管配置面收敛
+到主机上每个在用的 Claude 配置目录，其余内容留在各自目录中。目录列表是主机
+本地输入，不提交：`CLAUDE_CONFIG_DIRS` 是冒号分隔的列表（与 `PATH` 相同，
+因此目录名可以含空格），每一项必须是绝对路径或以 `~/` 开头；相对路径或
+看起来像用空格拼接的多个路径会在任何写入前报错。设置了它时 Makefile 和
+bootstrap 把它原样交给同步器，列表中的目录不论名称都会被管理。未设置或为空时
+由 `scripts/sync_codex_config.py` 自己发现：`~/.claude` 加上每个含有
+`.claude.json` 的 `~/.claude-*` 目录。`.claude.json` 只能把配置目录和
+`~/.claude` 的普通备份区分开，迁移出的目录的副本同样带着它，所以发现时跳过
+名称像副本或备份的目录。判断按名称片段而不是子串：`.claude-` 之后的部分按
+`-`、`_`、`.` 切分，某一段等于 `old`、`orig`、`copy` 或 `tmp`，或以 `bak`
+（含 `backup`）开头；名称含 `~`；或以日期结尾（例如 `.bak-20261017`）。
+因此 `.claude-gold`、`.claude-origin` 这类名称照常被发现。每个被跳过的目录
+连同原因一起打印；确实要管理这样命名的目录时，用 `CLAUDE_CONFIG_DIRS` 显式
+列出。check、sync 和 bootstrap 在写入任何配置目录前先打印解析出的目录列表和
+跳过的目录。没有 Python 3.11 时 bootstrap 无法发现目录：它只把托管 skills
+装进 `CLAUDE_CONFIG_DIRS` 列出的目录（未设置时只装 `~/.claude`），同样保留
+不带所有权标记的同名 skill，不改任何 `settings.json`。组织托管、主机用户层、
+workspace、项目和项目本地个人文件这五层的所有权模型以
+[Agent 配置层与托管配置面](../../.agents/host-templates/README-agents.md#managed-and-host-local-surfaces)
+为准。
 
 工作区根目录只承载 workspace-meta 治理文件；独立项目 checkout 放在
 `~/workspace/projects/<project>/`，并保留各自最近的 `.git` 根目录。
@@ -37,12 +62,14 @@ workspace-meta 远端有意公开；可发布范围仍由反向白名单和现�
 
 两个 agent 都采用“紧凑常驻适配器 + 按任务读取共享模块”。共享行为由
 `.agents/rules/` 下的 agent-neutral 文件负责；Codex 的 sandbox、工具发现和
-配置表面等运行机制由 `codex-runtime.md` 负责。Claude 的运行时机制只留在其
-适配器或实际客户端配置中。
+配置表面等运行机制由 `codex-runtime.md` 负责；Claude 的配置层、项目入口文件、
+memory、向 operator 提问、委派和长时间无人值守运行等机制由 `claude-runtime.md`
+负责。每个 runtime 模块只由自己 agent 的适配器路由。
 
-规则域、唯一 owner 和项目允许补充的内容以
-[Agent 配置与规则所有权矩阵](../../.agents/host-templates/README-agents.md) 为准。
-本文只解释分层关系，不复制矩阵、任务路由或事务步骤。
+规则域、唯一 owner、加载路由、执行检查和项目允许补充的内容以
+[Workspace-Meta 设计地图](design-map.md) 为准；主机层模型和托管配置面以
+[Agent 配置层与托管配置面](../../.agents/host-templates/README-agents.md) 为准。
+本文只解释分层关系，不复制领域目录、任务路由或事务步骤。
 
 语义授权与技术执行权限是两层独立机制：
 
@@ -64,25 +91,30 @@ workspace-meta 远端有意公开；可发布范围仍由反向白名单和现�
 | `.agents/host-templates/codex-AGENTS.md` | 安装到 Codex 全局 `AGENTS.md` 的标记块 |
 | `.agents/rules/*.md` | agent-neutral 的跨项目按任务读取模块 |
 | `.agents/rules/codex-runtime.md` | Codex-specific 运行机制 |
+| `.agents/rules/claude-runtime.md` | Claude-specific 运行机制 |
 | `.agents/host-templates/codex-hooks.toml` | Codex SessionStart 标记块模板 |
 | `.agents/host-templates/codex-preferences.toml` | Codex 字段级偏好期望配置 |
-| `.agents/host-templates/README-agents.md` | 共享核心、适配器和主机状态所有权矩阵 |
-| `scripts/workspace_status.py` | Claude/Codex 共用的状态评估策略 |
+| `.agents/host-templates/<name>-SKILL.md` | 安装到每个 Claude 配置目录 `skills/<name>/SKILL.md` 的托管 skill 模板 |
+| `.agents/host-templates/README-agents.md` | 主机层模型与托管配置面 |
+| `docs/architecture/design-map.md` | 领域目录：从观察到的现象找到负责的功能或领域及其 owner |
+| `scripts/workspace_status.py` | Claude/Codex 共用的状态评估策略，含项目就绪检查 |
 | `scripts/claude_status_line.py` | 从 Claude 官方 stdin payload 渲染交互式状态栏 |
-| `scripts/check_documentation.py` | 校验入口、owner 路由、链接、truth lifecycle 和 runbook 结构 |
-| `scripts/sync_codex_config.py` | 渲染、迁移、校验并按 check、交互或 bootstrap 模式收敛六个托管区域 |
+| `scripts/check_documentation.py` | 校验入口、owner 路由、runtime 模块归属、设计地图覆盖、链接、truth lifecycle 和 runbook 结构 |
+| `scripts/sync_codex_config.py` | 渲染、迁移、校验并按 check、交互或 bootstrap 模式收敛 Codex 的托管区域和每个 Claude 配置目录的托管区域 |
 | `scripts/bootstrap-local.sh` | 一台机器的安装入口 |
-| `tests/test_workspace_status.py` | 状态顺序、离线降噪和输出契约测试 |
+| `tests/test_workspace_status.py` | 状态顺序、离线降噪、项目就绪检查和输出契约测试 |
 | `tests/test_claude_status_line.py` | Claude 状态栏字段、颜色、格式与失败降噪测试 |
 | `tests/test_governance_docs.py` | 文档闸门的仓库正例与关键负向场景 |
 | `tests/test_sync_codex_config.py` | 安装、迁移、保留、拒绝和幂等测试 |
+| `tests/test_bootstrap_local.py` | 在临时仓库副本和临时 HOME 中运行 bootstrap：配置目录发现、显式列表、无 Python 回退、拒绝相对路径和幂等 |
 | `docs/reviews/` | 非小型变更的已批准 Plan（意图/执行合同）与验证完成、可提交时的 Changelog（结果） |
 | `projects/<project>/` | 独立项目仓库；不属于 workspace-meta 的跟踪范围 |
 
 ## 启动检查流程
 
-Claude 和 Codex 各安装一个 SessionStart handler。两个 handler 只在容器格式
-上不同，最终都执行同一个 `scripts/workspace_status.py`。
+Codex 安装一个 SessionStart handler，每个 Claude 配置目录也各安装一个。这些
+handler 只在容器格式和 `--agent claude|codex` 参数上不同，最终都执行同一个
+`scripts/workspace_status.py`。
 
 评估器按固定顺序运行：
 
@@ -95,10 +127,45 @@ Claude 和 Codex 各安装一个 SessionStart handler。两个 handler 只在容
    使用率达到 80% 或剩余空间低于 256 MiB 时给出警告，并指向
    `.agents/rules/temporary-files.md`。阈值可用 `--temp-used-percent` 和
    `--temp-min-free-mb` 调整。
-6. 健康时不输出；异常时只输出一个
-   `{"systemMessage":"workspace-meta: ..."}` JSON 对象。临时空间警告还会
-   写进 `hookSpecificOutput.additionalContext`，让 agent 也看到；其他提示
-   仍只给操作者看。
+6. 检查会话所在项目是否就绪（只读文件系统，不启动子进程）：
+   - 工作目录取 hook 输入的 `cwd`，否则取环境变量 `CLAUDE_PROJECT_DIR`；
+     两者都没有时跳过。只有工作目录位于 `<workspace>/projects/<name>/` 之内
+     （不含 `projects/` 本身）时才检查。
+   - `projects` 本身是符号链接时先解析到真实目录，再与解析后的工作目录比较。
+   - 项目根是工作目录向上、不超过 `projects/<name>` 的最近一个含可用 `.git`
+     的目录：`.git` 是含 `HEAD` 的目录，或是一个 `gitdir:` 文件且它指向
+     （相对路径按该文件所在目录解析）的目录含 `HEAD`。指向已删除或已 prune
+     目标的 `.git` 文件不算仓库，查找继续向上。找不到时跳过，因为非 Git 目录
+     只在 operator 要求时才建立入口文件。`projects/.git` 永远不算项目根，所以
+     那里的空 `.git` 目录不会把所有项目当成一个。
+   - 项目根是 linked worktree（`.git` 文件指向 `<common>/worktrees/<name>`，
+     且 `<common>` 是主 checkout 的 `.git` 目录），而 worktree 自己没有任何
+     入口文件（`AGENTS.md`、`CLAUDE.md`、`.claude/CLAUDE.md`、
+     `CLAUDE.local.md` 都没有）时，改为检查主 checkout，提示里写成
+     `project <主 checkout> (main checkout of <worktree>)`：入口文件应建在主
+     checkout，分支合并后自然得到它们，在 worktree 里另写一份会形成第二个、
+     不一致的 owner。worktree 自己有入口文件时照常检查它自己，冲突也照常报告。
+     bare 仓库的 worktree 没有主 checkout，照常检查。
+   - `--agent claude`：项目根有 `CLAUDE.md`、`.claude/CLAUDE.md` 或
+     `CLAUDE.local.md` 才算就绪；若项目根有 `AGENTS.md`，其中至少一个文件
+     还要在 fenced code 之外有一行恰好是 `@AGENTS.md`（允许首尾空白）。
+     只提到或链接 `AGENTS.md` 不会加载它。
+   - `--agent codex`：项目根有 `AGENTS.md` 即就绪。没有 `AGENTS.md` 但有
+     `CLAUDE.md` 或 `.claude/CLAUDE.md` 时，Codex 不会加载这个 owner，也不能
+     导入它，所以提示
+     `project <name>: Codex does not load its CLAUDE.md`，并指向
+     `.agents/rules/codex-runtime.md` Project Entry Files 提出把 owner 移到
+     `AGENTS.md`，而不是在旁边再建一个。
+   - 其他未就绪情况提示 `project <name> has no Claude entry file`、
+     `project <name>: no Claude entry file imports its AGENTS.md` 或
+     `project <name> has no AGENTS.md`，并指向
+     `.agents/rules/documentation.md` Project Bootstrap。`<name>` 是项目根
+     相对 `projects/` 的路径。这只是兜底提示，创建入口文件由 agent 按规则
+     完成，项目自己的文档闸门仍负责校验其适配器。
+7. 健康时不输出；异常时只输出一个
+   `{"systemMessage":"workspace-meta: ..."}` JSON 对象。临时空间警告和项目
+   就绪提示还会写进 `hookSpecificOutput.additionalContext`，让 agent 也看到；
+   其他提示仍只给操作者看。
 
 单一评估器解决了旧模型的两个问题：三个并发 handler 可能看到不同的远端
 引用状态；Claude 与 Codex 的离线行为可能分叉。现在顺序、措辞和降噪策略
@@ -143,8 +210,17 @@ JSON 协议。两家文档都把 `hookSpecificOutput.additionalContext`（配合
 
 ## 同步与迁移
 
-`scripts/sync_codex_config.py` 先在内存中完成四个主机文件、六个报告区域的渲染
-和结构校验：
+`scripts/sync_codex_config.py` 先在内存中完成全部主机文件和报告区域的渲染与
+结构校验。区域包括 Codex 的 `Codex AGENTS.md`、`Codex SessionStart hook`、
+`Codex preferences`，以及每个 `--claude-config-dir` 目录的
+`Claude SessionStart [<dir>]`、`Claude statusLine [<dir>]` 和每个
+`--claude-skill-template` 对应的 `skill <name> [<dir>]`；目录名以 `~` 缩写，
+状态列按最长标签对齐。目录来自 `--claude-config-dir`（可重复）和
+`--claude-config-dirs`（冒号分隔）；两者都没有给出时，同步器按上文规则自行
+发现。Makefile 和 bootstrap 只在设置了 `CLAUDE_CONFIG_DIRS` 时才传入目录，
+并总是传入 `.agents/host-templates/` 下的全部 `*-SKILL.md`。目录列表在报告
+区域之前解析一次，pre-validation 和写入后的复查使用同一份列表。各类目标
+依次处理：
 
 1. Codex `AGENTS.md`：验证标记唯一且有序；替换旧标记块，或在首次安装时
    追加并保留现有用户指导。
@@ -153,12 +229,29 @@ JSON 协议。两家文档都把 `hookSpecificOutput.additionalContext`（配合
    `.agents/host-templates/codex-preferences.toml` 的字段 allowlist 比较并
    局部更新 `history.persistence`、`history.max_bytes`、`tui.status_line` 等
    声明字段。整个合并结果再用 `tomllib` 解析。
-3. Claude `settings.json`：解析整个 JSON，移除完全归 workspace-meta 所有的
-   旧组，在原位置插入一个新组，并收敛带 workspace-meta 标记的 `statusLine`
-   对象，再序列化完整结果。若已有无法识别的 status line，拒绝写入所有目标。
-4. env-sync skill：将完整的 workspace-meta-owned skill 文件与版本化模板比较。
+3. 每个 Claude 配置目录的 `settings.json`：解析整个 JSON，移除完全归
+   workspace-meta 所有的旧组，在原位置插入一个新组，再序列化完整结果。
+   `statusLine` 缺失时安装；带 workspace-meta 标记时收敛；不带标记时属于
+   其他 owner（例如另一个自行安装 status line 的工具，比如为第二个账号提供的
+   包装器），保持不变，并在状态输出中报告
+   `kept: statusLine owned outside workspace-meta`。
+   这不是错误，不会中止其他区域，也不计为漂移。
+4. 托管 skills：每个 `<name>-SKILL.md` 模板对应每个配置目录的
+   `skills/<name>/SKILL.md`，将完整文件与版本化模板比较。模板名必须是
+   小写连字符名称加 `-SKILL.md` 后缀，两个模板不能安装同一个名称；每个模板
+   在 YAML frontmatter 之后的第一行必须是所有权标记
+   `<!-- workspace-meta managed skill: make sync replaces this file -->`，
+   否则在任何写入前报错。目标文件缺失时安装；第一行（frontmatter 之后）是该
+   标记时收敛；存在但不带标记时属于其他 owner（例如 operator 自己的同名
+   `interview` skill），不写入，并在状态输出中报告
+   `kept: skill owned outside workspace-meta`，与外部 `statusLine` 一样不中止
+   其他区域、不计为漂移。唯一例外是标记出现之前已由 workspace-meta 安装的
+   `env-sync`：不带标记的 `env-sync` 仍按托管文件收敛（dry-run 显示
+   `legacy unmarked workspace-meta skill`），写入后带上标记。没有 Python 时
+   bootstrap 的 fallback 按同一规则跳过不带标记的同名文件并打印
+   `kept <name> skill owned outside workspace-meta`。
 
-报告层把 Claude `settings.json` 中的 SessionStart 和 `statusLine` 分为两个组件；
+报告层把每个配置目录 `settings.json` 中的 SessionStart 和 `statusLine` 分为两个组件；
 Codex 和 Claude 的 hook/statusLine 漂移直接比较已解析结构中的 matcher、timeout、
 statusMessage、padding、脚本路径、命令目标、解释器、hash pin、hash 不匹配恢复命令
 和命令结构版本等托管字段。仅 pin 变化时会明确指出同步将信任当前仓库脚本；只有
@@ -201,6 +294,11 @@ statusMessage、padding、脚本路径、命令目标、解释器、hash pin、h
 同步器会报错并且不写任何目标。需要人工先把两类 handler 拆成独立 group。
 这是所有权边界不明确，自动删除或改写都有丢配置风险。
 
+不带标记的 `statusLine` 不同：它整体属于另一个 owner，边界是清楚的，保留它
+不会丢配置。因此同步器保留并报告它，而不是拒绝；拒绝会让一个配置目录里其他
+工具的 status line 阻止所有目录和 Codex 的收敛。若要改由 workspace-meta 管理，
+先在原 owner 处停用它，再移除该字段并重新同步。
+
 旧的三个独立 workspace-meta hook 会自动迁移为一个 handler。Codex 旧 trust
 索引可能成为孤立记录，但它属于主机状态且不影响运行，本项目不会删除。
 
@@ -215,6 +313,8 @@ session，不扫描私有 transcript，也不写死某个模型的价格。具�
 以 `scripts/claude_status_line.py` 为准，本文不维护第二份清单。token 分项
 是当前上下文/最近响应数据；美元金额是 Claude 客户端给出的 session 估算
 值；额度窗口按剩余百分比加重置倒计时显示，payload 缺少该数据时整段省略。
+某个 Claude 配置目录的 status line 属于其他工具时，该目录不安装此 renderer，
+由那个工具负责它的显示。
 
 Codex 继续使用 `.agents/host-templates/codex-preferences.toml` 中的原生
 `tui.status_line`；该模板是项目与 Git、模型、用量和额度展示顺序的唯一 owner。
@@ -227,10 +327,13 @@ Codex 继续使用 `.agents/host-templates/codex-preferences.toml` 中的原生
 [新 VPS runbook](../runbooks/new-vps.md) 负责；本项目的开发与交付约束由根目录
 `AGENTS.md` 负责。本文不维护操作步骤副本。
 
-配置范围以 [Agent 配置与规则所有权矩阵](../../.agents/host-templates/README-agents.md)
-为准。主机 credentials、trust、authorization、history、cache 和生成状态不属于
-版本化架构载体；受保护动作、Git 发布和验证分别由对应 `.agents/rules/` owner
-定义。
+配置范围以 [Agent 配置层与托管配置面](../../.agents/host-templates/README-agents.md)
+为准，领域与 owner 以 [设计地图](design-map.md) 为准。主机 credentials、trust、
+authorization、history、auto memory、cache 和生成状态不属于版本化架构载体；
+受保护动作、Git 发布和验证分别由对应 `.agents/rules/` owner 定义。Claude
+客户端加载与配置目录行为的版本化证据和复核条件见
+[Claude Code 运行时调查记录](../reviews/feature-claude-native-governance/investigation-claude-code-runtime-2026-10-17.md)，
+不嵌入当前架构说明。
 
 ## 参考
 
@@ -241,4 +344,8 @@ Codex 继续使用 `.agents/host-templates/codex-preferences.toml` 中的原生
 - Codex `AGENTS.md` 指导：<https://developers.openai.com/codex/concepts/customization#agents-guidance>
 - Codex `tui.status_line` 配置参考：<https://learn.chatgpt.com/docs/config-file/config-reference>
 - Claude Code status line：<https://code.claude.com/docs/en/statusline>
-- 决策来源：`feedback-register.md` 的 W-R28
+- Claude Code 配置目录与 `CLAUDE_CONFIG_DIR`：<https://code.claude.com/docs/en/claude-directory>、<https://code.claude.com/docs/en/env-vars>
+- Claude Code 指令文件、`AGENTS.md` 与 auto memory：<https://code.claude.com/docs/en/memory>
+- Claude Code skills：<https://code.claude.com/docs/en/skills>
+- Claude Code SessionStart hook 输入与输出：<https://code.claude.com/docs/en/hooks>
+- 决策来源：`feedback-register.md` 的 W-R28、W-R73、W-R74

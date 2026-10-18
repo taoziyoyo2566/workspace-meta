@@ -26,6 +26,10 @@ Classify every normative statement before writing it:
 Adapters route and may repeat only a compact safety floor that is tested against
 its canonical owner. They do not become a second procedural owner.
 
+To find the owner of an existing workspace behavior, start from the symptom
+index of `docs/architecture/design-map.md`, and follow its How To Change A
+Domain when the change lands.
+
 ## Feedback Intake
 
 When the operator corrects how you work or states a preference about it,

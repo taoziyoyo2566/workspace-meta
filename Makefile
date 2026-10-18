@@ -5,6 +5,18 @@
 # newer Homebrew python that sits later on PATH.
 PYTHON ?= $(shell ./scripts/find_python.sh 2>/dev/null || printf python3)
 
+# CLAUDE_CONFIG_DIRS: host-local, colon-separated (PATH-style) list of the
+# Claude config dirs that receive the managed surfaces; names with spaces work.
+# It is passed only when set. Unset, scripts/sync_codex_config.py discovers
+# ~/.claude plus every ~/.claude-* dir holding a .claude.json and prints the
+# list before any write. A copy of a relocated dir holds a .claude.json too, so
+# discovery skips names that look like a copy or backup and prints each one;
+# list a dir explicitly to manage it regardless of its name.
+CLAUDE_CONFIG_DIRS_ARG = $(if $(strip $(CLAUDE_CONFIG_DIRS)),--claude-config-dirs '$(subst ','\'',$(CLAUDE_CONFIG_DIRS))')
+
+# Each <name>-SKILL.md template installs as <claude dir>/skills/<name>/SKILL.md.
+CLAUDE_SKILL_TEMPLATES = $(sort $(wildcard .agents/host-templates/*-SKILL.md))
+
 AGENT_SYNC_COMMAND = "$(PYTHON)" scripts/sync_codex_config.py \
 	--python "$(PYTHON)" \
 	--agents-template .agents/host-templates/codex-AGENTS.md \
@@ -12,11 +24,12 @@ AGENT_SYNC_COMMAND = "$(PYTHON)" scripts/sync_codex_config.py \
 	--preferences-template .agents/host-templates/codex-preferences.toml \
 	--status-script scripts/workspace_status.py \
 	--claude-status-line-script scripts/claude_status_line.py \
-	--env-skill-template .agents/host-templates/env-sync-SKILL.md \
 	--codex-home "$${CODEX_HOME:-$$HOME/.codex}" \
-	--claude-settings "$$HOME/.claude/settings.json" \
-	--env-skill "$$HOME/.claude/skills/env-sync/SKILL.md"
+	$(foreach template,$(CLAUDE_SKILL_TEMPLATES),--claude-skill-template "$(template)") \
+	$(CLAUDE_CONFIG_DIRS_ARG)
 
+# make exports a CLAUDE_CONFIG_DIRS set on its command line or in the
+# environment, so the bootstrap reads the same list or discovers the same dirs.
 bootstrap:
 	./scripts/bootstrap-local.sh
 

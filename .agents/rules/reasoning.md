@@ -30,7 +30,7 @@ stated it, but do not manufacture disagreement: accept adequate evidence and
 surface a contrary conclusion only when evidence or material risk warrants it.
 Operator-owned goals, constraints, tradeoffs, and decisions remain authoritative
 as decisions; they are not empirical evidence. An example in a request, or a
-requirement derived from one, is not an operator decision (`planning.md`
+requirement derived from one, is not an operator decision (`requests.md`
 Understand The Request).
 
 ## Classify Knowledge States

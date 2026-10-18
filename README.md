@@ -14,9 +14,13 @@ Rules live in three layers, each with its own sync channel:
 
 | Layer | Holds | Sync channel |
 |---|---|---|
-| `~/.claude/`, `~/.codex/` | credentials, authorization, trust, caches, history data, host preferences | **none — except explicitly declared managed fields** |
+| every agent config dir: each Claude config dir in `CLAUDE_CONFIG_DIRS` (such as `~/.claude/`) and `~/.codex/` | credentials, authorization, trust, caches, history data, auto memory, host preferences | **none — except explicitly declared managed fields** |
 | `~/workspace/` root | cross-project methodology, provenance, host templates, bootstrap | **this repo** |
-| `~/workspace/projects/<project>/` | project-specific `CLAUDE.md`, `AGENTS.md`, `.agents/`, `.codex/`, governance docs | the project's own repo |
+| `~/workspace/projects/<project>/` | project-specific `AGENTS.md` and its `CLAUDE.md` adapter, `.claude/`, `.agents/`, `.codex/`, governance docs | the project's own repo |
+
+The full five-layer model, with organization-managed settings above and
+project-local personal files below, is in
+`.agents/host-templates/README-agents.md`.
 
 ### Workspace directory layout
 
@@ -57,27 +61,33 @@ Full provenance: `feedback-register.md` entry **W-R26**.
   probes its own dated environment facts; only the probe schema and behavior are
   versioned.
 - **Agent configuration uses narrow managed surfaces, not home-directory
-  mirrors** — the versioned templates converge only marked Codex sections and
-  one dedicated Claude SessionStart group and status line, plus an explicit
-  allowlist of stable Codex preference fields. Both agents call the same
-  ordered startup-status evaluator; interactive status lines use each client's
-  native extension contract.
+  mirrors** — the versioned templates converge only marked Codex sections, an
+  explicit allowlist of stable Codex preference fields, and, in every Claude
+  config dir (`CLAUDE_CONFIG_DIRS`), one dedicated SessionStart group, the
+  status line, and the managed skills. Every config dir the operator uses is
+  one instance of the host user layer. Both agents call the same ordered
+  startup-status evaluator; interactive status lines use each client's native
+  extension contract.
   Model choice, project trust, hook trust hashes, local guidance outside the
-  managed surfaces, `default.rules`, auth, plugins, skills, databases, history
-  data, unlisted preferences, logs, and caches remain host-local. Full design:
-  `docs/architecture/codex-config-management.md`; ownership matrix:
-  `.agents/host-templates/README-agents.md`; provenance: W-R28.
+  managed surfaces, `default.rules`, auth, plugins, other skills, MCP servers,
+  auto memory, databases, history data, unlisted preferences, logs, and caches
+  remain host-local per config dir. Full design:
+  `docs/architecture/codex-config-management.md`; layer model and managed
+  surfaces: `.agents/host-templates/README-agents.md`; provenance: W-R28 and
+  W-R74.
 - **Portable agent rules are modular and have one owner** — the workspace
   `CLAUDE.md` and installed Codex AGENTS block are compact adapters. Shared
   authorization, task-shaped Git including the change flow, releases and
-  versions, deployment, planning/handoff, technical reasoning, implementation
-  shape, documentation information architecture, file checks, verification,
-  review, proposals and problem follow-up, capability selection, temporary
-  files, secret/environment safety, and rule authoring live under
-  `.agents/rules/`; agent runtime mechanics are explicit, and projects keep
-  only topology, commands, schemas, operational constraints, and stricter
-  deltas. Ownership matrix: `.agents/host-templates/README-agents.md`;
-  provenance: W-R32, W-R37, W-R38, W-R39, W-R43, and W-R53–W-R61.
+  versions, deployment, understanding requests, planning/handoff, technical
+  reasoning, implementation shape, documentation information architecture
+  including project bootstrap, file checks, verification, review, proposals
+  and problem follow-up, capability selection and delegation, temporary files,
+  secret/environment safety, and rule authoring live under `.agents/rules/`;
+  agent runtime mechanics are explicit (`claude-runtime.md`,
+  `codex-runtime.md`), and projects keep only topology, commands, schemas,
+  operational constraints, and stricter deltas. Domain catalog:
+  `docs/architecture/design-map.md`; provenance: W-R32, W-R37, W-R38, W-R39,
+  W-R43, W-R53–W-R61, and W-R71–W-R73.
 - **Permission intent is portable; executable authorization is host-local** —
   the shared authorization owner says that native search, URL retrieval, remote
   read queries, and ordinary inspection need no conversational confirmation;
@@ -106,10 +116,14 @@ Full provenance: `feedback-register.md` entry **W-R26**.
 - [Engineering standards handbook (中文)](docs/standards/README.md) explains
   design, development, review, implementation, and delivery with short examples
   and primary-source rationale. Shared rules remain the canonical owners.
+- [Design map](docs/architecture/design-map.md) is the one catalog of
+  functions and domains: each owner's key sections, its route, what enforces
+  it, what a project may add, and the symptoms that point to it. Start there
+  when an agent or an integration misbehaves.
 - [Configuration architecture](docs/architecture/codex-config-management.md)
   explains managed surfaces, ownership boundaries, and synchronization design.
 - [Agent configuration ownership](.agents/host-templates/README-agents.md)
-  is the canonical matrix for portable, project, and host-local owners.
+  owns the layer model and the list of managed and host-local surfaces.
 - [New VPS runbook](docs/runbooks/new-vps.md) owns installation, activation,
   recovery, and troubleshooting procedures.
 - [Feedback register](feedback-register.md) preserves rule provenance and
@@ -127,7 +141,12 @@ Full provenance: `feedback-register.md` entry **W-R26**.
   review the exact update before changing the checkout; pulling stays deliberate
   so conflicts never happen unattended.
   `make sync` is the daily host-configuration workflow: it first validates and
-  reports all managed areas, then applies drift only after an explicit `Y`.
+  reports all managed areas, for Codex and for every Claude config dir in
+  `CLAUDE_CONFIG_DIRS`, then applies drift only after an explicit `Y`. When the
+  variable is unset, the list is `~/.claude` plus each `~/.claude-*` directory
+  holding a `.claude.json`, minus names that look like copies or backups, and
+  both lists are printed first; set the variable (colon-separated) to choose the
+  dirs on a host.
   `make agent-sync-check` reuses the same diagnostics without prompting or
   writing. `make bootstrap` remains the full installation/upgrade entry point,
   including repository-local Git hook initialization and identity checks. The
@@ -187,34 +206,41 @@ The bootstrap is idempotent and host-local. It:
 - checks `git config --global user.name` and whether `user.email` has a
   plausible email shape, but never writes identity values (W-R25/W-R14: those
   live only in each host's `~/.gitconfig`);
-- installs one SessionStart handler for **each** of Claude Code and Codex. Both
-  handlers invoke `scripts/workspace_status.py`, which evaluates in a stable order:
-  repository availability and dirty state, bounded remote fetch, one post-fetch
-  ahead/behind snapshot, environment-registry freshness, then free space on the
-  agent's temporary filesystem;
+- installs one SessionStart handler for Codex and for **every** Claude config
+  dir in `CLAUDE_CONFIG_DIRS`. All handlers invoke
+  `scripts/workspace_status.py`, which evaluates in a stable order: repository
+  availability and dirty state, bounded remote fetch, one post-fetch
+  ahead/behind snapshot, environment-registry freshness, free space on the
+  agent's temporary filesystem, then, in a Git project under
+  `~/workspace/projects/`, whether the project has an entry file for the agent
+  in use;
 - emits no hook output when healthy and otherwise emits one JSON
-  `systemMessage`; a temporary-space warning also reaches the agent as
-  `hookSpecificOutput.additionalContext`. Remote-unavailable warnings are
-  rate-limited through `~/.cache/workspace-meta/status.json`; behind,
-  dirty/unpushed, and stale-registry states remain visible;
+  `systemMessage`; a temporary-space or project-readiness warning also reaches
+  the agent as `hookSpecificOutput.additionalContext`. Remote-unavailable
+  warnings are rate-limited through `~/.cache/workspace-meta/status.json`;
+  behind, dirty/unpushed, and stale-registry states remain visible;
 - pins the evaluator SHA-256 in each installed command. An evaluator change is
   therefore an auditable hook-command change instead of silently changing the
   meaning of an already trusted command;
-- installs a hash-pinned Claude `statusLine.command` that renders directory,
-  branch, model with its effort level and a fast-mode marker, context use,
-  five-hour remaining usage marked `left` with reset countdown, current
-  token/cache detail, and Claude's own session-cost estimate. Codex uses the
+- installs a hash-pinned Claude `statusLine.command` in each Claude config dir
+  that renders directory, branch, model with its effort level and a fast-mode
+  marker, context use, five-hour remaining usage marked `left` with reset
+  countdown, current token/cache detail, and Claude's own session-cost
+  estimate. An existing `statusLine` without the workspace-meta marker belongs
+  to another owner: it is kept and reported, never overwritten. Codex uses the
   native ordered item list owned by the repository preferences template;
-- installs the **env-sync skill** (`~/.claude/skills/env-sync/`) and synchronizes
-  the workspace-wide Codex router/safety floor into a managed block in
-  `~/.codex/AGENTS.md`. The versioned root `CLAUDE.md` is Claude's thin adapter;
-  both route to the same portable modules. Existing Codex content outside the
-  managed block is preserved;
+- installs the managed **skills** `env-sync`, `project-bootstrap`, and
+  `interview` into `skills/<name>/` of every Claude config dir, each marked as
+  workspace-meta's (an existing unmarked skill of the same name is another
+  owner's and is kept), and
+  synchronizes the workspace-wide Codex router/safety floor into a managed
+  block in `~/.codex/AGENTS.md`. The versioned root `CLAUDE.md` is Claude's
+  thin adapter; both route to the same portable modules. Existing Codex
+  content outside the managed block is preserved, and bootstrap warns if
+  `AGENTS.override.md` would shadow it;
 - reconciles only the declared Codex preference fields in
   `.agents/host-templates/codex-preferences.toml`; existing unowned `config.toml`
-  fields, comments, hook state, and sections are preserved. An unrecognized
-  existing Claude `statusLine` is rejected rather than overwritten;
-  bootstrap warns if `AGENTS.override.md` would shadow it.
+  fields, comments, hook state, and sections are preserved.
 
 Managed installs are idempotent and convergent for both agents. The legacy
 `--write-codex` option remains accepted as a compatibility alias, but synchronization
@@ -224,10 +250,10 @@ Codex requires reviewing/trusting new or changed hooks via `/hooks` before they
 run. Claude settings outside the dedicated workspace-meta group and status-line
 field are preserved.
 
-Nothing under `~/.claude` or `~/.codex` is committed to this repo (they are
-outside `~/workspace` and per-host by design — W-R26). The root `CLAUDE.md`,
-shared rules, templates, and installer are the versioned carriers; generated
-host files are not.
+Nothing under any agent config dir (`~/.claude`, other Claude config dirs, or
+`~/.codex`) is committed to this repo (they are outside `~/workspace` and
+per-host by design — W-R26). The root `CLAUDE.md`, shared rules, templates, and
+installer are the versioned carriers; generated host files are not.
 
 ## Caveats
 

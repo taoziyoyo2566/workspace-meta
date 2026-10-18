@@ -7,9 +7,13 @@ with result quality before speed.
 
 This file owns generic selection triggers, the rule that quality comes before
 speed, recording behavior, and how a command is handed to the user to run.
-Agent adapters own concrete tool discovery, delegation, connected
+Agent adapters own concrete tool discovery, delegation mechanics, connected
 applications, and runtime mechanics. Projects own their toolchain, commands,
 environments, and preferred adapters.
+
+This file also owns delegation planning: how work is split across agents and
+what each agent is given. How a model or reasoning effort is set, and which
+orchestration features exist, are delegation mechanics.
 
 ## Observable Triggers
 
@@ -42,12 +46,61 @@ capability audit.
 - Prefer project scripts, test targets, environments, and adapters over manual
   reinvention.
 
+## Delegation
+
+Before handing work to subagents or a workflow, survey the subtasks first. For
+each one, name its output, what it depends on, and its demand:
+
+- mechanical: a lookup, inventory, sweep, or transformation whose result a
+  check or a later stage verifies;
+- analytic: reading and connecting evidence, or implementing a clear
+  specification;
+- judgment: design, diagnosis under ambiguity, review, verification of a
+  result the operator will rely on, and the synthesis the operator receives.
+
+Also name what a wrong result would cost and whether anything downstream would
+catch it. Keep in the main thread what needs the whole picture, the operator's
+words, or a question to the operator: subagents cannot ask, so settle the open
+points first (`requests.md` Ask Or Proceed).
+
+Then give each agent the model and reasoning effort its demand needs:
+
+- judgment work and the final synthesis keep at least the configured model and
+  effort, and get a stronger model when the operator allows its cost;
+- analytic work keeps the configured model, at an effort that matches its
+  depth;
+- mechanical work whose result is checked may use a lighter model or a lower
+  effort, because more reasoning does not improve it.
+
+Prefer the configured model at a matched effort to a mix of models. Use a
+lighter model for high-volume mechanical work or work larger than one context,
+and a stronger one for a subtask the configured model has failed at.
+
+Brief every agent with the goal it serves, the question it decides, its inputs
+and boundaries (read-only, or the files it alone may change; no protected
+action), its output shape, and how its result will be checked. A finding the
+result depends on counts once its evidence is checked; give judgments that are
+hard to check to independent verifiers. Use the runtime's orchestration
+features when they improve the result, such as isolated worktrees for parallel
+writers, structured output, voting verifiers, and background runs with visible
+progress.
+
+For substantial delegation, report the allocation with the result: each
+agent's task, model, effort, and the reason.
+
+Red flags: every agent left on the session default without a survey; a lighter
+model for work whose errors nothing downstream catches; "it is only a
+subagent" for the synthesis or the final verification; a subagent left to
+guess what the operator meant.
+
 ## Quality Before Speed
 
 The result's quality comes first. Keep the configured model, reasoning effort,
-and orchestration settings. Do not propose or apply a change that lowers
-quality to save time or usage, such as lower effort, fewer agents or
-verification passes, skipping evidence the decision needs, or a time limit
+and orchestration settings; giving each agent the model and effort its demand
+needs under Delegation applies them, it does not lower them. A subtask set
+below what its result needs is a quality cut. Do not propose or apply a change
+that lowers quality to save time or usage, such as lower effort, fewer agents
+or verification passes, skipping evidence the decision needs, or a time limit
 that cuts work short. Propose a change of method only when it also improves
 the result, and say how; narrowing each delegated task to the points that
 decide the question, for example, removes noise as well as time.
@@ -96,8 +149,8 @@ If a capability finding materially invalidates an `APPROVED` Plan, follow
 authorize Plan amendment.
 
 Do not require a `Capability fit` section, a list of unused capabilities, or a
-model-choice note for every plan. Model selection may be host/user-owned or
-invisible.
+model-choice note for every plan. The session's own model may be host/user-owned
+or invisible; a per-agent allocation is reported under Delegation.
 
 Recurring portable improvements belong in this workspace layer; concrete
 agent mechanics belong in the agent adapter; project/toolchain improvements

@@ -35,7 +35,8 @@ governance and its own review artifacts.
 - Never commit credentials, Codex authorization rules, hook trust hashes,
   project trust, histories, caches, databases, logs, or generated host config.
 - Workspace-meta may install only explicitly documented managed blocks into
-  `~/.codex` and `~/.claude`; content outside those ownership markers is local.
+  `~/.codex` and every Claude config dir in `CLAUDE_CONFIG_DIRS`; content
+  outside those ownership markers is local.
 - Changes to trusted hook behavior must change the installed hook command hash
   so Codex asks the operator to review it again.
 

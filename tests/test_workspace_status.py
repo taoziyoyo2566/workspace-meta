@@ -351,5 +351,462 @@ class WorkspaceStatusTests(unittest.TestCase):
         self.assertNotIn("repository status", context["additionalContext"])
 
 
+class ProjectReadinessTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.root = Path(self.temp_dir.name).resolve()
+        self.workspace = self.root / "workspace"
+        self.projects = self.workspace / "projects"
+        self.projects.mkdir(parents=True)
+
+    def tearDown(self) -> None:
+        self.temp_dir.cleanup()
+
+    def _project(self, name: str, git: str = "dir", **files: str) -> Path:
+        root = self.projects / name
+        root.mkdir(parents=True, exist_ok=True)
+        if git == "dir":
+            (root / ".git").mkdir()
+            (root / ".git" / "HEAD").write_text("ref: refs/heads/main\n", encoding="utf-8")
+        elif git == "stub":
+            (root / ".git").mkdir()
+        elif git == "file":
+            # A linked worktree of a repository kept outside projects/.
+            admin = self.root / "elsewhere" / ".git" / "worktrees" / name
+            admin.mkdir(parents=True)
+            (admin / "HEAD").write_text("ref: refs/heads/feature\n", encoding="utf-8")
+            (root / ".git").write_text(f"gitdir: {admin}\n", encoding="utf-8")
+        self._write(root, files)
+        return root
+
+    @staticmethod
+    def _write(root: Path, files: dict[str, str]) -> None:
+        for relative, text in files.items():
+            path = root / relative.replace("__", "/")
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding="utf-8")
+
+    def _worktree(self, name: str, main: Path, **files: str) -> Path:
+        """Add a linked worktree of main under projects/, as git worktree add does."""
+        admin = main / ".git" / "worktrees" / name
+        admin.mkdir(parents=True)
+        (admin / "HEAD").write_text("ref: refs/heads/feature\n", encoding="utf-8")
+        (admin / "commondir").write_text("../..\n", encoding="utf-8")
+        root = self.projects / name
+        root.mkdir(parents=True)
+        (root / ".git").write_text(f"gitdir: {admin}\n", encoding="utf-8")
+        self._write(root, files)
+        return root
+
+    def _root_for(self, cwd: Path | str) -> Path | None:
+        return STATUS.choose_project_root({"cwd": str(cwd)}, {}, self.workspace)
+
+    def _evaluate(self, root: Path | None, agent: str = "claude", read_file=None):
+        config = STATUS.StatusConfig(
+            workspace=self.workspace,
+            cache_file=self.root / "cache" / "status.json",
+            agent=agent,
+            project_root=root,
+        )
+        kwargs = {} if read_file is None else {"read_file": read_file}
+        return STATUS.evaluate_status(
+            config, runner=FakeRunner(self.workspace), now=1000, **kwargs
+        )
+
+    def test_root_is_the_git_directory_above_cwd(self) -> None:
+        root = self._project("app")
+        (root / "src" / "pkg").mkdir(parents=True)
+
+        self.assertEqual(self._root_for(root), root)
+        self.assertEqual(self._root_for(root / "src" / "pkg"), root)
+
+    def test_root_accepts_a_git_file_from_a_linked_worktree(self) -> None:
+        root = self._project("app-v2", git="file")
+
+        self.assertEqual(self._root_for(root), root)
+
+    def test_relative_gitdir_resolves_from_the_git_file(self) -> None:
+        outer = self._project("app")
+        modules = outer / ".git" / "modules" / "sub"
+        modules.mkdir(parents=True)
+        (modules / "HEAD").write_text("ref: refs/heads/main\n", encoding="utf-8")
+        sub = outer / "sub"
+        sub.mkdir()
+        (sub / ".git").write_text("gitdir: ../.git/modules/sub\n", encoding="utf-8")
+
+        self.assertEqual(self._root_for(sub / "src"), sub)
+
+    def test_git_file_pointing_to_a_missing_gitdir_is_not_a_root(self) -> None:
+        outer = self._project("real", **{"CLAUDE.md": "# Real\n"})
+        empty_admin = self.root / "pruned" / ".git" / "worktrees" / "empty"
+        empty_admin.mkdir(parents=True)
+        for pointer in (
+            "gitdir: /nonexistent/worktrees/gone",
+            "gitdir: ../.git/worktrees/gone",
+            "gitdir:",
+            f"gitdir: {empty_admin}",
+        ):
+            with self.subTest(pointer=pointer):
+                sub = outer / "sub"
+                sub.mkdir(exist_ok=True)
+                (sub / ".git").write_text(pointer + "\n", encoding="utf-8")
+                stale = self._project("stale", git="none")
+                (stale / ".git").write_text(pointer + "\n", encoding="utf-8")
+
+                # The stale pointer is skipped; the search goes on upward.
+                self.assertEqual(self._root_for(sub), outer)
+                self.assertEqual(self._evaluate(self._root_for(sub)).messages, [])
+                self.assertIsNone(self._root_for(stale))
+
+    def test_symlinked_projects_directory_is_followed(self) -> None:
+        real_projects = self.root / "volume" / "projects"
+        real_projects.mkdir(parents=True)
+        workspace = self.root / "linked-workspace"
+        workspace.mkdir()
+        (workspace / "projects").symlink_to(real_projects, target_is_directory=True)
+        app = real_projects / "app"
+        (app / ".git").mkdir(parents=True)
+        (app / ".git" / "HEAD").write_text("ref: refs/heads/main\n", encoding="utf-8")
+        (app / "src").mkdir()
+
+        root = STATUS.choose_project_root(
+            {"cwd": str(workspace / "projects" / "app" / "src")}, {}, workspace
+        )
+
+        self.assertEqual(root, app)
+        self.assertEqual(STATUS.project_name(app, workspace), "app")
+        config = STATUS.StatusConfig(
+            workspace=workspace,
+            cache_file=self.root / "cache" / "status.json",
+            project_root=root,
+        )
+        result = STATUS.evaluate_status(config, runner=FakeRunner(workspace), now=1000)
+        self.assertEqual(len(result.messages), 1)
+        self.assertTrue(
+            result.messages[0].startswith("project app has no Claude entry file;")
+        )
+
+    def test_nested_repository_is_its_own_root(self) -> None:
+        outer = self._project("app")
+        nested = outer / ".build" / "dep"
+        nested.mkdir(parents=True)
+        (nested / ".git").mkdir()
+        (nested / ".git" / "HEAD").write_text("ref: refs/heads/main\n", encoding="utf-8")
+
+        self.assertEqual(self._root_for(nested / "src"), nested)
+
+    def test_empty_or_broken_git_entry_is_not_a_root(self) -> None:
+        stub = self._project("tools", git="stub")
+        broken = self._project("clone", git="none")
+        (broken / ".git").write_text("not a gitdir pointer\n", encoding="utf-8")
+
+        self.assertIsNone(self._root_for(stub))
+        self.assertIsNone(self._root_for(broken))
+
+    def test_directory_without_git_is_skipped(self) -> None:
+        plain = self._project("notes", git="none")
+        (plain / "sub").mkdir()
+
+        self.assertIsNone(self._root_for(plain))
+        self.assertIsNone(self._root_for(plain / "sub"))
+
+    def test_cwd_outside_projects_is_skipped(self) -> None:
+        (self.workspace / ".git").mkdir()
+
+        self.assertIsNone(self._root_for(self.workspace))
+        self.assertIsNone(self._root_for(self.workspace / ".worktrees" / "feat"))
+        self.assertIsNone(self._root_for(self.root))
+        self.assertIsNone(STATUS.choose_project_root({}, {}, self.workspace))
+        self.assertIsNone(self._root_for("projects/app"))
+
+    def test_projects_directory_itself_is_skipped(self) -> None:
+        self._project("app")
+
+        self.assertIsNone(self._root_for(self.projects))
+
+    def test_projects_git_stub_is_never_a_project_root(self) -> None:
+        (self.projects / ".git").mkdir()
+        plain = self._project("notes", git="none")
+
+        self.assertIsNone(self._root_for(plain))
+        self.assertIsNone(self._root_for(self.projects))
+
+    def test_project_dir_env_is_used_when_hook_has_no_cwd(self) -> None:
+        root = self._project("app")
+        other = self._project("other")
+
+        self.assertEqual(
+            STATUS.choose_project_root({}, {"CLAUDE_PROJECT_DIR": str(root)}, self.workspace),
+            root,
+        )
+        self.assertEqual(
+            STATUS.choose_project_root(
+                {"cwd": str(other)}, {"CLAUDE_PROJECT_DIR": str(root)}, self.workspace
+            ),
+            other,
+        )
+
+    def test_check_is_off_without_a_project_root(self) -> None:
+        def no_reads(path: Path) -> str | None:
+            raise AssertionError(f"unexpected read: {path}")
+
+        result = self._evaluate(None, read_file=no_reads)
+
+        self.assertEqual(result.messages, [])
+        self.assertEqual(result.context, [])
+
+    def test_claude_without_entry_file_warns_operator_and_agent(self) -> None:
+        root = self._project("app")
+
+        result = self._evaluate(root)
+
+        self.assertEqual(
+            result.messages,
+            [
+                "project app has no Claude entry file; bootstrap it as "
+                "~/workspace/.agents/rules/documentation.md Project Bootstrap "
+                "describes before substantive work"
+            ],
+        )
+        self.assertEqual(result.context, result.messages)
+
+    def test_claude_entry_file_without_agents_md_is_ready(self) -> None:
+        for entry in ("CLAUDE.md", ".claude__CLAUDE.md", "CLAUDE.local.md"):
+            with self.subTest(entry=entry):
+                root = self._project(f"app-{entry.replace('__', '-')}", **{entry: "# App\n"})
+
+                self.assertEqual(self._evaluate(root).messages, [])
+
+    def test_claude_entry_importing_agents_md_is_ready(self) -> None:
+        root = self._project(
+            "app", **{"AGENTS.md": "# Agents\n", "CLAUDE.local.md": "  @AGENTS.md  \n"}
+        )
+
+        self.assertEqual(self._evaluate(root).messages, [])
+
+    def test_claude_entry_not_importing_agents_md_warns(self) -> None:
+        root = self._project(
+            "app",
+            **{
+                "AGENTS.md": "# Agents\n",
+                "CLAUDE.md": "# App\nRead AGENTS.md and [@AGENTS.md](AGENTS.md).\n",
+            },
+        )
+
+        result = self._evaluate(root)
+
+        self.assertEqual(len(result.messages), 1)
+        self.assertTrue(
+            result.messages[0].startswith(
+                "project app: no Claude entry file imports its AGENTS.md; bootstrap it as "
+            )
+        )
+        self.assertEqual(result.context, result.messages)
+
+    def test_dot_claude_entry_imports_agents_md_from_the_parent(self) -> None:
+        ready = self._project(
+            "app", **{"AGENTS.md": "# Agents\n", ".claude__CLAUDE.md": "@../AGENTS.md\n"}
+        )
+        wrong = self._project(
+            "lib", **{"AGENTS.md": "# Agents\n", ".claude__CLAUDE.md": "@AGENTS.md\n"}
+        )
+
+        self.assertEqual(self._evaluate(ready).messages, [])
+        self.assertEqual(len(self._evaluate(wrong).messages), 1)
+
+    def test_import_inside_fenced_code_does_not_count(self) -> None:
+        for fence in ("```", "~~~~"):
+            with self.subTest(fence=fence):
+                text = f"# App\n{fence}markdown\n@AGENTS.md\n{fence}\n"
+                self.assertFalse(STATUS.imports_agents_md(text))
+                self.assertTrue(STATUS.imports_agents_md(text + "@AGENTS.md\n"))
+        # A shorter or different marker does not close the fence.
+        self.assertFalse(STATUS.imports_agents_md("````\n```\n~~~~\n@AGENTS.md\n"))
+
+    def test_codex_verdicts_follow_agents_md(self) -> None:
+        bare = self._project("app")
+        local_only = self._project("notes", **{"CLAUDE.local.md": "# Notes\n"})
+        ready = self._project("lib", **{"AGENTS.md": "# Agents\n"})
+
+        for root, name in ((bare, "app"), (local_only, "notes")):
+            with self.subTest(project=name):
+                result = self._evaluate(root, agent="codex")
+                self.assertEqual(
+                    result.messages,
+                    [
+                        f"project {name} has no AGENTS.md; bootstrap it as "
+                        "~/workspace/.agents/rules/documentation.md Project Bootstrap "
+                        "describes before substantive work"
+                    ],
+                )
+                self.assertEqual(result.context, result.messages)
+        self.assertEqual(self._evaluate(ready, agent="codex").messages, [])
+
+    def test_codex_reports_a_claude_md_owner_as_an_owner_move(self) -> None:
+        # Codex cannot import, so a CLAUDE.md owner needs moving, not a
+        # second AGENTS.md beside it.
+        for entry in ("CLAUDE.md", ".claude__CLAUDE.md"):
+            with self.subTest(entry=entry):
+                name = f"app-{entry.replace('__', '-')}"
+                root = self._project(name, **{entry: "# App\n"})
+
+                result = self._evaluate(root, agent="codex")
+
+                self.assertEqual(
+                    result.messages,
+                    [
+                        f"project {name}: Codex does not load its CLAUDE.md; "
+                        "propose moving it to AGENTS.md as "
+                        "~/workspace/.agents/rules/codex-runtime.md Project Entry "
+                        "Files describes"
+                    ],
+                )
+                self.assertEqual(result.context, result.messages)
+
+    def test_linked_worktree_of_a_main_checkout_with_entry_files_is_silent(
+        self,
+    ) -> None:
+        main = self._project("app", **{"AGENTS.md": "# Agents\n", "CLAUDE.md": "@AGENTS.md\n"})
+        branch = self._worktree("app-v2", main)
+
+        for agent in ("claude", "codex"):
+            with self.subTest(agent=agent):
+                self.assertEqual(self._root_for(branch), branch)
+                result = self._evaluate(branch, agent=agent)
+                self.assertEqual(result.messages, [])
+                self.assertEqual(result.context, [])
+
+    def test_linked_worktree_without_own_files_is_judged_by_its_main(self) -> None:
+        # The bootstrap belongs in the main checkout; the branch gets the files
+        # by merge, so the message names the main checkout.
+        for main_files, agent, expected in (
+            ({"CLAUDE.local.md": "# Local\n"}, "claude", None),
+            ({".claude__CLAUDE.md": "# App\n"}, "claude", None),
+            ({"AGENTS.md": "# Agents\n"}, "codex", None),
+            ({"CLAUDE.md": "# App\n"}, "codex", ": Codex does not load its CLAUDE.md;"),
+            ({"AGENTS.md": "# Agents\n"}, "claude", " has no Claude entry file;"),
+            ({}, "claude", " has no Claude entry file;"),
+            ({}, "codex", " has no AGENTS.md;"),
+        ):
+            with self.subTest(main=sorted(main_files), agent=agent):
+                name = f"app{len(list(self.projects.iterdir()))}"
+                main = self._project(name, **main_files)
+                branch = self._worktree(f"{name}-v2", main)
+
+                messages = self._evaluate(branch, agent=agent).messages
+
+                if expected is None:
+                    self.assertEqual(messages, [])
+                else:
+                    self.assertEqual(len(messages), 1)
+                    self.assertTrue(
+                        messages[0].startswith(
+                            f"project {name} (main checkout of {name}-v2){expected}"
+                        ),
+                        messages[0],
+                    )
+
+    def test_linked_worktree_still_reports_its_own_conflicting_files(self) -> None:
+        main = self._project("app", **{"AGENTS.md": "# Agents\n", "CLAUDE.md": "@AGENTS.md\n"})
+        branch = self._worktree(
+            "app-v2", main, **{"AGENTS.md": "# Agents\n", "CLAUDE.md": "# Own rules\n"}
+        )
+
+        messages = self._evaluate(branch).messages
+
+        self.assertEqual(len(messages), 1)
+        self.assertTrue(
+            messages[0].startswith("project app-v2: no Claude entry file imports its AGENTS.md;")
+        )
+
+    def test_worktree_of_a_bare_repository_has_no_main_checkout(self) -> None:
+        # The directory holding a bare repository is not a checkout, even
+        # when it has entry files of its own.
+        (self.projects / "CLAUDE.md").write_text("# Not a checkout\n", encoding="utf-8")
+        (self.projects / "AGENTS.md").write_text("# Not a checkout\n", encoding="utf-8")
+        common = self.projects / "repo.git"
+        admin = common / "worktrees" / "feature"
+        admin.mkdir(parents=True)
+        (common / "HEAD").write_text("ref: refs/heads/main\n", encoding="utf-8")
+        (admin / "HEAD").write_text("ref: refs/heads/feature\n", encoding="utf-8")
+        branch = self.projects / "feature"
+        branch.mkdir()
+        (branch / ".git").write_text(f"gitdir: {admin}\n", encoding="utf-8")
+
+        self.assertIsNone(STATUS.main_checkout(branch))
+        for agent in ("claude", "codex"):
+            with self.subTest(agent=agent):
+                self.assertEqual(len(self._evaluate(branch, agent=agent).messages), 1)
+
+    def test_hints_name_existing_rule_sections(self) -> None:
+        # Each prompt points the agent at a rule section; it must exist.
+        for hint, rule, section in (
+            (STATUS.PROJECT_BOOTSTRAP_HINT, "documentation.md", "Project Bootstrap"),
+            (STATUS.CODEX_OWNER_MOVE_HINT, "codex-runtime.md", "Project Entry Files"),
+        ):
+            with self.subTest(rule=rule):
+                self.assertIn(f"~/workspace/.agents/rules/{rule} {section}", hint)
+                text = (ROOT / ".agents" / "rules" / rule).read_text(encoding="utf-8")
+                self.assertEqual(text.count(f"\n## {section}\n"), 1)
+
+    def test_nested_root_is_named_relative_to_projects(self) -> None:
+        nested = self.projects / "app" / ".build" / "dep"
+        nested.mkdir(parents=True)
+
+        result = self._evaluate(nested)
+
+        self.assertIn("project app/.build/dep has no Claude entry file", result.messages[0])
+
+    def test_readiness_follows_existing_checks(self) -> None:
+        root = self._project("app")
+        config = STATUS.StatusConfig(
+            workspace=self.workspace,
+            cache_file=self.root / "cache" / "status.json",
+            project_root=root,
+        )
+        runner = FakeRunner(self.workspace, env=STATUS.CommandResult(1))
+
+        result = STATUS.evaluate_status(config, runner=runner, now=1000)
+
+        self.assertEqual(len(result.messages), 2)
+        self.assertIn("host capability registry", result.messages[0])
+        self.assertIn("project app has no Claude entry file", result.messages[1])
+        self.assertEqual(result.context, result.messages[1:])
+
+    def test_unready_project_reaches_agent_context_from_hook_cwd(self) -> None:
+        root = self._project("app")
+        (root / "src").mkdir()
+        env = os.environ.copy()
+        env.pop("CLAUDE_PROJECT_DIR", None)
+        command = [
+            "python3",
+            str(ROOT / "scripts" / "workspace_status.py"),
+            "--agent",
+            "claude",
+            "--workspace",
+            str(self.workspace),
+            "--cache-file",
+            str(self.root / "status.json"),
+        ]
+
+        completed = subprocess.run(
+            command,
+            input=json.dumps({"cwd": str(root / "src")}),
+            capture_output=True,
+            check=False,
+            env=env,
+            text=True,
+        )
+        payload = json.loads(completed.stdout)
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        expected = "project app has no Claude entry file; bootstrap it as "
+        context = payload["hookSpecificOutput"]
+        self.assertEqual(context["hookEventName"], "SessionStart")
+        self.assertIn(expected, context["additionalContext"])
+        self.assertIn(expected, payload["systemMessage"])
+        self.assertNotIn("repository status", context["additionalContext"])
+
+
 if __name__ == "__main__":
     unittest.main()

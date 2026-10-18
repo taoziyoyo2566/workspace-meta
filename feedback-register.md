@@ -18,23 +18,26 @@ number. Never renumber. Numbering accumulates; mark replacements rather than del
 
 | Canonical owner | Consolidated provenance |
 |---|---|
-| `.agents/rules/authorization.md` | W-R13 authorization boundary, W-R23, W-R29–W-R31, W-R34–W-R35, refined by W-R54 |
+| `.agents/rules/authorization.md` | W-R13 authorization boundary, W-R23, W-R29–W-R31, W-R34–W-R35, refined by W-R54, standing bootstrap authority W-R73 |
 | `.agents/rules/git.md` | W-R21 inspection/freshness, W-R23, refined by W-R57 |
 | `.agents/rules/git-branches.md` | W-R21–W-R22 and W-R32 branch-contract design refined by W-R40, change flow W-R58 |
 | `.agents/rules/git-publication.md` | W-R25, W-R30 refined by W-R31, change-flow bundle W-R58 |
 | `.agents/rules/git-integration.md` | W-R21 and the accepted W-R32 terminal-evidence refinement, refined by W-R54, W-R57 and W-R58 |
 | `.agents/rules/git-recovery.md` | W-R19–W-R20, refined by W-R57 and W-R58 |
-| `.agents/rules/planning.md` | W-R1–W-R7, W-R12, W-R18 and accepted W-R32 refinements, refined by W-R44, W-R46, W-R47, W-R50, W-R51, W-R56 and W-R57, understanding the request W-R63 |
+| `.agents/rules/requests.md` | W-R63, moved from `planning.md`, extended by W-R71 |
+| `.agents/rules/planning.md` | W-R1–W-R7, W-R12, W-R18 and accepted W-R32 refinements, refined by W-R44, W-R46, W-R47, W-R50, W-R51, W-R56 and W-R57 |
 | `.agents/rules/reasoning.md` | W-R43, refined by W-R63 |
 | `.agents/rules/implementation.md` | W-R37 refined by W-R44, W-R48 and W-R53 |
-| `.agents/rules/documentation.md` | W-R38 refined by W-R39, W-R41 entry-point loadability refined by W-R42, Plan/Changelog lifecycle refined by W-R44, W-R46 and W-R47, investigation records refined by W-R50, seams for W-R53 and W-R57 |
+| `.agents/rules/documentation.md` | W-R38 refined by W-R39, W-R41 entry-point loadability refined by W-R42, Plan/Changelog lifecycle refined by W-R44, W-R46 and W-R47, investigation records refined by W-R50, seams for W-R53 and W-R57, project bootstrap W-R73 restoring W-R11 in a narrower form |
 | `.agents/rules/verification.md` | W-R15–W-R17, refined by W-R53 |
 | `.agents/rules/file-checks.md` | W-R53 |
 | `.agents/rules/deployment.md` | W-R54 refined by W-R57 |
 | `.agents/rules/releases.md` | W-R57 |
 | `.agents/rules/review.md` | W-R13, W-R20, W-R33 and accepted W-R32 refinements, refined by W-R56, problem reports W-R59 |
 | `.agents/rules/problem-follow-up.md` | W-R56 |
-| `.agents/rules/capabilities.md` | W-R18 and accepted W-R32 refinements, refined by W-R44, W-R52, W-R53 and W-R55, quality before speed W-R60 |
+| `.agents/rules/capabilities.md` | W-R18 and accepted W-R32 refinements, refined by W-R44, W-R52, W-R53 and W-R55, quality before speed W-R60, delegation W-R72 |
+| `.agents/rules/claude-runtime.md` | Claude mechanics for W-R71, W-R72 and W-R73 |
+| `.agents/host-templates/README-agents.md` | W-R28, W-R36, every agent config dir W-R74 |
 | `.agents/rules/secrets.md` | W-R13, refined by W-R53 |
 | `.agents/rules/temporary-files.md` | W-R55 |
 | `.agents/rules/environment-truth.md` | W-R24 refined by W-R44 |
@@ -232,3 +235,11 @@ Distilled cross-project rules. Numbering accumulates — do not delete old rules
     - Source: 2026-10-15, workspace-meta: a survey of existing tools scored candidates against a checklist built from the operator's examples and missed the answer the operator wanted; similar misreadings had happened before.
 - **W-R64 (2026-10-15)** — **Rules, adapters, register entries, and memory notes of feedback hold only lasting guidance; a register entry is the rule in one sentence plus one line of source.**
     - Source: 2026-10-15, workspace-meta: a feedback memory note and a planned register entry carried session times, a temporary path, and routing status.
+- **W-R71 (2026-10-17)** — **Read every request before starting work, as deeply as it needs: state its goal and what done means, find the similar problems it stands for and say which join the scope, ask in one round with options and a recommendation only when the operator is present and an answer would redirect the work, and otherwise proceed on stated assumptions.**
+    - Source: 2026-10-17, workspace-meta: the operator asked for one standard way of reading their questions and ideas, because their brief descriptions are examples that often stand for a class of problems, while request reading covered only investigations, comparisons, and designs.
+- **W-R72 (2026-10-17)** — **Before delegating, survey the subtasks and give each agent the model and reasoning effort its demand needs, judgment and synthesis at no less than the configured settings and checked mechanical work lighter, with a bounded brief and a stated check; set them explicitly and report the allocation.**
+    - Source: 2026-10-17, workspace-meta: the operator asked that delegated work be assessed per subtask and given a fitting model and effort, while nothing planned delegation, so every subagent inherited the session's settings and broad research agents at max effort ran for hours.
+- **W-R73 (2026-10-17)** — **A Git project the operator works on with an agent gets that agent's missing entry files at the first substantive work, with `AGENTS.md` as the owner, a thin importing adapter per runtime, and only local files in someone else's clone, created without asking, never overwriting, left uncommitted, and reported.**
+    - Source: 2026-10-17, workspace-meta: the operator asked that every project used with Claude get its project content automatically, while most Git projects had no entry file Claude loads, `AGENTS.md`-only projects loaded nothing in Claude, and W-R11's per-project file had lost its owner.
+- **W-R74 (2026-10-17)** — **Every agent config dir the operator uses is an instance of the host user layer: workspace-managed surfaces are converged into each one, and everything else in it stays with that account.**
+    - Source: 2026-10-17, workspace-meta: after the operator added a second Claude account, its sessions ran under a second config dir that received none of the managed session-start check, status line, or skill.

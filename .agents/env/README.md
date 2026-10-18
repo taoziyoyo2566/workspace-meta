@@ -9,8 +9,9 @@ behavior remain versioned here.
 - **Never edit by hand** — re-run the probe instead.
 - `probed_at` + `ttl_days` define freshness; `scripts/env_probe.sh --check`
   (`make env-probe-check`) gates on it. Once the per-host SessionStart hook is
-  installed (`~/.claude/settings.json`, one-time per machine), it runs the check
-  automatically at the start of each Claude Code session.
+  installed (`make sync` writes it into every Claude config dir in
+  `CLAUDE_CONFIG_DIRS` and into Codex), it runs the check automatically at the
+  start of each agent session.
 - Capability facts here are **dated snapshots** (`.agents/rules/environment-truth.md`):
   any mid-session `command not found` / daemon error on a listed capability means
   the entry is stale — re-probe in the same round, regardless of TTL.
@@ -21,5 +22,5 @@ behavior remain versioned here.
 - Do not force-add generated YAML files. They are dated runtime state, not
   portable governance or cross-machine evidence.
 - First session on a new machine: run `make env-probe` before relying on any
-  recorded environment claim (the env-sync skill + SessionStart hook live under
-  `~/.claude/`, per-host, and must be installed once per machine).
+  recorded environment claim (the env-sync skill and the SessionStart hook live
+  in each Claude config dir on that host, and `make sync` installs them).

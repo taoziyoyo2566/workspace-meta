@@ -72,8 +72,9 @@ ManagedArea = namedtuple(
         "preference_drift",
         "hook_definition_changed",
         "component_drift",
+        "kept",
     ),
-    defaults=((), False, None),
+    defaults=((), False, None, None),
 )
 SyncPlan = namedtuple("SyncPlan", ("areas", "updates"))
 PlannedUpdate = namedtuple(
@@ -86,6 +87,30 @@ PREFERENCE_ALLOWED_PATHS = {
     "tui.status_line",
 }
 PREFERENCE_SECTIONS = {path.split(".", 1)[0] for path in PREFERENCE_ALLOWED_PATHS}
+SKILL_TEMPLATE_SUFFIX = "-SKILL.md"
+SKILL_NAME_PATTERN = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
+STATUS_LINE_KEPT = "statusLine owned outside workspace-meta"
+# Every managed skill template carries this line first after its frontmatter.
+# An installed SKILL.md without it belongs to another owner and is kept.
+SKILL_OWNERSHIP_MARKER = (
+    "<!-- workspace-meta managed skill: make sync replaces this file -->"
+)
+SKILL_KEPT = "skill owned outside workspace-meta"
+# Skills workspace-meta installed before the marker existed: an unmarked copy
+# of one is still managed, converges, and gains the marker.
+LEGACY_UNMARKED_SKILLS = ("env-sync",)
+# Discovery skips a ~/.claude-* name that looks like a copy or backup of a
+# config dir: a "-", "_" or "." separated part that is a copy word or starts
+# with a backup prefix, a "~", or a date at the end such as 20261017. An
+# explicit CLAUDE_CONFIG_DIRS list can still name one.
+CONFIG_DIR_COPY_WORDS = ("old", "orig", "copy", "tmp")
+CONFIG_DIR_BACKUP_PREFIXES = ("bak", "backup")
+CONFIG_DIR_NAME_SEPARATORS = re.compile(r"[-_.]")
+CONFIG_DIR_DATE_SUFFIX = re.compile(
+    r"(?<!\d)(?:19|20)\d{2}([-_.]?)(?:0[1-9]|1[0-2])\1(?:0[1-9]|[12]\d|3[01])$"
+)
+# A space before "/" or "~" means two paths were joined, not a dir name.
+SPACE_SEPARATED_LIST = re.compile(r"\s[/~]")
 MISSING = object()
 
 
@@ -875,12 +900,20 @@ def hook_commands(group: object) -> list[str]:
     return commands
 
 
-def _unmanaged_status_line_error(destination: Path) -> SyncError:
-    return SyncError(
-        "refusing to replace an unmanaged Claude statusLine in "
-        f"{destination}; review and preserve the existing value, or remove only "
-        "the statusLine field if you intend workspace-meta to own it, then rerun "
-        "synchronization"
+def foreign_status_line(settings: dict[str, object]) -> bool:
+    """Return whether statusLine is present without the workspace-meta marker.
+
+    Such a statusLine belongs to another owner (for example a per-account
+    wrapper installed by a host tool); synchronization leaves it untouched.
+    """
+
+    status_line = settings.get("statusLine", MISSING)
+    if status_line is MISSING:
+        return False
+    command = status_line.get("command", "") if isinstance(status_line, dict) else ""
+    return not (
+        isinstance(command, str)
+        and MANAGED_CLAUDE_STATUS_LINE_MARKER_PATTERN.search(command)
     )
 
 
@@ -950,23 +983,14 @@ def render_claude_settings(
     retained.insert(insert_at, managed_group)
     hooks["SessionStart"] = retained
 
-    managed_status_line = {
-        "type": "command",
-        "command": build_claude_status_line_command(
-            claude_status_line_script, python_bin
-        ),
-        "padding": 0,
-    }
-    current_status_line = settings.get("statusLine", MISSING)
-    if current_status_line is not MISSING:
-        if not isinstance(current_status_line, dict):
-            raise _unmanaged_status_line_error(destination)
-        current_command = current_status_line.get("command", "")
-        if not isinstance(current_command, str) or not (
-            MANAGED_CLAUDE_STATUS_LINE_MARKER_PATTERN.search(current_command)
-        ):
-            raise _unmanaged_status_line_error(destination)
-    settings["statusLine"] = managed_status_line
+    if not foreign_status_line(settings):
+        settings["statusLine"] = {
+            "type": "command",
+            "command": build_claude_status_line_command(
+                claude_status_line_script, python_bin
+            ),
+            "padding": 0,
+        }
     result = json.dumps(settings, ensure_ascii=False, indent=2) + "\n"
     if result == current:
         return result, "already current"
@@ -1235,15 +1259,9 @@ def _owned_session_start_snapshot(
 
 def _owned_status_line_snapshot(settings: dict[str, object]) -> object:
     status_line = settings.get("statusLine", MISSING)
-    if status_line is MISSING:
+    if status_line is MISSING or foreign_status_line(settings):
         return MISSING
-    if not isinstance(status_line, dict):
-        raise SyncError("Claude statusLine must be an object")
-    command = status_line.get("command", "")
-    if not isinstance(command, str) or not (
-        MANAGED_CLAUDE_STATUS_LINE_MARKER_PATTERN.search(command)
-    ):
-        return MISSING
+    command = status_line["command"]
     return {
         "managed component": "workspace-meta statusLine",
         "type": status_line.get("type", MISSING),
@@ -1321,7 +1339,293 @@ def _render_area(label: str, operation):
         raise SyncError(f"{label}: {exc}") from exc
 
 
-def build_sync_plan(args: argparse.Namespace) -> SyncPlan:
+def display_path(path: Path) -> str:
+    """Abbreviate the home directory so area labels stay short."""
+
+    try:
+        relative = path.relative_to(Path.home())
+    except ValueError:
+        return str(path)
+    return "~" if relative == Path(".") else f"~/{relative.as_posix()}"
+
+
+def split_claude_config_dirs(value: str | None) -> list[Path]:
+    """Split a PATH-style, colon-separated config dir list; empty entries drop."""
+
+    if not value or not value.strip():
+        return []
+    return [Path(entry) for entry in value.split(":") if entry]
+
+
+def copy_name_reason(name: str) -> str | None:
+    """Why a ``.claude-*`` dir name looks like a copy or backup, or None.
+
+    Words are matched as whole name parts, so ``.claude-gold`` or
+    ``.claude-origin`` is a config dir, not a copy.
+    """
+
+    suffix = name.removeprefix(".claude-").lower()
+    for part in CONFIG_DIR_NAME_SEPARATORS.split(suffix):
+        if part in CONFIG_DIR_COPY_WORDS or part.startswith(
+            CONFIG_DIR_BACKUP_PREFIXES
+        ):
+            return f'name has the part "{part}"'
+    if "~" in name:
+        return 'name contains "~"'
+    if CONFIG_DIR_DATE_SUFFIX.search(suffix):
+        return "name ends in a date"
+    return None
+
+
+def discover_claude_config_dirs(
+    home: Path,
+) -> tuple[tuple[Path, ...], tuple[tuple[Path, str], ...]]:
+    """Return ~/.claude plus each relocated ~/.claude-* dir, and the skipped ones.
+
+    A relocated config dir holds its own ``.claude.json``, but so does a copy
+    or backup of one, so a name that looks like a copy is skipped and reported.
+    """
+
+    found = [home / ".claude"]
+    skipped: list[tuple[Path, str]] = []
+    for candidate in sorted(home.glob(".claude-*")):
+        if not (candidate / ".claude.json").is_file():
+            continue
+        reason = copy_name_reason(candidate.name)
+        if reason:
+            skipped.append((candidate, reason))
+        else:
+            found.append(candidate)
+    return tuple(found), tuple(skipped)
+
+
+def resolve_claude_config_dirs(paths: list[Path]) -> tuple[Path, ...]:
+    """Expand and de-duplicate the requested Claude config dirs.
+
+    A relative entry is refused instead of being resolved against the current
+    directory: it is a mis-split or mistyped name, never a config dir.
+    """
+
+    resolved: dict[Path, Path] = {}
+    for path in paths:
+        if SPACE_SEPARATED_LIST.search(str(path)):
+            raise SyncError(
+                "Claude config dir looks like a space-separated list; "
+                f"separate CLAUDE_CONFIG_DIRS entries with ':': {str(path)!r}"
+            )
+        text = str(path)
+        # Only ~ and ~/ expand, as in the bootstrap's no-Python fallback.
+        tilde_user = text.startswith("~") and text != "~" and not text.startswith("~/")
+        try:
+            expanded = path if tilde_user else path.expanduser()
+        except RuntimeError as exc:
+            raise SyncError(f"cannot expand Claude config dir {text!r}") from exc
+        if not expanded.is_absolute():
+            raise SyncError(
+                "Claude config dir must be an absolute path or start with ~/: "
+                f"{str(path)!r}"
+            )
+        absolute = Path(os.path.normpath(expanded))
+        resolved.setdefault(absolute.resolve(), absolute)
+    return tuple(resolved.values())
+
+
+def select_claude_config_dirs(
+    args: argparse.Namespace,
+) -> tuple[tuple[Path, ...], tuple[tuple[Path, str], ...]]:
+    """The config dirs this run manages, and the discovered dirs it skipped.
+
+    An explicit list wins; without one, the dirs are discovered under HOME.
+    """
+
+    explicit = [
+        *(args.claude_config_dirs or ()),
+        *split_claude_config_dirs(getattr(args, "claude_config_dir_list", None)),
+    ]
+    if explicit:
+        return resolve_claude_config_dirs(explicit), ()
+    found, skipped = discover_claude_config_dirs(Path.home())
+    return resolve_claude_config_dirs(list(found)), skipped
+
+
+def has_skill_ownership_marker(content: str) -> bool:
+    """Whether the first line after the YAML frontmatter is the ownership marker.
+
+    Without frontmatter the marker must be the first line. An unclosed
+    frontmatter has no line after it, so it never carries the marker.
+    """
+
+    lines = content.splitlines()
+    start = 0
+    if lines and lines[0] == "---":
+        if "---" not in lines[1:]:
+            return False
+        start = lines.index("---", 1) + 1
+    return start < len(lines) and lines[start] == SKILL_OWNERSHIP_MARKER
+
+
+def claude_skills(templates: list[Path]) -> tuple[tuple[str, Path], ...]:
+    """Map each ``<name>-SKILL.md`` template to the skill name it installs as."""
+
+    skills: dict[str, Path] = {}
+    for template in templates:
+        name = template.name.removesuffix(SKILL_TEMPLATE_SUFFIX)
+        if name == template.name or not SKILL_NAME_PATTERN.fullmatch(name):
+            raise SyncError(
+                f"skill template must be named <name>{SKILL_TEMPLATE_SUFFIX} "
+                f"with a lowercase hyphenated name: {template}"
+            )
+        if name in skills:
+            raise SyncError(
+                f"skill templates {skills[name]} and {template} both install {name}"
+            )
+        if not template.is_file():
+            raise SyncError(f"managed file template is missing: {template}")
+        # An installed copy without the marker would be kept as foreign on
+        # the next run, so a template must carry it.
+        if not has_skill_ownership_marker(read_text(template)):
+            raise SyncError(
+                "skill template must carry the ownership marker as the first "
+                f"line after its frontmatter: {template}"
+            )
+        skills[name] = template
+    return tuple(skills.items())
+
+
+def _plan_claude_config_dir(
+    args: argparse.Namespace,
+    config_dir: Path,
+    skills: tuple[tuple[str, Path], ...],
+) -> tuple[list[ManagedArea], list[PlannedUpdate]]:
+    shown = display_path(config_dir)
+    settings_path = config_dir / "settings.json"
+    settings_label = f"Claude settings [{shown}]"
+    current = _render_area(settings_label, lambda: read_text(settings_path))
+    result, _ = _render_area(
+        settings_label,
+        lambda: render_claude_settings(
+            settings_path,
+            args.status_script,
+            args.python,
+            args.claude_status_line_script,
+        ),
+    )
+
+    current_settings = json.loads(current) if current else {}
+    expected_settings = json.loads(result)
+    current_hook = _owned_session_start_snapshot(current_settings, "claude")
+    expected_hook = _owned_session_start_snapshot(expected_settings, "claude")
+    if not isinstance(expected_hook, dict):
+        raise SyncError(
+            f"rendered Claude SessionStart hook is missing: {settings_path}"
+        )
+    hook_drift = _semantic_component_drift(
+        "workspace-meta SessionStart",
+        f"scripts/{args.status_script.name}",
+        current_hook,
+        expected_hook,
+    )
+    areas = [
+        ManagedArea(
+            f"Claude SessionStart [{shown}]",
+            settings_path,
+            bool(hook_drift.fields),
+            "workspace-meta SessionStart",
+            "repository managed fields",
+            "current host managed fields",
+            component_drift=hook_drift,
+        )
+    ]
+
+    status_line_label = f"Claude statusLine [{shown}]"
+    if foreign_status_line(current_settings):
+        areas.append(
+            ManagedArea(
+                status_line_label,
+                settings_path,
+                False,
+                STATUS_LINE_KEPT,
+                "not managed here",
+                "kept unchanged",
+                kept=STATUS_LINE_KEPT,
+            )
+        )
+    else:
+        expected_status_line = _owned_status_line_snapshot(expected_settings)
+        if not isinstance(expected_status_line, dict):
+            raise SyncError(f"rendered Claude statusLine is missing: {settings_path}")
+        status_line_drift = _semantic_component_drift(
+            "workspace-meta statusLine",
+            f"scripts/{args.claude_status_line_script.name}",
+            _owned_status_line_snapshot(current_settings),
+            expected_status_line,
+        )
+        areas.append(
+            ManagedArea(
+                status_line_label,
+                settings_path,
+                bool(status_line_drift.fields),
+                "workspace-meta statusLine",
+                "repository managed fields",
+                "current host managed fields",
+                component_drift=status_line_drift,
+            )
+        )
+    updates = [
+        PlannedUpdate(settings_path, settings_path.exists(), current, result)
+    ]
+
+    for name, template in skills:
+        skill_path = config_dir / "skills" / name / "SKILL.md"
+        skill_label = f"skill {name} [{shown}]"
+        skill_current = _render_area(skill_label, lambda: read_text(skill_path))
+        skill_exists = skill_path.exists()
+        if not skill_exists:
+            current_value = "managed file not present"
+        elif has_skill_ownership_marker(skill_current):
+            current_value = _sha256_value(skill_current)
+        elif name in LEGACY_UNMARKED_SKILLS:
+            current_value = (
+                "legacy unmarked workspace-meta skill, "
+                f"{_sha256_value(skill_current)}"
+            )
+        else:
+            # A same-named skill of the operator's own, like a foreign
+            # statusLine: never written, reported, and no other area blocks.
+            areas.append(
+                ManagedArea(
+                    skill_label,
+                    skill_path,
+                    False,
+                    SKILL_KEPT,
+                    "not managed here",
+                    "kept unchanged",
+                    kept=SKILL_KEPT,
+                )
+            )
+            continue
+        skill_result, _ = _render_area(
+            skill_label, lambda: render_managed_file(template, skill_path)
+        )
+        areas.append(
+            ManagedArea(
+                skill_label,
+                skill_path,
+                skill_result != skill_current,
+                "workspace-meta-owned skill file",
+                _sha256_value(skill_result),
+                current_value,
+            )
+        )
+        updates.append(
+            PlannedUpdate(skill_path, skill_exists, skill_current, skill_result)
+        )
+    return areas, updates
+
+
+def build_sync_plan(
+    args: argparse.Namespace, config_dirs: tuple[Path, ...] | None = None
+) -> SyncPlan:
     agents_path = args.codex_home / "AGENTS.md"
     codex_config_path = args.codex_home / "config.toml"
 
@@ -1350,26 +1654,15 @@ def build_sync_plan(args: argparse.Namespace) -> SyncPlan:
         lambda: render_preferences(args.preferences_template, hooks_rendered.content),
     )
 
-    claude_current = _render_area(
-        "Claude settings", lambda: read_text(args.claude_settings)
-    )
-    claude_result, _ = _render_area(
-        "Claude settings",
-        lambda: render_claude_settings(
-            args.claude_settings,
-            args.status_script,
-            args.python,
-            args.claude_status_line_script,
-        ),
-    )
-
-    env_skill_current = _render_area(
-        "env-sync skill", lambda: read_text(args.env_skill)
-    )
-    env_skill_result, _ = _render_area(
-        "env-sync skill",
-        lambda: render_managed_file(args.env_skill_template, args.env_skill),
-    )
+    skills = claude_skills(args.claude_skill_templates)
+    claude_areas: list[ManagedArea] = []
+    claude_updates: list[PlannedUpdate] = []
+    if config_dirs is None:
+        config_dirs, _ = select_claude_config_dirs(args)
+    for config_dir in config_dirs:
+        dir_areas, dir_updates = _plan_claude_config_dir(args, config_dir, skills)
+        claude_areas.extend(dir_areas)
+        claude_updates.extend(dir_updates)
 
     current_agents_value = _marked_value(
         agents_current, AGENTS_BEGIN, AGENTS_END
@@ -1406,37 +1699,6 @@ def build_sync_plan(args: argparse.Namespace) -> SyncPlan:
         codex_boundary_drift,
     )
 
-    current_claude_settings = json.loads(claude_current) if claude_current else {}
-    expected_claude_settings = json.loads(claude_result)
-    current_claude_hook = _owned_session_start_snapshot(
-        current_claude_settings, "claude"
-    )
-    expected_claude_hook = _owned_session_start_snapshot(
-        expected_claude_settings, "claude"
-    )
-    if not isinstance(expected_claude_hook, dict):
-        raise SyncError("rendered Claude SessionStart hook is missing")
-    claude_hook_drift = _semantic_component_drift(
-        "workspace-meta SessionStart",
-        f"scripts/{args.status_script.name}",
-        current_claude_hook,
-        expected_claude_hook,
-    )
-    current_claude_status_line = _owned_status_line_snapshot(
-        current_claude_settings
-    )
-    expected_claude_status_line = _owned_status_line_snapshot(
-        expected_claude_settings
-    )
-    if not isinstance(expected_claude_status_line, dict):
-        raise SyncError("rendered Claude statusLine is missing")
-    claude_status_line_drift = _semantic_component_drift(
-        "workspace-meta statusLine",
-        f"scripts/{args.claude_status_line_script.name}",
-        current_claude_status_line,
-        expected_claude_status_line,
-    )
-
     areas = (
         ManagedArea(
             "Codex AGENTS.md",
@@ -1465,36 +1727,7 @@ def build_sync_plan(args: argparse.Namespace) -> SyncPlan:
             "current parsed host values",
             preference_drift=preferences_rendered.drift,
         ),
-        ManagedArea(
-            "Claude SessionStart hook",
-            args.claude_settings,
-            bool(claude_hook_drift.fields),
-            "workspace-meta SessionStart",
-            "repository managed fields",
-            "current host managed fields",
-            component_drift=claude_hook_drift,
-        ),
-        ManagedArea(
-            "Claude statusLine",
-            args.claude_settings,
-            bool(claude_status_line_drift.fields),
-            "workspace-meta statusLine",
-            "repository managed fields",
-            "current host managed fields",
-            component_drift=claude_status_line_drift,
-        ),
-        ManagedArea(
-            "env-sync skill",
-            args.env_skill,
-            env_skill_result != env_skill_current,
-            "workspace-meta-owned skill file",
-            _sha256_value(env_skill_result),
-            (
-                _sha256_value(env_skill_current)
-                if args.env_skill.exists()
-                else "managed file not present"
-            ),
-        ),
+        *claude_areas,
     )
     updates = (
         PlannedUpdate(
@@ -1506,31 +1739,39 @@ def build_sync_plan(args: argparse.Namespace) -> SyncPlan:
             config_current,
             preferences_rendered.content,
         ),
-        PlannedUpdate(
-            args.claude_settings,
-            args.claude_settings.exists(),
-            claude_current,
-            claude_result,
-        ),
-        PlannedUpdate(
-            args.env_skill,
-            args.env_skill.exists(),
-            env_skill_current,
-            env_skill_result,
-        ),
+        *claude_updates,
     )
     return SyncPlan(areas, updates)
+
+
+def print_claude_config_dirs(
+    config_dirs: tuple[Path, ...], skipped: tuple[tuple[Path, str], ...] = ()
+) -> None:
+    print("Claude config dirs (CLAUDE_CONFIG_DIRS):")
+    for config_dir in config_dirs:
+        print(f"  {display_path(config_dir)}")
+    if skipped:
+        print(
+            "Skipped as a likely copy or backup "
+            "(name it in CLAUDE_CONFIG_DIRS to manage it):"
+        )
+        for config_dir, reason in skipped:
+            print(f"  {display_path(config_dir)}: {reason}")
+    print()
 
 
 def print_area_statuses(
     areas: tuple[ManagedArea, ...], updated_paths: tuple[Path, ...] = ()
 ) -> None:
+    width = max([28, *(len(area.label) + 3 for area in areas)])
     for area in areas:
-        if updated_paths and area.drifted and area.path in updated_paths:
+        if area.kept:
+            status = f"kept: {area.kept}"
+        elif updated_paths and area.drifted and area.path in updated_paths:
             status = "UPDATED"
         else:
             status = "DRIFT" if area.drifted else "OK"
-        print(f"{area.label + ':':<28}{status}")
+        print(f"{area.label + ':':<{width}}{status}")
 
 
 def _print_value(title: str, value: object) -> None:
@@ -1709,10 +1950,38 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--preferences-template", required=True, type=Path)
     parser.add_argument("--status-script", required=True, type=Path)
     parser.add_argument("--claude-status-line-script", required=True, type=Path)
-    parser.add_argument("--env-skill-template", required=True, type=Path)
-    parser.add_argument("--env-skill", required=True, type=Path)
     parser.add_argument("--codex-home", required=True, type=Path)
-    parser.add_argument("--claude-settings", required=True, type=Path)
+    parser.add_argument(
+        "--claude-config-dir",
+        dest="claude_config_dirs",
+        action="append",
+        default=[],
+        type=Path,
+        metavar="DIR",
+        help="Claude config dir to converge; repeat for every one in use",
+    )
+    parser.add_argument(
+        "--claude-config-dirs",
+        dest="claude_config_dir_list",
+        metavar="LIST",
+        help=(
+            "colon-separated Claude config dirs (CLAUDE_CONFIG_DIRS); without "
+            "any dir, ~/.claude and each ~/.claude-* dir holding a .claude.json "
+            "are discovered, skipping copy or backup names"
+        ),
+    )
+    parser.add_argument(
+        "--claude-skill-template",
+        dest="claude_skill_templates",
+        action="append",
+        default=[],
+        type=Path,
+        metavar="PATH",
+        help=(
+            "<name>-SKILL.md template installed as DIR/skills/<name>/SKILL.md; "
+            "an installed file without the ownership marker is kept"
+        ),
+    )
     parser.add_argument(
         "--python",
         default="python3",
@@ -1727,7 +1996,13 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     try:
-        plan = build_sync_plan(args)
+        config_dirs, skipped = select_claude_config_dirs(args)
+    except (OSError, SyncError) as exc:
+        _print_error(exc)
+        return 1
+    print_claude_config_dirs(config_dirs, skipped)
+    try:
+        plan = build_sync_plan(args, config_dirs)
     except (OSError, SyncError) as exc:
         _print_error(exc)
         return 1
@@ -1771,7 +2046,7 @@ def main() -> int:
         return 1
 
     try:
-        final_plan = build_sync_plan(args)
+        final_plan = build_sync_plan(args, config_dirs)
     except (OSError, SyncError) as exc:
         print(f"ERROR: post-apply validation failed: {exc}", file=sys.stderr)
         return 1

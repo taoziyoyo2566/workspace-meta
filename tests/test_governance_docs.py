@@ -194,8 +194,115 @@ class GovernanceDocumentationTests(unittest.TestCase):
             )
         )
 
+    def test_rejects_a_runtime_module_routed_by_the_other_adapter(self) -> None:
+        for adapter, module in (
+            ("CLAUDE.md", "codex-runtime.md"),
+            (".agents/host-templates/codex-AGENTS.md", "claude-runtime.md"),
+        ):
+            with self.subTest(adapter=adapter):
+                temporary, root = self.fixture()
+                self.addCleanup(temporary.cleanup)
+                path = root / adapter
+                head, routing = path.read_text().split("## Direct Task Routing", 1)
+                self.assertIn("|---|---|\n", routing)
+                routing = routing.replace(
+                    "|---|---|\n",
+                    f"|---|---|\n| runtime mechanics | `.agents/rules/{module}` |\n",
+                    1,
+                )
+                path.write_text(head + "## Direct Task Routing" + routing)
+                self.assertIn(
+                    f"{Path(adapter).name} routes to another agent's runtime "
+                    f"module: {module}",
+                    DOCS.check(root),
+                )
+
+    def test_rejects_a_runtime_module_missing_from_its_own_adapter(self) -> None:
+        for adapter, module in (
+            ("CLAUDE.md", "claude-runtime.md"),
+            (".agents/host-templates/codex-AGENTS.md", "codex-runtime.md"),
+        ):
+            with self.subTest(adapter=adapter):
+                temporary, root = self.fixture()
+                self.addCleanup(temporary.cleanup)
+                path = root / adapter
+                path.write_text(path.read_text().replace(module, "missing.md"))
+                self.assertIn(
+                    f"{Path(adapter).name} does not route to {module}",
+                    DOCS.check(root),
+                )
+
+    def test_rejects_a_rule_owner_missing_from_the_design_map(self) -> None:
+        fenced_link = "\n```text\n[new](../../.agents/rules/new-owner.md)\n```\n"
+        for map_addition in ("", fenced_link):
+            with self.subTest(map_addition=map_addition):
+                temporary, root = self.fixture()
+                self.addCleanup(temporary.cleanup)
+                (root / ".agents/rules/new-owner.md").write_text(
+                    "# New Owner\n\n## Ownership\n"
+                )
+                design_map = root / "docs/architecture/design-map.md"
+                design_map.write_text(design_map.read_text() + map_addition)
+                self.assertIn(
+                    "design map does not link rule owner: new-owner.md",
+                    DOCS.check(root),
+                )
+
+    def test_rejects_a_missing_design_map(self) -> None:
+        temporary, root = self.fixture()
+        self.addCleanup(temporary.cleanup)
+        (root / "docs/architecture/design-map.md").unlink()
+        self.assertIn(
+            "design map is missing: docs/architecture/design-map.md",
+            DOCS.check(root),
+        )
+
+    def test_rejects_drift_in_the_request_reading_sentence(self) -> None:
+        cases = (
+            (
+                ".agents/host-templates/codex-AGENTS.md",
+                "and not while the operator is away",
+                "and while the operator is away",
+                "the adapters' request-reading sentences differ",
+            ),
+            (
+                "CLAUDE.md",
+                "what done means",
+                "what finished looks like",
+                "CLAUDE.md request-reading sentence lacks: what done means",
+            ),
+            (
+                ".agents/rules/requests.md",
+                "what done means",
+                "the finished state",
+                ".agents/rules/requests.md lacks the adapters' phrase: what done means",
+            ),
+            (
+                "CLAUDE.md",
+                "Before starting work on a request",
+                "Before any work",
+                "CLAUDE.md lacks the request-reading sentence",
+            ),
+        )
+        for relative, old, new, expected in cases:
+            with self.subTest(file=relative, expected=expected):
+                temporary, root = self.fixture()
+                self.addCleanup(temporary.cleanup)
+                path = root / relative
+                text = path.read_text()
+                self.assertIn(old, text)
+                # An owner keeps a phrase as long as any copy remains, so the
+                # owner case removes every copy; an adapter case changes one.
+                count = -1 if relative.startswith(".agents/rules/") else 1
+                path.write_text(text.replace(old, new, count))
+                self.assertIn(expected, DOCS.check(root))
+
     def test_rejects_a_missing_readme_index_target(self) -> None:
-        for target in ("docs/runbooks/new-vps.md", "docs/standards/README.md"):
+        for target in (
+            "docs/runbooks/new-vps.md",
+            "docs/standards/README.md",
+            "docs/architecture/design-map.md",
+        ):
             with self.subTest(target=target):
                 temporary, root = self.fixture()
                 self.addCleanup(temporary.cleanup)

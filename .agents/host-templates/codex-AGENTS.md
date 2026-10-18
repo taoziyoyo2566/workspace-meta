@@ -29,6 +29,11 @@ Canonical sources: `git.md`, `authorization.md`, `git-publication.md`,
 
 ## Direct Task Routing
 
+Before starting work on a request, read it for its goal, what done means, and
+the similar problems it stands for, as deeply as the request needs; ask only
+what would redirect the work, and not while the operator is away
+(`~/workspace/.agents/rules/requests.md`).
+
 | Trigger | Read before crossing the boundary |
 |---|---|
 | first write, permission/scope question, external/host/live mutation | `~/workspace/.agents/rules/authorization.md` |
@@ -39,10 +44,11 @@ Canonical sources: `git.md`, `authorization.md`, `git-publication.md`,
 | rewrite/discard/force/delete/amend/recovery | `~/workspace/.agents/rules/authorization.md` + `~/workspace/.agents/rules/git.md` + `~/workspace/.agents/rules/git-recovery.md` |
 | release, version tag or number, rollback target, or fixing a released version | `~/workspace/.agents/rules/authorization.md` + `~/workspace/.agents/rules/git.md` + `~/workspace/.agents/rules/releases.md` |
 | deploying, what may serve users, a temporary deployment, or an instance outside the inventory | `~/workspace/.agents/rules/authorization.md` + `~/workspace/.agents/rules/deployment.md` |
+| starting work on a request: a reported problem, a correction, an idea, a change, or a need described through examples; asking the operator or proceeding on assumptions | `~/workspace/.agents/rules/requests.md` |
 | load-bearing premise validation, conflicting evidence, independent technical judgment, competing explanations, or diagnostic method | `~/workspace/.agents/rules/reasoning.md` |
-| non-trivial planning, a new capability's design or plan, starting an investigation, comparison of options, or experiment, a request that describes a need through examples, a verified finding that affects other work, an operator decision on a workstream, reporting its status from memory or an earlier session, evidence, approval scope, deviation, handoff | `~/workspace/.agents/rules/planning.md` |
+| non-trivial planning, a new capability's design or plan, starting an investigation, comparison of options, or experiment, a verified finding that affects other work, an operator decision on a workstream, reporting its status from memory or an earlier session, evidence, approval scope, deviation, handoff | `~/workspace/.agents/rules/planning.md` |
 | implementation, configuration, refactoring, or artifact-structure change | `~/workspace/.agents/rules/implementation.md` |
-| project documentation authoring, restructuring, or lifecycle governance | `~/workspace/.agents/rules/documentation.md` |
+| project documentation authoring, restructuring, or lifecycle governance, or a project without an entry file for the runtime in use | `~/workspace/.agents/rules/documentation.md` + `~/workspace/.agents/rules/codex-runtime.md` for Codex's entry files |
 | a created or changed file before it is called done, handed over, committed, or deployed | `~/workspace/.agents/rules/file-checks.md` |
 | change verification or blocked check | `~/workspace/.agents/rules/verification.md` |
 | review, audit, diagnosis, remediation assessment, or reporting which problems exist | `~/workspace/.agents/rules/review.md` |
@@ -52,6 +58,7 @@ Canonical sources: `git.md`, `authorization.md`, `git-publication.md`,
 | creating temporary files, or temporary space full or filling | `~/workspace/.agents/rules/temporary-files.md` |
 | load-bearing host/environment claim | `~/workspace/.agents/rules/environment-truth.md` |
 | writing/refactoring agent rules, routing feedback, or the operator correcting how you work or stating a preference about it | `~/workspace/.agents/rules/rule-authoring.md` |
+| delegating work to subagents or a workflow | `~/workspace/.agents/rules/capabilities.md` + `~/workspace/.agents/rules/codex-runtime.md` when Codex mechanics are needed |
 
 Project rules provide topology, artifact schema, commands, checks, live fields,
 secret locations, and stricter domain constraints. If a project repeats a
@@ -61,15 +68,17 @@ report the duplicate as governance debt.
 ## Codex-Specific Runtime
 
 Use `codex-runtime.md` for sandbox/escalation, execpolicy, deferred tool
-discovery, delegation mechanics, and Codex configuration ownership.
+discovery, delegation mechanics, project entry files, and Codex configuration
+ownership.
 `~/.codex/rules/*.rules` is host-local executable authorization state and must
 not be copied into workspace-meta or a project.
 
 ## Managed Boundary
 
 Workspace-meta owns this marked block, its marked Codex hook block, the shared
-rules, and its dedicated Claude SessionStart group and marker-bearing status
-line. Text outside markers, model selection, project/hook trust, credentials,
+rules, and, in every Claude config dir the operator uses, its dedicated Claude
+SessionStart group, marker-bearing status line, and managed skills. Text
+outside markers, model selection, project/hook trust, credentials,
 history, caches, databases, installed plugins/system skills, and executable
 approval history remain host-local.
 

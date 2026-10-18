@@ -5,9 +5,9 @@ Codex-specific mechanics for applying the shared workspace rules.
 ## Ownership
 
 This file owns only Codex sandbox/escalation, execpolicy, deferred tool
-discovery, and Codex configuration boundaries. Semantic authorization is owned
-by `authorization.md`; capability-selection triggers are owned by
-`capabilities.md`.
+discovery, Codex's project entry files, and Codex configuration boundaries.
+Semantic authorization is owned by `authorization.md`; capability-selection
+triggers are owned by `capabilities.md`.
 
 ## Sandbox And Escalation
 
@@ -29,6 +29,19 @@ by `authorization.md`; capability-selection triggers are owned by
   is concrete and independently useful.
 - Agent tool names and plugin/skill availability are runtime facts, not portable
   behavior policy.
+
+## Project Entry Files
+
+Under `documentation.md` Project Bootstrap, Codex's entry file is `AGENTS.md`
+itself: Codex reads the `AGENTS.md` files from the Git root down to the working
+directory, and has no import syntax.
+
+- A project whose agent facts live in another file, such as a `CLAUDE.md`
+  owner, gets no Codex adapter. Report the move of those facts to `AGENTS.md`,
+  with a thin `CLAUDE.md` adapter left behind, and make it only after the
+  operator agrees.
+- In a clone of a repository the operator does not own, nothing is written for
+  Codex; report the gap.
 
 ## Configuration Boundary
 

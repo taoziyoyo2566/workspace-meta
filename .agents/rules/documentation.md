@@ -3,7 +3,8 @@
 ## Ownership
 
 This file is the sole portable owner for project-documentation roles,
-information architecture, truth lifecycles, and migration boundaries.
+information architecture, truth lifecycles, migration boundaries, and the
+bootstrap of a project's agent entry files.
 `planning.md` owns approved scope and handoff, `implementation.md` owns the
 shape of changed artifacts generally, `file-checks.md` owns the checks each
 changed file receives, and `verification.md` owns executed checks. Projects add
@@ -106,7 +107,8 @@ project is actually operated with and give each one an entry file it loads.
 - Keep one canonical owner for the project's agent facts, commands, routes, and
   constraints.
 - Every additional entry file is a thin adapter that imports that owner and
-  states no rule of its own, so no second authority exists to drift.
+  states no rule of its own, so no second authority exists to drift. It may
+  add mechanics of its own runtime only.
 - Mentioning or linking the owner does not load it. Use the runtime's own
   import mechanism and confirm the position where it is written is one the
   runtime actually follows.
@@ -115,8 +117,62 @@ project is actually operated with and give each one an entry file it loads.
 
 When operating a runtime for which a project has no entry file, read that
 project's canonical owner before substantive project work, including read-only
-review or any host/external action, and report the missing entry file as a
-governance gap.
+review or any host/external action, and create the missing entry file as
+Project Bootstrap describes; report what you could not create as a governance
+gap.
+
+## Project Bootstrap
+
+A project the operator works on with an agent gets the entry files that agent
+loads, without the operator asking each time. This covers every Git repository
+under the workspace project directory. A directory that is not a Git
+repository, such as notes, a backup, or a worktree container, is bootstrapped
+only when the operator asks. A linked worktree without entry files of its own
+is not bootstrapped itself: its main checkout is, and the branch receives the
+files by merge.
+
+Only the session in conversation with the operator bootstraps. A delegated
+agent, and any task whose operator instruction or brief forbids writes, reports
+the missing entry file instead of creating it; the delegating session
+bootstraps before it hands out work in the project.
+
+At the first substantive work in a project, including read-only review, check
+the entry file for the runtime in use and create what is missing:
+
+1. The canonical owner of the project's agent facts is `AGENTS.md`, the one
+   file every agent runtime in the workspace can be given. A project whose
+   existing canonical owner is another file keeps it until the operator moves
+   it.
+2. In a repository the operator owns that has no canonical owner, survey the
+   project and write `AGENTS.md`: its purpose and layout; the commands that
+   build, test, run, and deploy it; its conventions and constraints; the
+   project facts the shared rules leave to projects, such as the main branch,
+   merge route, canonical remote, and release and deployment facts that apply;
+   and routes to its own documents. Leave out portable rules, secrets, live
+   state, and dated status, and keep it short enough to load in every session.
+3. When a runtime does not load the canonical owner directly, add its entry
+   file as a thin adapter that imports the owner, beside the root owner and
+   beside each subdirectory's own owner file. A runtime that cannot import
+   gets no adapter: report the owner move it would need.
+4. In a clone of a repository the operator does not own, write only the
+   runtime's local entry file, holding the import of the clone's own owner or,
+   when it has none, the survey notes, and exclude it through the clone's own
+   Git exclude list, never its tracked `.gitignore`. A runtime without a local
+   entry file gets nothing written there; report the gap.
+5. Never overwrite or rewrite an existing entry file. When a project's files
+   conflict, such as an adapter that does not import an existing owner or two
+   files that both state rules, report it with a proposed fix and change it
+   only after the operator agrees.
+6. Leave what you created uncommitted and report it in the same reply: each
+   path, what it holds, and that committing it follows the project's change
+   flow.
+
+Creating a missing entry file this way is the operator's standing decision and
+needs no further confirmation (`authorization.md`). Agent runtime modules own
+each runtime's entry files, import syntax, local-only file, and how the survey
+is run. A session-start check that reports a project without an entry file is
+a backstop, not the owner; the project's own documentation gate still enforces
+its adapter.
 
 ## Keep Truth Classes Explicit
 

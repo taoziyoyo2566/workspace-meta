@@ -2,6 +2,7 @@
 name: env-sync
 description: Probe this host's environment capabilities into its local workspace registry (~/workspace/.agents/env/<host>.yml). Use at session start on a new/changed machine, when env-probe-check reports stale, or whenever a command unexpectedly fails with "not found" / daemon errors.
 ---
+<!-- workspace-meta managed skill: make sync replaces this file -->
 
 # env-sync — refresh the local per-host capability registry
 

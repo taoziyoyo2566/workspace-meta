@@ -5,48 +5,18 @@ scope, execution deviation, durable handoff, and closeout.
 
 ## Ownership
 
-This file owns how a request's goal is read before an investigation, a
-comparison of options, or a design, and generic planning, discovery of earlier
-and concurrent work, recording of confirmed findings and operator decisions,
-approval, material-deviation, handoff, and Plan lifecycle behavior.
-`documentation.md` owns the durable content roles of Plans, Changelogs, and
-investigation records. Projects own plan filenames/directories, where verified
-findings are recorded, additional metadata, architecture sources, branch gates,
-test commands, and live-resource fields.
-
-## Understand The Request
-
-Before an investigation, a comparison of options, or a design, read the request
-for what the operator is trying to achieve, not only for its wording. Scale the
-steps to the request; a narrow question needs only steps 1 and 3.
-
-1. State the goal behind the request in one sentence.
-2. When the answer depends on how something will be used, list the usage
-   scenarios, including likely ones the operator did not mention, and mark the
-   ones you assumed.
-3. Separate the goal, the constraints the operator stated as required, the
-   examples, and the requirements you derived. An example shows one case of
-   the need; it is neither the whole need nor a constraint. When the operator
-   says the description is only an example, treat all of it that way.
-4. Carry each requirement you derived as an assumption (`reasoning.md`): show
-   it, and do not use it to rule options out.
-5. Judge options scenario by scenario. Different tools for different scenarios
-   is a valid answer, and so is "an existing feature already covers this".
-6. A rule that governs your own actions is no reason to hide an option from the
-   operator: show it with the conflict named. The rule still governs what you
-   do.
-
-When two readings would lead to different answers and the request does not
-settle which, state the reading you took at the top of the result, and ask once
-when the answer would redirect the work (`authorization.md` Uncertainty).
-
-Red flags: "the operator mentioned it, so it is required"; "no option meets all
-the requirements"; a pass/fail checklist built from examples; "it breaks a
-principle of my design, so leave it out".
+This file owns generic planning, discovery of earlier and concurrent work,
+recording of confirmed findings and operator decisions, approval,
+material-deviation, handoff, and Plan lifecycle behavior. `requests.md` owns
+how a request is read before work starts. `documentation.md` owns the durable
+content roles of Plans, Changelogs, and investigation records. Projects own
+plan filenames/directories, where verified findings are recorded, additional
+metadata, architecture sources, branch gates, test commands, and live-resource
+fields.
 
 ## Before Planning
 
-Investigate in two passes:
+Read the request first (`requests.md`). Then investigate in two passes:
 
 1. direction: current repository truth, active task/branch, ownership, and
    whether the work belongs here;

@@ -8,6 +8,7 @@
 !docs/
 !docs/architecture/
 !docs/architecture/codex-config-management.md
+!docs/architecture/design-map.md
 !docs/runbooks/
 !docs/runbooks/new-vps.md
 !docs/standards/
@@ -49,6 +50,8 @@
 !docs/reviews/refactor-rule-gaps/*.md
 !docs/reviews/refactor-feedback-intake/
 !docs/reviews/refactor-feedback-intake/*.md
+!docs/reviews/feature-claude-native-governance/
+!docs/reviews/feature-claude-native-governance/*.md
 !.githooks/
 !.githooks/pre-commit
 !scripts/
@@ -64,10 +67,12 @@
 !tests/test_workspace_status.py
 !tests/test_claude_status_line.py
 !tests/test_governance_docs.py
+!tests/test_bootstrap_local.py
 !.agents/
 !.agents/rules/
 !.agents/rules/authorization.md
 !.agents/rules/capabilities.md
+!.agents/rules/claude-runtime.md
 !.agents/rules/codex-runtime.md
 !.agents/rules/documentation.md
 !.agents/rules/environment-truth.md
@@ -84,6 +89,7 @@
 !.agents/rules/implementation.md
 !.agents/rules/planning.md
 !.agents/rules/reasoning.md
+!.agents/rules/requests.md
 !.agents/rules/review.md
 !.agents/rules/rule-authoring.md
 !.agents/rules/secrets.md

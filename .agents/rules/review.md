@@ -15,7 +15,10 @@ routing, and risk-specific severity refinements.
 
 Review, audit, and diagnosis requests are read-only by default. A request to fix
 findings or apply recommendations authorizes bounded working-tree remediation
-under `authorization.md`, but not Git publication or external/live writes.
+under `authorization.md`, but not Git publication or external/live writes. The
+one standing exception is a missing project entry file, which the session in
+conversation with the operator creates as `documentation.md` Project Bootstrap
+describes, unless the operator or the brief forbids writes.
 
 ## Review Shape
 

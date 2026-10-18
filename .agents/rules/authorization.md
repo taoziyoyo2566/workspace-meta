@@ -1,7 +1,7 @@
 # Authorization
 
-Agent-neutral workspace rule for interpreting requests, edit authority,
-technical permission prompts, and protected mutations.
+Agent-neutral workspace rule for the authority a request grants, edit
+authority, technical permission prompts, and protected mutations.
 
 ## Ownership
 
@@ -55,6 +55,9 @@ Once the task is authorized:
 - in-scope working-tree edits inside writable roots;
 - static checks, tests, and local ephemeral outputs that do not mutate a real
   external system;
+- creating a missing project entry file as `documentation.md` Project
+  Bootstrap describes, also during a read-only task, unless the operator or
+  the task's brief forbids writes;
 - narrowly scoped technical escalation when one of those safe operations is
   blocked by the runtime boundary.
 
@@ -160,4 +163,5 @@ workspace-meta or a project.
 Ask only when the missing answer could materially redirect scope, destroy or
 expose user work, mutate a protected target, or change the applicable
 authorization model. Ordinary implementation judgment inside authorized scope
-is not a reason to pause.
+is not a reason to pause. How to ask, and what to do while the operator is
+away, is `requests.md` Ask Or Proceed.

@@ -19,6 +19,25 @@ ROOT_MARKDOWN_ALLOWLIST = {
 }
 DATE_PATTERN = re.compile(r"\b20\d{2}-\d{2}-\d{2}\b")
 LINK_PATTERN = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
+CLAUDE_ADAPTER = "CLAUDE.md"
+CODEX_ADAPTER = ".agents/host-templates/codex-AGENTS.md"
+# Each agent runtime module is routed by its own agent's adapter only; every
+# other rule file is portable and routed by both adapters.
+RUNTIME_MODULES = {
+    "claude-runtime.md": CLAUDE_ADAPTER,
+    "codex-runtime.md": CODEX_ADAPTER,
+}
+DESIGN_MAP = "docs/architecture/design-map.md"
+REQUESTS_OWNER = ".agents/rules/requests.md"
+# The resident request-reading sentence both adapters carry above their
+# routing tables, and the phrases it shares with its owner.
+REQUEST_SENTENCE_START = "Before starting work on a request"
+REQUEST_SENTENCE_PHRASES = (
+    "what done means",
+    "similar problems",
+    "redirect the work",
+    "away",
+)
 
 
 def _read(path: Path) -> str:
@@ -119,19 +138,24 @@ def _check_root_entries(root: Path, errors: list[str]) -> None:
 def _check_routes(root: Path, errors: list[str]) -> None:
     rules_dir = root / ".agents/rules"
     rule_names = {path.name for path in rules_dir.glob("*.md")}
-    claude = _read(root / "CLAUDE.md")
-    codex = _read(root / ".agents/host-templates/codex-AGENTS.md")
-    claude_routes = _routing_block(claude)
-    codex_routes = _routing_block(codex)
-    for name in sorted(rule_names - {"codex-runtime.md"}):
-        for label, content in (
-            ("CLAUDE.md", claude_routes),
-            ("codex-AGENTS.md", codex_routes),
-        ):
+    claude = _read(root / CLAUDE_ADAPTER)
+    routes = {
+        CLAUDE_ADAPTER: _routing_block(claude),
+        CODEX_ADAPTER: _routing_block(_read(root / CODEX_ADAPTER)),
+    }
+    for name in sorted(rule_names - set(RUNTIME_MODULES)):
+        for adapter, content in routes.items():
             if name not in content:
+                errors.append(f"{Path(adapter).name} does not route to {name}")
+    for name, owner in sorted(RUNTIME_MODULES.items()):
+        for adapter, content in routes.items():
+            label = Path(adapter).name
+            if adapter == owner and name not in content:
                 errors.append(f"{label} does not route to {name}")
-    if "codex-runtime.md" not in codex_routes:
-        errors.append("codex-AGENTS.md does not route to codex-runtime.md")
+            if adapter != owner and name in content:
+                errors.append(
+                    f"{label} routes to another agent's runtime module: {name}"
+                )
 
     documentation = _normalize(_read(rules_dir / "documentation.md"))
     normalized_claude = _normalize(claude)
@@ -201,6 +225,7 @@ def _check_index(root: Path, errors: list[str]) -> None:
     for target in (
         ".agents/host-templates/README-agents.md",
         "docs/architecture/codex-config-management.md",
+        DESIGN_MAP,
         "docs/runbooks/new-vps.md",
         "docs/standards/README.md",
         "docs/reviews/",
@@ -208,6 +233,51 @@ def _check_index(root: Path, errors: list[str]) -> None:
     ):
         if target not in readme:
             errors.append(f"README documentation map lacks: {target}")
+
+
+def _check_design_map(root: Path, errors: list[str]) -> None:
+    """Require the design map to catalog every rule owner by a real link."""
+    design_map = root / DESIGN_MAP
+    if not design_map.is_file():
+        errors.append(f"design map is missing: {DESIGN_MAP}")
+        return
+    linked = {
+        target.strip().strip("<>").split(maxsplit=1)[0].partition("#")[0]
+        for _, target in LINK_PATTERN.findall(
+            _without_fenced_code(_read(design_map))
+        )
+    }
+    for path in sorted((root / ".agents/rules").glob("*.md")):
+        if f"../../.agents/rules/{path.name}" not in linked:
+            errors.append(f"design map does not link rule owner: {path.name}")
+
+
+def _request_sentence(content: str) -> str | None:
+    for paragraph in _routing_block(content).split("\n\n"):
+        if paragraph.strip().startswith(REQUEST_SENTENCE_START):
+            # The adapters differ only in how they write the rule path.
+            return _normalize(paragraph.replace("~/workspace/", ""))
+    return None
+
+
+def _check_request_sentence(root: Path, errors: list[str]) -> None:
+    """Keep the adapters' resident request-reading sentence tied to its owner."""
+    sentences = {}
+    for label in (CLAUDE_ADAPTER, CODEX_ADAPTER):
+        sentence = _request_sentence(_read(root / label))
+        if sentence is None:
+            errors.append(f"{label} lacks the request-reading sentence")
+        else:
+            sentences[label] = sentence
+    if len(set(sentences.values())) > 1:
+        errors.append("the adapters' request-reading sentences differ")
+    owner = _normalize(_read(root / REQUESTS_OWNER))
+    for phrase in REQUEST_SENTENCE_PHRASES:
+        for label, sentence in sentences.items():
+            if phrase not in sentence:
+                errors.append(f"{label} request-reading sentence lacks: {phrase}")
+        if phrase not in owner:
+            errors.append(f"{REQUESTS_OWNER} lacks the adapters' phrase: {phrase}")
 
 
 def _check_links(root: Path, errors: list[str]) -> None:
@@ -310,6 +380,8 @@ def check(root: Path = ROOT) -> list[str]:
     _check_routes(root, errors)
     _check_safety_floor(root, errors)
     _check_index(root, errors)
+    _check_design_map(root, errors)
+    _check_request_sentence(root, errors)
     _check_links(root, errors)
     _check_truth_lifecycle(root, errors)
     _check_runbook(root, errors)

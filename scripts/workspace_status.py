@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 import json
 import os
 from pathlib import Path
+import re
 import select
 import stat
 import subprocess
@@ -26,6 +27,25 @@ DEFAULT_TEMP_USED_PERCENT = 80
 DEFAULT_TEMP_MIN_FREE_MB = 256
 HOOK_INPUT_TIMEOUT = 1.0
 HOOK_INPUT_LIMIT = 65536
+# Each Claude entry file with the import line that loads the root AGENTS.md;
+# an import resolves relative to the file that contains it.
+CLAUDE_ENTRY_FILES = (
+    ("CLAUDE.md", "@AGENTS.md"),
+    (".claude/CLAUDE.md", "@../AGENTS.md"),
+    ("CLAUDE.local.md", "@AGENTS.md"),
+)
+PROJECT_BOOTSTRAP_HINT = (
+    "bootstrap it as ~/workspace/.agents/rules/documentation.md Project Bootstrap "
+    "describes before substantive work"
+)
+# Codex loads only AGENTS.md and cannot import, so a project whose owner is a
+# CLAUDE.md needs an owner move, not a second file.
+CODEX_OWNER_MOVE_HINT = (
+    "propose moving it to AGENTS.md as ~/workspace/.agents/rules/codex-runtime.md "
+    "Project Entry Files describes"
+)
+CODEX_OWNER_FILES = ("CLAUDE.md", ".claude/CLAUDE.md")
+FENCE_PATTERN = re.compile(r" {0,3}(`{3,}|~{3,})")
 
 
 @dataclass(frozen=True)
@@ -47,6 +67,9 @@ class StatusConfig:
     temp_root: Path | None = None
     temp_used_percent: int = DEFAULT_TEMP_USED_PERCENT
     temp_min_free_mb: int = DEFAULT_TEMP_MIN_FREE_MB
+    agent: str = "claude"
+    # None turns the project readiness check off.
+    project_root: Path | None = None
 
 
 @dataclass
@@ -60,6 +83,8 @@ class StatusEvaluation:
 
 Runner = Callable[[Sequence[str], int], CommandResult]
 StatVfs = Callable[[str], os.statvfs_result]
+# Returns a file's text, or None when it is absent or cannot be read.
+ReadFile = Callable[[Path], "str | None"]
 
 
 def run_command(argv: Sequence[str], timeout: int) -> CommandResult:
@@ -152,6 +177,165 @@ def choose_temp_root(hook_input: dict, environ: dict[str, str]) -> Path:
     return Path(environ.get("TMPDIR") or "/tmp")
 
 
+def choose_project_root(
+    hook_input: dict, environ: dict[str, str], workspace: Path
+) -> Path | None:
+    """Return the Git root of the session's project under <workspace>/projects."""
+    cwd = hook_input.get("cwd")
+    if not isinstance(cwd, str) or not cwd:
+        cwd = environ.get("CLAUDE_PROJECT_DIR")
+    if not cwd or not os.path.isabs(cwd):
+        return None
+    projects = Path(os.path.realpath(Path(workspace) / "projects"))
+    current = Path(os.path.realpath(cwd))
+    try:
+        parts = current.relative_to(projects).parts
+    except ValueError:
+        return None
+    if not parts:
+        return None
+    # The search stops at projects/<name>, so the projects/.git stub never
+    # counts; directories without Git are bootstrapped only on request.
+    top = projects / parts[0]
+    for candidate in (current, *current.parents):
+        if is_git_entry(candidate / ".git"):
+            return candidate
+        if candidate == top:
+            break
+    return None
+
+
+def is_git_entry(path: Path) -> bool:
+    """Whether path is a usable .git: a directory with HEAD, or a gitdir file
+    whose target is one."""
+    # An empty or broken .git, such as a stub a sandbox left behind or a
+    # pointer to a pruned worktree, is not a repository even though Claude
+    # Code treats it as one.
+    if path.is_dir():
+        return (path / "HEAD").is_file()
+    target = gitdir_target(path)
+    return target is not None and (target / "HEAD").is_file()
+
+
+def gitdir_target(path: Path) -> Path | None:
+    """The directory a ``gitdir:`` file points to, relative to the file."""
+    try:
+        with path.open(encoding="utf-8", errors="replace") as handle:
+            line = handle.readline()
+    except OSError:
+        return None
+    if not line.startswith("gitdir:"):
+        return None
+    value = line.removeprefix("gitdir:").strip()
+    if not value:
+        return None
+    return Path(os.path.normpath(path.parent / value))
+
+
+def main_checkout(root: Path) -> Path | None:
+    """The main checkout of a linked worktree rooted at root, or None.
+
+    A linked worktree's .git file points to <common>/worktrees/<name>; the
+    main checkout is the directory that holds <common> when <common> is its
+    .git directory. A bare repository has no main checkout.
+    """
+    target = gitdir_target(root / ".git")
+    if target is None or target.parent.name != "worktrees":
+        return None
+    common = target.parent.parent
+    if common.name != ".git" or not (common / "HEAD").is_file():
+        return None
+    return common.parent
+
+
+def read_entry_file(path: Path) -> str | None:
+    try:
+        return path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+
+
+def imports_agents_md(text: str, import_line: str = "@AGENTS.md") -> bool:
+    """Whether a line outside fenced code is exactly the given import."""
+    fence: str | None = None
+    for line in text.splitlines():
+        marker = FENCE_PATTERN.match(line)
+        if fence is None:
+            if marker:
+                fence = marker.group(1)
+            elif line.strip() == import_line:
+                return True
+        elif (
+            marker
+            and marker.group(1)[0] == fence[0]
+            and len(marker.group(1)) >= len(fence)
+            and line.strip() == marker.group(1)
+        ):
+            fence = None
+    return False
+
+
+def project_name(root: Path, workspace: Path) -> str:
+    projects = Path(os.path.realpath(Path(workspace) / "projects"))
+    try:
+        return str(root.relative_to(projects))
+    except ValueError:
+        return root.name
+
+
+def has_any_file(root: Path, names: Sequence[str], read_file: ReadFile) -> bool:
+    return any(read_file(root / name) is not None for name in names)
+
+
+def readiness_checkout(root: Path, read_file: ReadFile) -> Path:
+    """The checkout whose entry files decide readiness for root.
+
+    A linked worktree without entry files of its own is judged by its main
+    checkout: a bootstrap belongs there, and the branch gets the files by
+    merge instead of a second, divergent copy written into the worktree. A
+    worktree with entry files of its own is judged itself.
+    """
+    main = main_checkout(root)
+    own_files = ("AGENTS.md", *(entry for entry, _ in CLAUDE_ENTRY_FILES))
+    if main is None or has_any_file(root, own_files, read_file):
+        return root
+    return main
+
+
+def project_readiness_message(
+    root: Path, name: str, agent: str, read_file: ReadFile
+) -> str | None:
+    agents_md = read_file(root / "AGENTS.md")
+    if agent == "codex":
+        if agents_md is not None:
+            return None
+        if has_any_file(root, CODEX_OWNER_FILES, read_file):
+            return (
+                f"project {name}: Codex does not load its CLAUDE.md; "
+                f"{CODEX_OWNER_MOVE_HINT}"
+            )
+        return f"project {name} has no AGENTS.md; {PROJECT_BOOTSTRAP_HINT}"
+    entries = [
+        (text, import_line)
+        for text, import_line in (
+            (read_file(root / entry), import_line)
+            for entry, import_line in CLAUDE_ENTRY_FILES
+        )
+        if text is not None
+    ]
+    if not entries:
+        return f"project {name} has no Claude entry file; {PROJECT_BOOTSTRAP_HINT}"
+    # Mentioning or linking AGENTS.md does not load it; only the import does.
+    if agents_md is None or any(
+        imports_agents_md(text, import_line) for text, import_line in entries
+    ):
+        return None
+    return (
+        f"project {name}: no Claude entry file imports its AGENTS.md; "
+        f"{PROJECT_BOOTSTRAP_HINT}"
+    )
+
+
 def temp_space_message(
     root: Path, used_percent: int, min_free_mb: int, statvfs: StatVfs
 ) -> str | None:
@@ -195,6 +379,7 @@ def evaluate_status(
     now: int | None = None,
     initial_cache: dict[str, int] | None = None,
     statvfs: StatVfs = os.statvfs,
+    read_file: ReadFile = read_entry_file,
 ) -> StatusEvaluation:
     current_time = int(time.time()) if now is None else now
     original_cache = dict(initial_cache if initial_cache is not None else load_cache(config.cache_file))
@@ -277,6 +462,21 @@ def evaluate_status(
             messages.append(temp_message)
             context.append(temp_message)
 
+    if config.project_root is not None:
+        checkout = readiness_checkout(config.project_root, read_file)
+        name = project_name(checkout, config.workspace)
+        if checkout != config.project_root:
+            name = (
+                f"{name} (main checkout of "
+                f"{project_name(config.project_root, config.workspace)})"
+            )
+        project_message = project_readiness_message(
+            checkout, name, config.agent, read_file
+        )
+        if project_message:
+            messages.append(project_message)
+            context.append(project_message)
+
     return StatusEvaluation(
         messages=messages,
         cache=cache,
@@ -305,15 +505,19 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    hook_input = read_hook_input(sys.stdin)
+    environ = dict(os.environ)
     config = StatusConfig(
         workspace=args.workspace,
         cache_file=args.cache_file,
         fetch_min_interval=max(0, args.fetch_min_interval),
         remote_warning_ttl=max(0, args.remote_warning_ttl),
         fetch_timeout=max(1, args.fetch_timeout),
-        temp_root=choose_temp_root(read_hook_input(sys.stdin), dict(os.environ)),
+        temp_root=choose_temp_root(hook_input, environ),
         temp_used_percent=args.temp_used_percent,
         temp_min_free_mb=max(0, args.temp_min_free_mb),
+        agent=args.agent,
+        project_root=choose_project_root(hook_input, environ, args.workspace),
     )
     evaluation = evaluate_status(config)
     if evaluation.cache_changed:
