@@ -61,6 +61,15 @@ Once the task is authorized:
 - narrowly scoped technical escalation when one of those safe operations is
   blocked by the runtime boundary.
 
+Read-only inspection runs as the account you are logged in with. Its group
+memberships and the project's own status commands usually answer the
+question; try them first. A read that needs `sudo`, root, or another account
+is privilege elevation even though it changes nothing: say what it needs and
+why, and get the user's go-ahead before running it (Protected Mutations). An
+unprivileged read that is refused is a finding to report, not a reason to
+elevate. Red flags: "`sudo -n` cannot prompt, so it is harmless"; "it is only
+a read"; "sudo is passwordless on that host".
+
 Use the current sandbox for ordinary reads and in-workspace writes. Classify the
 actual invocation, target, and effect, not only the executable name. A shell,
 interpreter, build tool, or compound command is not high-impact merely because
@@ -74,7 +83,8 @@ The user must request or approve the named operation before:
   cleanup, as refined by the applicable Git module;
 - remote API writes, deployments, or external-resource mutation;
 - writes outside configured writable roots;
-- privilege elevation or host package/service/configuration changes;
+- privilege elevation, including for a read, or host
+  package/service/configuration changes;
 - live infrastructure mutation.
 
 The review identifies the actual target, operation, expected impact, material
@@ -128,6 +138,12 @@ Approval boundary: ...
 Please confirm whether to proceed.
 ```
 
+Name the targets and options of a request by what they are, such as the
+container names or the operation. Do not label them with letters, numbers, or
+names that already mean something else in the conversation, such as an
+earlier "option B". When a short reply to a request for an irreversible action
+could select more than one target set, ask which one before acting.
+
 A command-only request is insufficient when the action is protected. If a
 runtime permission prompt displays only a command, the agent's preceding
 semantic request must still provide this context; a technical approval prompt
@@ -151,7 +167,15 @@ action. Conversely, safe work should not receive repeated conversational
 prompts merely because a host permission rule lacks a convenient allow entry.
 
 When an authorized safe repeated operation is technically blocked, request one
-narrow categorical technical approval. Never treat a broad shell/interpreter
+narrow categorical technical approval.
+
+A runtime denial stands even when the user approved the operation. Do not
+repeat the operation through another tool, session, terminal, command form, or
+script with the same effect. Tell the user it was denied, then hand them the
+exact operation to run themselves (`capabilities.md` Commands The User Runs),
+under the brief already given, or name the host permission they could change.
+Red flags: "the user already approved it"; "a new tmux session is a different
+command"; "I'll put it in a script". Never treat a broad shell/interpreter
 allow rule as proof that arbitrary payloads are safe.
 
 Concrete executable allow/prompt decisions are host-local. They may be more

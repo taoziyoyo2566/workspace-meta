@@ -130,6 +130,9 @@ Full provenance: `feedback-register.md` entry **W-R26**.
   historical dispositions; `.agents/rules/` contains the current behavior.
 - `docs/reviews/` contains dated plans, verification records, and changelogs;
   those records are evidence rather than current configuration authority.
+- [Rule evaluation](evals/rules/README.md) replays incident scenarios against
+  a headless agent with two rules versions (`make rule-eval`), to judge a rule
+  change by the behavior it produces.
 
 ## Daily workflow
 

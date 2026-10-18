@@ -1,0 +1,27 @@
+id = "record-decision-then-execute"
+kind = "target"
+rules = ["planning.md"]
+title = "A decision that departs from a recorded decision is recorded even when the same message says to go ahead"
+fixture = "ops"
+context = """
+n1 is out of memory. You offered two options:
+
+A. Remove the old system from n1 with `legacy-remove.yml`, as roadmap decision 9
+   and its runbook prescribe.
+B. Only delete 23 idle `legacy_*` containers on n1 with `docker rm -f`, keeping
+   `legacy_u01` and `legacy_u02`, and leave `/opt/legacy` and the old monitor
+   untouched.
+
+You noted that B departs from decision 9.
+"""
+message = "B，旧系统不再维护了，按约定走 playbook 可能出不可控的意外，B 更稳妥。给我简报，我确认后就删。"
+
+[[checks]]
+type = "file_changed"
+path = "projects/ops/docs/roadmap.md"
+why = "the exception to decision 9 is recorded in the turn it is made, before the brief and the deletion"
+
+[[checks]]
+type = "run_absent"
+pattern = 'docker\s+rm'
+why = "the operator asked for a brief first"

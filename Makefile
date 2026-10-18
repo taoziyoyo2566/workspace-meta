@@ -1,4 +1,4 @@
-.PHONY: bootstrap sync agent-sync-check docs-check env-probe env-probe-check test
+.PHONY: bootstrap sync agent-sync-check docs-check env-probe env-probe-check test rule-eval
 
 # Python 3.11+ (tomllib) is required to run the sync script and tests. Discover one
 # at parse time so a macOS system python3 (often 3.9 without tomllib) can't shadow a
@@ -50,3 +50,18 @@ docs-check: ## Validate workspace-meta documentation structure and routes
 
 test: docs-check ## Run workspace-meta regression tests
 	@"$(PYTHON)" -m unittest discover -s tests -v
+
+BEFORE ?= main
+AFTER ?= .
+TRIALS ?= 3
+AGENT ?= claude
+MODEL ?= $(if $(filter claude,$(AGENT)),claude-opus-5-5,)
+JUDGE_MODEL ?=
+RULE_EVAL = "$(PYTHON)" scripts/rule_eval.py run --agent $(AGENT) --trials $(TRIALS) \
+	$(if $(MODEL),--model "$(MODEL)") $(if $(JUDGE_MODEL),--judge-model "$(JUDGE_MODEL)")
+
+rule-eval: ## Compare agent behavior under two rules versions; uses API credit (AGENT=claude|codex BEFORE=ref AFTER=ref|dir OUT=dir)
+	@test -n "$(OUT)" || { echo "set OUT=<directory outside the repository>"; exit 2; }
+	@$(RULE_EVAL) --rules "$(BEFORE)" --label before --out "$(OUT)/before"
+	@$(RULE_EVAL) --rules "$(AFTER)" --label after --out "$(OUT)/after"
+	@"$(PYTHON)" scripts/rule_eval.py compare "$(OUT)/before/results.json" "$(OUT)/after/results.json"

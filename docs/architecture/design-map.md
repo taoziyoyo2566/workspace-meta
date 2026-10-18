@@ -76,6 +76,8 @@ Related maps, not copied here:
 | A delegated agent breaks a workspace rule or lacks context the main session had | [Capabilities and delegation](#capabilities-and-delegation), [Claude runtime](#claude-runtime) |
 | Effort, agents, or verification are cut to save time without asking | [Capabilities and delegation](#capabilities-and-delegation) |
 | A correction is saved to memory but never routed, or a rule lands in the wrong layer | [Rule authoring and feedback](#rule-authoring-and-feedback) |
+| A read runs with `sudo` without asking, or a denied command is retried another way | [Authorization](#authorization) |
+| A rule change is judged only by its wording, or an evaluation scenario quotes the rule it tests | [Rule evaluation harness](#rule-evaluation-harness) |
 | Codex asks approval for each safe read, or broad allow rules appear | [Codex runtime](#codex-runtime) |
 | The two adapters disagree, or portable behavior lives only in one adapter | [Adapters](#adapters) |
 | Sessions under one Claude config dir lack a startup warning, status line, or skill that another has | [Sync engine](#sync-engine-and-managed-surfaces), [Managed skills](#managed-skills) |
@@ -101,7 +103,8 @@ brief before it is proposed, run, or handed to the operator.
   [Technical Permission Is Not Semantic Authority](../../.agents/rules/authorization.md#technical-permission-is-not-semantic-authority),
   [Uncertainty](../../.agents/rules/authorization.md#uncertainty).
 - **Routed by**: its row in both adapters (first write, permission or scope
-  question, external, host, or live mutation); co-loaded by every Git,
+  question, external, host, or live mutation, privilege elevation even for a
+  read, a runtime denial, an approval request); co-loaded by every Git,
   release, and deployment row; the safety floor.
 - **Enforced by**: the gate's safety-floor binding; brief and action-context
   tests in `tests/test_sync_codex_config.py`; host-local executable decisions
@@ -111,7 +114,10 @@ brief before it is proposed, run, or handed to the operator.
   standing approval.
 - **Symptoms**: confirmations for routine reads or in-scope edits; a protected
   command with no brief; a permission prompt taken as approval; an approval
-  stretched to a retry, another target, or a follow-up operation.
+  stretched to a retry, another target, or a follow-up operation; a read run
+  with `sudo` or as another account without asking; a denied command retried
+  by another route; approval targets labelled with names that already meant
+  something, or a short reply acted on when it could select two target sets.
 
 ### Secrets
 
@@ -410,7 +416,9 @@ deviations, and handoff through the owning artifact.
 - **Symptoms**: an operator decision kept only in chat or memory, so the next
   session asks again; status from memory contradicting the Plan or Git
   history; two sessions redoing one investigation; a new Plan for routine
-  feedback, or a new capability folded into an old Plan.
+  feedback, or a new capability folded into an old Plan; an exception to a
+  recorded decision kept only in chat; a remembered restriction used to refuse
+  a request instead of being raised once.
 
 ## Building And Checking
 
@@ -624,7 +632,8 @@ lasting content.
 - **Symptoms**: a correction only saved to memory; a cross-project rule placed
   in a project file, or the reverse; rule text growing with incident stories;
   a recurrence answered with louder wording instead of another rule form; a
-  new rule duplicating another owner.
+  new rule duplicating another owner; a memory note that restricts agents
+  without naming its scope.
 
 ### Claude Runtime
 
@@ -867,6 +876,31 @@ guidance, the runbook headings, and that routed files are tracked.
 - **Project may add**: its own gate.
 - **Symptoms**: a broken link or anchor merged; a dated incident in current
   guidance; a new rule owner not routed or not mapped here.
+
+### Rule Evaluation Harness
+
+Judging a rule change by the behavior it produces: scenarios built from real
+decision points are replayed against a headless agent under two rules
+versions, graded by checks and a voting judge, and compared.
+
+- **Owner**: `scripts/rule_eval.py`, the scenarios and fixtures with
+  [`evals/rules/README.md`](../../evals/rules/README.md), and the `Makefile`
+  target `rule-eval`. Design and results:
+  [rule-evals Plan](../reviews/feature-rule-evals/plan-rule-evals-2026-10-16.md)
+  and its staged extension, the
+  [transcript-replay Plan](../reviews/feature-rule-evals/plan-transcript-replay-2026-10-16.md).
+- **Routed by**: no rule routes an agent to it; the operator or a
+  rule-changing session runs `make rule-eval`, which spends model usage, and
+  the evals README explains the scenario format.
+- **Enforced by**: `tests/test_rule_eval.py` (the runner with fake agents,
+  scenario hygiene including a check that no scenario repeats rule text, and
+  structural checks of the rules it was built with).
+- **Project may add**: nothing; a project evaluates its own rules with its
+  own tools.
+- **Symptoms**: a rule change judged only by its wording; a scenario that
+  quotes the rule it tests; a comparison in which one version's trials went
+  ungraded; an evaluation run that read the real workspace or a real config
+  dir instead of copies.
 
 ### Pre-Commit Guard
 

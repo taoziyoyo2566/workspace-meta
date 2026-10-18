@@ -93,7 +93,8 @@ not invent a host prose file as a portable owner.
 A rule, an adapter, a register entry, and an agent memory note of feedback hold
 only lasting guidance: what to do, when, and why in general terms. Leave out
 what is true only for one session or task, such as exact times, temporary
-paths, routing or progress status, quotes, and the story of an incident.
+paths, routing or progress status, quotes, and the story of an incident. A note that restricts what agents do
+names its scope: which hosts, projects, or operations it covers.
 
 A later real recurrence is refactor evidence: revisit owner, trigger, and rule
 form before amplifying wording. Constructed pressure scenarios are optional for

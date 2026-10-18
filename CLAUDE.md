@@ -35,7 +35,7 @@ what would redirect the work, and not while the operator is away
 
 | Trigger | Shared owner |
 |---|---|
-| first write, permission/scope question, external/host/live mutation | `.agents/rules/authorization.md` |
+| first write, permission/scope question, external/host/live mutation, privilege elevation even for a read, a runtime denial, an approval request | `.agents/rules/authorization.md` |
 | Git inspection or freshness | `.agents/rules/git.md` |
 | branch/worktree/stash action, or starting a repository change | `.agents/rules/authorization.md` + `.agents/rules/git.md` + `.agents/rules/git-branches.md` |
 | stage/commit/push/PR publication | `.agents/rules/authorization.md` + `.agents/rules/git.md` + `.agents/rules/git-publication.md` |

@@ -213,8 +213,9 @@ these records.
 
 When the operator makes or changes a decision that alters what a living
 artifact says about a workstream, such as approving, deferring, dropping, or
-reordering work, changing its scope, or answering a question the artifact lists
-as open, record it in that artifact in the same turn, before any other task
+reordering work, changing its scope, answering a question the artifact lists
+as open, or making an exception to a decision or procedure the artifact
+records, even for one operation, record it in that artifact in the same turn, before any other task
 work except the reads that locate the record and confirm you may write it, so
 an interrupted turn still leaves it on disk. When the same message asks for an
 action the record would block, such as a deploy that needs a clean checkout, do
@@ -256,7 +257,9 @@ never the only place a decision or a workstream's state lives.
 
 Red flags: "I'll update the Plan once the operator confirms" after the operator
 has decided; "memory has it for now"; "it is uncommitted anyway"; "the next
-session will pick it up"; "I'll do it at closeout".
+session will pick it up"; "I'll do it at closeout"; "it is an operational
+choice, not a workstream decision"; asking whether to record a decision
+already made.
 
 ## Handoff And Closeout
 
@@ -269,7 +272,9 @@ and the copy loaded into a session is a snapshot.
 Before reporting a workstream's status, a pending decision, or what the
 operator still owes from memory, a summary, or an earlier turn or session, read
 its owning artifact and the relevant Git state; a memory entry or summary line
-is a lead to open, not the answer. When they disagree, do not settle it by the
+is a lead to open, not the answer. The same holds for a remembered
+restriction: when memory forbids what the operator now asks, name the note and
+the conflict and ask once, instead of declining on its authority. When they disagree, do not settle it by the
 kind of record: find which is current from dated evidence, such as the
 operator's own words or Git history, report that state and the disagreement,
 and bring the owning artifact up to date in the same turn or name it as a gap.

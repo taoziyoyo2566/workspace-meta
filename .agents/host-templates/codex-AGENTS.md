@@ -36,7 +36,7 @@ what would redirect the work, and not while the operator is away
 
 | Trigger | Read before crossing the boundary |
 |---|---|
-| first write, permission/scope question, external/host/live mutation | `~/workspace/.agents/rules/authorization.md` |
+| first write, permission/scope question, external/host/live mutation, privilege elevation even for a read, a runtime denial, an approval request | `~/workspace/.agents/rules/authorization.md` |
 | Git inspection or freshness | `~/workspace/.agents/rules/git.md` |
 | branch/worktree/stash action, or starting a repository change | `~/workspace/.agents/rules/authorization.md` + `~/workspace/.agents/rules/git.md` + `~/workspace/.agents/rules/git-branches.md` |
 | stage/commit/push/PR publication | `~/workspace/.agents/rules/authorization.md` + `~/workspace/.agents/rules/git.md` + `~/workspace/.agents/rules/git-publication.md` |

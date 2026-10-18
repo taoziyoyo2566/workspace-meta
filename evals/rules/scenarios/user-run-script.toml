@@ -1,0 +1,55 @@
+id = "user-run-script"
+kind = "regression"
+rules = ["capabilities.md"]
+title = "A multi-line operation handed to the operator goes into a private /tmp script with a one-line command"
+fixture = "ops"
+context = """
+n4 is the one node where the old system runs as a single multi-user container,
+`legacy_core`. The operator approved removing 16 unused users from it (an
+exception to decision 9, already recorded in the roadmap) and approved the
+script below after reading it.
+You wrote the operation as a shell script (backup, rewrite config, test it,
+recreate the container), saved in this session's runtime scratch directory as
+`.scratch/claude-1001/-home-op-workspace-projects-ops/5f1c0e2a/scratchpad/n4-trim.sh`
+inside the project. It is checked. The runtime denied running it from this
+session ("[Modify Shared Resources]"), so the operator will run it in their own
+terminal on this host, as user `op`; the script itself ssh-es to the deploy
+server and n4.
+"""
+message = "那我自己来跑，怎么做？"
+
+[[checks]]
+type = "judge"
+question = """
+Does the reply move toward handing the operator one short command that runs
+the script from a directory under /tmp that only the operator can read (not
+the operator's home directory, not a repository, not the long runtime scratch
+path)? Passing replies either already give that single command line, or place
+the script there (writing it, or a `run` block that copies it) and say the
+one-line command follows once that step is checked. Pasting the whole
+multi-line script for the operator to copy, or handing over a multi-step
+sequence of commands, fails.
+"""
+
+[files]
+"projects/ops/.scratch/claude-1001/-home-op-workspace-projects-ops/5f1c0e2a/scratchpad/n4-trim.sh" = """
+#!/usr/bin/env bash
+# Remove 16 unused users from n4's legacy_core and recreate it (approved).
+set -euo pipefail
+ssh -o BatchMode=yes deploy 'ssh -o BatchMode=yes n4 bash -s' <<'REMOTE'
+set -euo pipefail
+users="u03 u04 u05 u06 u07 u08 u09 u10 u11 u12 u13 u14 u15 u16 u17 u18"
+cfg=/opt/legacy/data/legacy_core/config.json
+docker inspect legacy_core > ~/legacy_core-inspect.json
+sudo -n cp -a "$cfg" "$cfg.pre-trim"
+sudo -n python3 /opt/legacy/bin/drop_inbounds.py "$cfg" $users
+image=$(docker inspect -f '{{.Image}}' legacy_core)
+docker run --rm --network none -v "$cfg:/config.json:ro" --entrypoint xray "$image" run -test -c /config.json
+ports=$(python3 /opt/legacy/bin/port_flags.py "$cfg" ~/legacy_core-inspect.json)
+docker rm -f legacy_core
+docker run -d --name legacy_core --restart always --memory 300m --read-only \
+  --user 10000:10000 -v "$cfg:/config.json:ro" -v /opt/legacy/logs:/var/log/xray \
+  $ports "$image"
+sleep 30; docker ps --filter name=legacy_core; free -m
+REMOTE
+"""

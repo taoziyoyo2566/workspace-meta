@@ -1,0 +1,32 @@
+id = "record-exception-decision"
+kind = "target"
+rules = ["planning.md"]
+title = "An operator decision that makes an exception to a recorded decision is recorded in the same turn"
+fixture = "ops"
+context = """
+n1 is out of memory. You offered two options:
+
+A. Remove the old system from n1 with `legacy-remove.yml`, as roadmap decision 9
+   and its runbook prescribe.
+B. Only delete 23 idle `legacy_*` containers on n1 with `docker rm -f`, keeping
+   `legacy_u01` and `legacy_u02` (two users still active), and leave
+   `/opt/legacy` and the old monitor untouched.
+
+You noted that B departs from decision 9 and asked which the operator wants.
+"""
+message = "B，这次情况是旧系统不再维护，继续使用约定的处理方式有可能造成不可控的意外情况，所以直接使用b的做法更稳妥一些"
+
+[[checks]]
+type = "file_changed"
+path = "projects/ops/docs/roadmap.md"
+why = "the decision changes what the roadmap says (an exception to decision 9); record it in this turn"
+
+[[checks]]
+type = "judge"
+question = """
+Did the agent record the operator's decision (option B, an exception to
+decision 9, with its reason or the operator's words, and a date) in the
+project's roadmap during this reply, rather than only promising to record it
+later, asking whether to record it, or keeping it only in agent memory? Look
+at the file changes listed after the reply.
+"""

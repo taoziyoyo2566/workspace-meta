@@ -18,14 +18,14 @@ number. Never renumber. Numbering accumulates; mark replacements rather than del
 
 | Canonical owner | Consolidated provenance |
 |---|---|
-| `.agents/rules/authorization.md` | W-R13 authorization boundary, W-R23, W-R29–W-R31, W-R34–W-R35, refined by W-R54, standing bootstrap authority W-R73 |
+| `.agents/rules/authorization.md` | W-R13 authorization boundary, W-R23, W-R29–W-R31, W-R34–W-R35, refined by W-R54, elevated reads W-R66, approval labels W-R68, runtime denials W-R69, standing bootstrap authority W-R73 |
 | `.agents/rules/git.md` | W-R21 inspection/freshness, W-R23, refined by W-R57 |
 | `.agents/rules/git-branches.md` | W-R21–W-R22 and W-R32 branch-contract design refined by W-R40, change flow W-R58 |
 | `.agents/rules/git-publication.md` | W-R25, W-R30 refined by W-R31, change-flow bundle W-R58 |
 | `.agents/rules/git-integration.md` | W-R21 and the accepted W-R32 terminal-evidence refinement, refined by W-R54, W-R57 and W-R58 |
 | `.agents/rules/git-recovery.md` | W-R19–W-R20, refined by W-R57 and W-R58 |
 | `.agents/rules/requests.md` | W-R63, moved from `planning.md`, extended by W-R71 |
-| `.agents/rules/planning.md` | W-R1–W-R7, W-R12, W-R18 and accepted W-R32 refinements, refined by W-R44, W-R46, W-R47, W-R50, W-R51, W-R56 and W-R57 |
+| `.agents/rules/planning.md` | W-R1–W-R7, W-R12, W-R18 and accepted W-R32 refinements, refined by W-R44, W-R46, W-R47, W-R50, W-R51, W-R56 and W-R57, exceptions to recorded decisions W-R67, remembered restrictions W-R70 |
 | `.agents/rules/reasoning.md` | W-R43, refined by W-R63 |
 | `.agents/rules/implementation.md` | W-R37 refined by W-R44, W-R48 and W-R53 |
 | `.agents/rules/documentation.md` | W-R38 refined by W-R39, W-R41 entry-point loadability refined by W-R42, Plan/Changelog lifecycle refined by W-R44, W-R46 and W-R47, investigation records refined by W-R50, seams for W-R53 and W-R57, project bootstrap W-R73 restoring W-R11 in a narrower form |
@@ -41,7 +41,7 @@ number. Never renumber. Numbering accumulates; mark replacements rather than del
 | `.agents/rules/secrets.md` | W-R13, refined by W-R53 |
 | `.agents/rules/temporary-files.md` | W-R55 |
 | `.agents/rules/environment-truth.md` | W-R24 refined by W-R44 |
-| `.agents/rules/rule-authoring.md` | W-R8–W-R14, W-R27–W-R28, W-R32, refined by W-R53 and W-R56, feedback intake W-R61, lasting content and one-line sources W-R64 |
+| `.agents/rules/rule-authoring.md` | W-R8–W-R14, W-R27–W-R28, W-R32, refined by W-R53 and W-R56, feedback intake W-R61, lasting content and one-line sources W-R64, scope of restricting notes W-R70 |
 
 Earlier entries intentionally retain incident-era terminology and recipes. When an earlier
 “How to apply” conflicts with a later disposition or a canonical module, the later disposition
@@ -235,6 +235,16 @@ Distilled cross-project rules. Numbering accumulates — do not delete old rules
     - Source: 2026-10-15, workspace-meta: a survey of existing tools scored candidates against a checklist built from the operator's examples and missed the answer the operator wanted; similar misreadings had happened before.
 - **W-R64 (2026-10-15)** — **Rules, adapters, register entries, and memory notes of feedback hold only lasting guidance; a register entry is the rule in one sentence plus one line of source.**
     - Source: 2026-10-15, workspace-meta: a feedback memory note and a planned register entry carried session times, a temporary path, and routing status.
+- **W-R66 (2026-10-16)** — **Read-only inspection runs as the logged-in account; a read that needs sudo, root, or another account is privilege elevation and waits for the user's go-ahead, and a refused unprivileged read is reported, not escalated.**
+    - Source: 2026-10-16, reality-ops: a session read containers on twelve hosts with `sudo -n` without asking, though the account was in the docker group everywhere, and on the one host where sudo needed a password it reported the containers as unknown (the class of W-R41).
+- **W-R67 (2026-10-16)** — **An operator decision that makes an exception to a recorded decision or procedure, even for one operation, is recorded in that artifact in the same turn.**
+    - Source: 2026-10-16, reality-ops: the operator chose to trim the old system by hand instead of its removal playbook, against a recorded roadmap decision, and the session recorded it only a day later after asking whether to record it (a recurrence of W-R51).
+- **W-R68 (2026-10-16)** — **An approval request names its targets by what they are and reuses no label that already means something else; a short reply that could select two target sets of an irreversible action is clarified first.**
+    - Source: 2026-10-16, reality-ops: groups labelled A/B/C after "option B" had already named an approach made "按B删除" readable two ways for an irreversible deletion.
+- **W-R69 (2026-10-16)** — **A runtime denial stands even for an approved operation: do not repeat it by another route; hand the exact operation to the user or name the permission they could change.**
+    - Source: 2026-10-16, reality-ops: the runtime denied an approved deployment and an approved host change, and the operator asked whether a new tmux session could run the denied command instead.
+- **W-R70 (2026-10-16)** — **A memory note that restricts agents names its scope, and when a remembered restriction forbids what the operator now asks, the agent names the conflict and asks once instead of declining on its authority.**
+    - Source: 2026-10-16, reality-ops: a remembered "do not connect to the deploy server from here", with no scope, blocked the operator's request to control and monitor deployments there until the operator corrected it.
 - **W-R71 (2026-10-17)** — **Read every request before starting work, as deeply as it needs: state its goal and what done means, find the similar problems it stands for and say which join the scope, ask in one round with options and a recommendation only when the operator is present and an answer would redirect the work, and otherwise proceed on stated assumptions.**
     - Source: 2026-10-17, workspace-meta: the operator asked for one standard way of reading their questions and ideas, because their brief descriptions are examples that often stand for a class of problems, while request reading covered only investigations, comparisons, and designs.
 - **W-R72 (2026-10-17)** — **Before delegating, survey the subtasks and give each agent the model and reasoning effort its demand needs, judgment and synthesis at no less than the configured settings and checked mechanical work lighter, with a bounded brief and a stated check; set them explicitly and report the allocation.**
