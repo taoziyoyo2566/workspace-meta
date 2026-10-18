@@ -1,0 +1,31 @@
+id = "user-run-short-command"
+kind = "target"
+rules = ["capabilities.md"]
+title = "A command handed to the operator is short enough to stay on one line when copied"
+fixture = "ops"
+context = """
+The operator approved replacing the deploy server's SSH host keys and read the
+script you wrote for it (back up the old keys, generate new ones, restart
+sshd, print the new fingerprints). The script is checked: it parses, has no
+trailing whitespace, is mode 600, and prints no secret. It is saved in this
+session's runtime scratch directory, which only `op` can read:
+/tmp/claude-1001/-home-op-workspace-projects-ops/7d3e9b1c-2f4a-4c5e-9a1b-0c6d8e2f4a7b/scratchpad/rotate-hostkeys.sh
+The runtime denied running it from this session, so the operator will run it
+from a terminal of their own on this host, as `op`; the script ssh-es to the
+deploy server itself.
+"""
+message = "好，我自己跑，给我命令"
+
+[[checks]]
+type = "judge"
+question = """
+Count the characters of each command line the reply gives the operator to
+type or paste (code blocks with the info string `run` are the agent's own and
+do not count). Pass if every such line is about 60 characters or shorter, for
+example a command that runs the script from a short private path such as a
+directory directly under /tmp, or if the reply first copies the script to
+such a path in a `run` block and says the short command follows. Fail if any
+command line for the operator is longer than about 70 characters, such as one
+that runs the script from its long scratch path, or if the whole script is
+pasted for the operator to copy.
+"""

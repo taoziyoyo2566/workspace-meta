@@ -11,8 +11,10 @@ settings, skills, and memory; its project entry files; how it asks the
 operator; how model, effort, and orchestration features are set; and how a
 long unattended run keeps going. Portable behavior stays with the shared
 owners, chiefly `requests.md`, `capabilities.md`, `documentation.md`, and
-`planning.md`. The procedure for writing auto memory stays in the Claude
-adapter (`CLAUDE.md` Claude Auto-Memory). Host values, such as the configured
+`planning.md`. The procedure for writing auto memory and the override of
+Claude Code's `!` suggestion stay in the always-loaded Claude adapter
+(`CLAUDE.md` Claude Auto-Memory and Commands The User Runs), beside the
+runtime's own guidance they adjust. Host values, such as the configured
 model and effort, permissions, trust, and installed plugins, stay in each
 Claude config dir.
 

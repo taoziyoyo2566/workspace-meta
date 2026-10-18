@@ -75,6 +75,7 @@ Related maps, not copied here:
 | Every agent of a workflow runs at the session model and effort, with no allocation shown | [Capabilities and delegation](#capabilities-and-delegation) |
 | A delegated agent breaks a workspace rule or lacks context the main session had | [Capabilities and delegation](#capabilities-and-delegation), [Claude runtime](#claude-runtime) |
 | Effort, agents, or verification are cut to save time without asking | [Capabilities and delegation](#capabilities-and-delegation) |
+| A command for the operator is suggested for the agent's own prompt (`!`), or breaks when copied | [Capabilities and delegation](#capabilities-and-delegation) |
 | A correction is saved to memory but never routed, or a rule lands in the wrong layer | [Rule authoring and feedback](#rule-authoring-and-feedback) |
 | A read runs with `sudo` without asking, or a denied command is retried another way | [Authorization](#authorization) |
 | A rule change is judged only by its wording, or an evaluation scenario quotes the rule it tests | [Rule evaluation harness](#rule-evaluation-harness) |
@@ -578,7 +579,7 @@ deferral gets an owner and a restart condition.
 When to check which capabilities exist, how tools are chosen, quality before
 speed, how work is delegated (subtasks surveyed by demand, a model tier and
 effort per agent, briefs, verification of delegated output, the allocation
-reported), and how a command is handed to the operator.
+reported), and where and how the operator runs a command handed to them.
 
 - **Owner**: [`capabilities.md`](../../.agents/rules/capabilities.md):
   [Observable Triggers](../../.agents/rules/capabilities.md#observable-triggers),
@@ -589,14 +590,18 @@ reported), and how a command is handed to the operator.
   [Recording](../../.agents/rules/capabilities.md#recording). Claude mechanics:
   [`claude-runtime.md` Delegation](../../.agents/rules/claude-runtime.md#delegation)
   and
-  [Long Unattended Runs](../../.agents/rules/claude-runtime.md#long-unattended-runs).
+  [Long Unattended Runs](../../.agents/rules/claude-runtime.md#long-unattended-runs);
+  the override of Claude Code's `!` suggestion:
+  [`CLAUDE.md` Commands The User Runs](../../CLAUDE.md#commands-the-user-runs).
 - **Routed by**: two rows in both adapters: capability selection, method
-  failure, slow or costly work, or a command for the operator's own terminal;
-  and delegating work to subagents or a workflow. In `CLAUDE.md` the
-  delegation row adds `claude-runtime.md`; in the Codex adapter both rows add
-  `codex-runtime.md` when Codex mechanics are needed.
-- **Enforced by**: Quality Before Speed and Delegation phrase tests in
-  `tests/test_sync_codex_config.py`; nothing checks an allocation. Claude
+  failure, slow or costly work, or a command for the operator to run; and
+  delegating work to subagents or a workflow. In `CLAUDE.md` the delegation
+  row adds `claude-runtime.md`, and the Commands The User Runs section is
+  resident; in the Codex adapter both rows add `codex-runtime.md` when Codex
+  mechanics are needed.
+- **Enforced by**: Quality Before Speed, Delegation, and Commands The User
+  Runs phrase tests in `tests/test_sync_codex_config.py`; nothing checks an
+  allocation or a handed-over command. Claude
   sets a per-agent model and effort only because
   [`CLAUDE.md` Claude-Specific Runtime](../../CLAUDE.md#claude-specific-runtime)
   and `claude-runtime.md` Delegation instruct it to.
@@ -605,7 +610,9 @@ reported), and how a command is handed to the operator.
   with no allocation shown; a delegated agent working without the constraints
   the main session had; effort, agents, or verification cut to save time
   without asking; a delegated result reported without checking its evidence;
-  a multi-line command handed over to paste.
+  a command for the operator suggested for the agent's own prompt, such as
+  Claude Code's `!` prefix, where a passphrase prompt returns unanswered; a
+  multi-line or overlong command handed over to paste.
 
 ### Rule Authoring And Feedback
 

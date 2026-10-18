@@ -2054,7 +2054,7 @@ class CodexConfigSyncTests(unittest.TestCase):
             )
             self.assertIn(entry, row)
 
-        # From W-R63 on, an entry is the rule plus one line of source.
+        # From W-R62 on, an entry is the rule plus one line of source.
         entries: dict[int, list[str]] = {}
         current = None
         for line in feedback.splitlines():
@@ -2067,7 +2067,7 @@ class CodexConfigSyncTests(unittest.TestCase):
             elif line.strip():
                 current = None
         new_entries = {
-            number: lines for number, lines in entries.items() if number >= 63
+            number: lines for number, lines in entries.items() if number >= 62
         }
         self.assertGreaterEqual(len(new_entries), 2)
         for number, lines in new_entries.items():
@@ -2234,6 +2234,71 @@ class CodexConfigSyncTests(unittest.TestCase):
             self.assertEqual(len(routes), 1)
             self.assertIn("rules/capabilities.md`", routes[0])
             self.assertIn(f"rules/{runtime_module}`", routes[0])
+
+    def test_commands_the_user_runs_have_routed_owners(self) -> None:
+        # A command the user runs goes to a new terminal of their own (W-R62)
+        # and stays short enough to copy as one line (W-R65); the Claude
+        # adapter overrides the runtime's own `!` suggestion.
+        capabilities = (self.rules_dir / "capabilities.md").read_text()
+        self.assertEqual(capabilities.count("## Commands The User Runs"), 1)
+        section = capabilities.split("## Commands The User Runs", 1)[1]
+        section = " ".join(section.split("\n## ", 1)[0].split()).lower()
+        for invariant in (
+            "hand it over for a new terminal of their own, not for the "
+            "agent's conversation input",
+            "a passphrase, password, or confirmation prompt returns",
+            "name the host and account it runs as",
+            "reaches the same agent, store, or environment",
+            "afterwards check the effect from the session",
+            "or longer than about 60 characters, write it to a script file",
+            "the wrap can be copied as a line break",
+            "a single simple command within that length is given as it is",
+            "the command that runs a script stays within that length too",
+            "not in a long runtime scratch directory",
+        ):
+            self.assertIn(invariant, section)
+
+        claude = (ROOT / "CLAUDE.md").read_text()
+        self.assertEqual(claude.count("## Commands The User Runs"), 1)
+        override = claude.split("## Commands The User Runs", 1)[1]
+        override = " ".join(override.split("\n## ", 1)[0].split())
+        self.assertIn(
+            "`.agents/rules/capabilities.md` Commands The User Runs", override
+        )
+        self.assertIn("Never suggest the `!` prompt prefix", override)
+
+        runtime = (self.rules_dir / "claude-runtime.md").read_text()
+        ownership = runtime.split("## Ownership", 1)[1].split("\n## ", 1)[0]
+        self.assertIn(
+            "(`CLAUDE.md` Claude Auto-Memory and Commands The User Runs)",
+            " ".join(ownership.split()),
+        )
+
+        for adapter in (self.agents_template.read_text(), claude):
+            routes = [
+                line
+                for line in adapter.splitlines()
+                if line.startswith("| ") and "slow or costly work" in line
+            ]
+            self.assertEqual(len(routes), 1)
+            route_trigger = routes[0].strip("|").split("|", 1)[0]
+            self.assertIn("a command for the user to run", route_trigger)
+            self.assertNotIn("in their own terminal", route_trigger)
+            self.assertIn("rules/capabilities.md`", routes[0])
+
+        entry = self.design_map_entry("capabilities.md")
+        self.assertIn("where and how the operator runs a command", entry)
+        self.assertIn("(../../claude.md#commands-the-user-runs)", entry)
+
+        feedback = (ROOT / "feedback-register.md").read_text()
+        row = next(
+            line
+            for line in feedback.splitlines()
+            if line.startswith("| `.agents/rules/capabilities.md`")
+        )
+        for entry_id in ("W-R62", "W-R65"):
+            self.assertEqual(feedback.count(f"- **{entry_id} ("), 1)
+            self.assertIn(entry_id, row)
 
     def test_project_bootstrap_has_routed_owners(self) -> None:
         # Projects get their missing agent entry files without asking (W-R73).

@@ -6,7 +6,7 @@ with result quality before speed.
 ## Ownership
 
 This file owns generic selection triggers, the rule that quality comes before
-speed, recording behavior, and how a command is handed to the user to run.
+speed, recording behavior, and where and how the user runs a command.
 Agent adapters own concrete tool discovery, delegation mechanics, connected
 applications, and runtime mechanics. Projects own their toolchain, commands,
 environments, and preferred adapters.
@@ -113,19 +113,36 @@ quality cost and let the operator decide before making it. Proportional depth
 
 ## Commands The User Runs
 
-When the user is to run a command in their own terminal and it is more than
-one simple line, write it to a script file and hand over only the one-line
-command that runs the file. Text copied from a chat or terminal view can gain
-trailing spaces or broken lines without showing it: a heredoc terminator stops
-matching, a continuation line runs on its own, or a quoted argument splits.
+When the user is to run a command, hand it over for a new terminal of their
+own, not for the agent's conversation input, even where the runtime offers a
+prefix that runs shell commands from it. A command run from there may have no
+terminal to read from, so a passphrase, password, or confirmation prompt
+returns without the user's answer.
+
+- Name the host and account it runs as.
+- When its effect must reach the session, such as a key loaded into an agent
+  or a login token, first check that a new terminal of theirs reaches the same
+  agent, store, or environment.
+- Afterwards check the effect from the session, such as the key now listed in
+  the agent; when the session cannot see it, ask for the output.
+
+When the command is more than one simple line, or longer than about 60
+characters, write it to a script file and hand over only the one-line command
+that runs the file. Text copied from a chat or terminal view can gain trailing
+spaces or broken lines without showing it: a long line is wrapped for display,
+and the wrap can be copied as a line break that splits a path or an argument;
+a heredoc terminator stops matching; a continuation line runs on its own; or a
+quoted argument splits.
 
 - More than one simple line means several lines, a heredoc, a line
   continuation, a multi-line loop or pipeline, or an interpreter `-c` argument
-  with nested quotes. A single simple command is given as it is.
-- A one-off script goes under `/tmp`, in a directory only the user can read,
-  not into a repository; its removal follows `temporary-files.md`. A command
-  that will be reused belongs in the project as a tool, under the project's
-  rules.
+  with nested quotes. A single simple command within that length is given as
+  it is.
+- The command that runs a script stays within that length too: a one-off
+  script goes under `/tmp`, in a directory only the user can read, at a short
+  path, not in a long runtime scratch directory or a repository. Its removal
+  follows `temporary-files.md`. A command that will be reused belongs in the
+  project as a tool, under the project's rules.
 - Before handing it over, run its file checks (`file-checks.md`): it parses,
   has no trailing whitespace, is readable only by the user, and prints no
   secret value.

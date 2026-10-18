@@ -53,7 +53,7 @@ what would redirect the work, and not while the operator is away
 | change verification or blocked check | `~/workspace/.agents/rules/verification.md` |
 | review, audit, diagnosis, remediation assessment, or reporting which problems exist | `~/workspace/.agents/rules/review.md` |
 | proposing a procedure or practice, or reporting a handled problem | `~/workspace/.agents/rules/problem-follow-up.md` |
-| capability selection, method failure, slow or costly work, or a command for the user to run in their own terminal | `~/workspace/.agents/rules/capabilities.md` + `~/workspace/.agents/rules/codex-runtime.md` when Codex mechanics are needed |
+| capability selection, method failure, slow or costly work, or a command for the user to run | `~/workspace/.agents/rules/capabilities.md` + `~/workspace/.agents/rules/codex-runtime.md` when Codex mechanics are needed |
 | secret material or remediation | `~/workspace/.agents/rules/secrets.md` |
 | creating temporary files, or temporary space full or filling | `~/workspace/.agents/rules/temporary-files.md` |
 | load-bearing host/environment claim | `~/workspace/.agents/rules/environment-truth.md` |

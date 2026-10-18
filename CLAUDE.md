@@ -52,7 +52,7 @@ what would redirect the work, and not while the operator is away
 | change verification or blocked check | `.agents/rules/verification.md` |
 | review, audit, diagnosis, remediation assessment, or reporting which problems exist | `.agents/rules/review.md` |
 | proposing a procedure or practice, or reporting a handled problem | `.agents/rules/problem-follow-up.md` |
-| capability selection, method failure, slow or costly work, or a command for the user to run in their own terminal | `.agents/rules/capabilities.md`; use only Claude mechanics actually available in the session |
+| capability selection, method failure, slow or costly work, or a command for the user to run | `.agents/rules/capabilities.md`; use only Claude mechanics actually available in the session |
 | secret material or remediation | `.agents/rules/secrets.md` |
 | creating temporary files, or temporary space full or filling | `.agents/rules/temporary-files.md` |
 | load-bearing host/environment claim | `.agents/rules/environment-truth.md` |
@@ -71,6 +71,14 @@ before substantive project work, including read-only review or any
 host/external action, and create the missing entry file as
 `.agents/rules/documentation.md` Project Bootstrap describes; a delegated
 agent, or one told not to write, reports it instead.
+
+## Commands The User Runs
+
+Hand a command the user runs over for a new terminal of their own, as
+`.agents/rules/capabilities.md` Commands The User Runs says. Never suggest the
+`!` prompt prefix for it, even for an interactive login where Claude Code's own
+guidance suggests it: a `!` command cannot read the user's input, so a
+passphrase or login prompt returns unanswered.
 
 ## Handoff And Feedback
 
