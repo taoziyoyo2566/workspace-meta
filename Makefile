@@ -1,4 +1,4 @@
-.PHONY: bootstrap sync agent-sync-check docs-check env-probe env-probe-check test rule-eval
+.PHONY: bootstrap sync agent-sync-check docs-check env-probe env-probe-check test verify-committed rule-eval
 
 # Python 3.11+ (tomllib) is required to run the sync script and tests. Discover one
 # at parse time so a macOS system python3 (often 3.9 without tomllib) can't shadow a
@@ -33,8 +33,8 @@ AGENT_SYNC_COMMAND = "$(PYTHON)" scripts/sync_codex_config.py \
 bootstrap:
 	./scripts/bootstrap-local.sh
 
-sync: ## Inspect, confirm, and synchronize workspace-meta-managed host configuration
-	@$(AGENT_SYNC_COMMAND) --interactive
+sync: ## Inspect, confirm, and synchronize workspace-meta-managed host configuration (SYNC_EXPECT='label;label' applies without a prompt only when no other area drifts)
+	@$(AGENT_SYNC_COMMAND) $(if $(strip $(value SYNC_EXPECT)),--expect '$(subst ','\'',$(value SYNC_EXPECT))',--interactive)
 
 agent-sync-check: ## Report host Claude/Codex managed-config drift without writing files
 	@$(AGENT_SYNC_COMMAND) --check
@@ -50,6 +50,9 @@ docs-check: ## Validate workspace-meta documentation structure and routes
 
 test: docs-check ## Run workspace-meta regression tests
 	@"$(PYTHON)" -m unittest discover -s tests -v
+
+verify-committed: ## Run make test on a temporary copy in which every file the whitelist admits is committed
+	@bash scripts/verify_committed_copy.sh . -- $(MAKE) test PYTHON="$(PYTHON)"
 
 BEFORE ?= main
 AFTER ?= .

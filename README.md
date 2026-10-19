@@ -149,7 +149,9 @@ Full provenance: `feedback-register.md` entry **W-R26**.
   variable is unset, the list is `~/.claude` plus each `~/.claude-*` directory
   holding a `.claude.json`, minus names that look like copies or backups, and
   both lists are printed first; set the variable (colon-separated) to choose the
-  dirs on a host.
+  dirs on a host. With `SYNC_EXPECT='label;label'` (labels as the status lines
+  print them), `make sync` applies without asking when every drifted area is
+  listed, and refuses, writing nothing, when any other area drifted.
   `make agent-sync-check` reuses the same diagnostics without prompting or
   writing. `make bootstrap` remains the full installation/upgrade entry point,
   including repository-local Git hook initialization and identity checks. The
@@ -162,6 +164,17 @@ Full provenance: `feedback-register.md` entry **W-R26**.
   (`git config --show-origin user.name user.email` must resolve from the
   host's *global* gitconfig to the current operator); **no trailers**
   (`Co-Authored-By`, `Signed-off-by`); post-commit `git log -1` self-check.
+  `scripts/change_flow_bundle.sh check|commit|retire DIR` runs a reviewed
+  change-flow bundle from a bundle directory whose fingerprints bind the
+  reviewed tree and message. It stops on the drifts it checks (refs, content,
+  message, identity, staging, a worktree of another repository, an ignored
+  file the merge would overwrite, push configuration that would send more
+  than `main`), retires only the change's own worktree without `--force` and
+  only when everything in it is tracked, and leaves the push between `commit`
+  and `retire` as its own command, printed as `cd <repo> && git push ...`
+  with the reviewed commit as its source.
+  `make verify-committed` runs `make test` on a temporary copy in which every
+  file the whitelist admits is committed, before the commit is made.
 
 ## Onboarding a machine
 

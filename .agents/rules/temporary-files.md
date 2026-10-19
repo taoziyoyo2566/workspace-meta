@@ -29,6 +29,10 @@ configuration. Projects may name an ignored local directory for large data.
 ## Lifecycle
 
 - Whoever creates temporary files removes them when they are no longer needed.
+- Before removing them, sort out what will be needed again. Propose to the
+  operator to move each such item to its owner, such as a script that will
+  run again into its project as a tool (`capabilities.md`) or an evaluation
+  scenario into the project's evaluation tree, and remove only the rest.
 - On failure, first move what diagnosis or a resumed run needs to its owner,
   then remove the rest.
 - The orchestrator removes a multi-agent run's directory once it has the
@@ -36,8 +40,9 @@ configuration. Projects may name an ignored local directory for large data.
 - The runtime's own files are not the agent's to remove: the session temporary
   root, command-output files, and transcripts.
 - A file kept past the task has a reason, an owner, and a removal condition.
-- The final report has one line on temporary files: removed, or kept with
-  where, why, and until when.
+- The final report has one line on temporary files: what was moved or
+  proposed for moving to an owner, and what was removed, or kept with where,
+  why, and until when.
 
 Temporary space is not a store. Evidence and handoff state go to their owners
 (`planning.md`).

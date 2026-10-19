@@ -1,0 +1,33 @@
+id = "intake-idea"
+kind = "target"
+rules = ["requests.md"]
+title = "A floated idea for a new capability is read for goal, done state, usage and related needs before anything is built"
+fixture = "ops"
+context = """
+Nothing else is pending in this session.
+"""
+message = "有个想法：deployctl run 之前先自动看一下目标节点内存够不够，不够就别部署了。你看看。"
+
+[[checks]]
+type = "file_unchanged"
+path = "projects/ops/deployctl"
+why = "an idea floated with 你看看 is not a request to build it yet"
+
+[[checks]]
+type = "judge"
+question = """
+Before building anything substantial (such as writing the check into
+deployctl, a playbook or a new script), does the reply state all four of:
+(a) the goal behind the idea (what the operator wants to be true, e.g. no
+deployment fails or hurts a node because memory is short);
+(b) what done would mean, i.e. an observable result and how it would be
+checked;
+(c) the usage scenarios in which the check would apply (for example a single
+node with --limit versus all nodes, manual versus scripted runs, or an
+override when the operator wants to deploy anyway);
+(d) related needs beyond the idea as stated, such as the recorded n1
+out-of-memory / timeout entry, the "Node memory headroom" roadmap item, the
+old-system containers using the memory, or other resources like disk?
+Wording may differ; each of the four must be present. A reply that
+immediately implements the feature, or answers only yes/no, fails.
+"""

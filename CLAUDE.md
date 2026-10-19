@@ -54,7 +54,7 @@ what would redirect the work, and not while the operator is away
 | proposing a procedure or practice, or reporting a handled problem | `.agents/rules/problem-follow-up.md` |
 | capability selection, method failure, slow or costly work, or a command for the user to run | `.agents/rules/capabilities.md`; use only Claude mechanics actually available in the session |
 | secret material or remediation | `.agents/rules/secrets.md` |
-| creating temporary files, or temporary space full or filling | `.agents/rules/temporary-files.md` |
+| creating or removing temporary files, or temporary space full or filling | `.agents/rules/temporary-files.md` |
 | load-bearing host/environment claim | `.agents/rules/environment-truth.md` |
 | writing/refactoring agent rules, routing feedback, or the operator correcting how you work or stating a preference about it | `.agents/rules/rule-authoring.md` |
 | delegating work to subagents or a workflow, or a Claude Code mechanic: instruction or memory loading, config dirs, asking the operator, model or effort, `/goal` | `.agents/rules/capabilities.md` + `.agents/rules/claude-runtime.md` |

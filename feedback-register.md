@@ -39,7 +39,7 @@ number. Never renumber. Numbering accumulates; mark replacements rather than del
 | `.agents/rules/claude-runtime.md` | Claude mechanics for W-R71, W-R72 and W-R73 |
 | `.agents/host-templates/README-agents.md` | W-R28, W-R36, every agent config dir W-R74 |
 | `.agents/rules/secrets.md` | W-R13, refined by W-R53 |
-| `.agents/rules/temporary-files.md` | W-R55 |
+| `.agents/rules/temporary-files.md` | W-R55, keeping reusable work W-R75 |
 | `.agents/rules/environment-truth.md` | W-R24 refined by W-R44 |
 | `.agents/rules/rule-authoring.md` | W-R8–W-R14, W-R27–W-R28, W-R32, refined by W-R53 and W-R56, feedback intake W-R61, lasting content and one-line sources W-R64, scope of restricting notes W-R70 |
 
@@ -257,3 +257,5 @@ Distilled cross-project rules. Numbering accumulates — do not delete old rules
     - Source: 2026-10-17, workspace-meta: the operator asked that every project used with Claude get its project content automatically, while most Git projects had no entry file Claude loads, `AGENTS.md`-only projects loaded nothing in Claude, and W-R11's per-project file had lost its owner.
 - **W-R74 (2026-10-17)** — **Every agent config dir the operator uses is an instance of the host user layer: workspace-managed surfaces are converged into each one, and everything else in it stays with that account.**
     - Source: 2026-10-17, workspace-meta: after the operator added a second Claude account, its sessions ran under a second config dir that received none of the managed session-start check, status line, or skill.
+- **W-R75 (2026-10-18)** — **Before removing its temporary files, an agent sorts out what will be needed again and proposes moving it to its owner, such as a script into its project as a tool or an evaluation scenario into the evaluation tree, and removes only the rest.**
+    - Source: 2026-10-18, workspace-meta: a session's scratch cleanup removed evaluation scenarios and a guarded-sync script that would be needed again, and the operator asked that scripts which will be reused be kept.

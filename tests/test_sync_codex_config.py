@@ -315,6 +315,146 @@ class CodexConfigSyncTests(unittest.TestCase):
         self.assertIn("Result: everything is already current.", second.stdout)
         self.assertEqual(current_snapshot, self.path_snapshot(config))
 
+    def test_sync_expect_applies_listed_drift_without_prompt(self) -> None:
+        self.install_current_managed_state()
+        config = self.codex_home / "config.toml"
+        self.drift_status_line()
+        unchanged_paths = tuple(path for path in self.managed_paths() if path != config)
+        unchanged_before = {
+            path: self.path_snapshot(path) for path in unchanged_paths
+        }
+
+        completed = subprocess.run(
+            [
+                *self.sync_args(None, None),
+                "--expect=Codex preferences",
+                "--expect=Codex AGENTS.md",
+            ],
+            capture_output=True,
+            text=True,
+            env=self.isolated_env(),
+            check=False,
+        )
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertNotIn("Apply these changes?", completed.stdout)
+        self.assertIn("- Codex preferences: replace tui.status_line", completed.stdout)
+        self.assertIn("Expected but already current: Codex AGENTS.md", completed.stdout)
+        self.assertIn("Final managed configuration:", completed.stdout)
+        self.assertRegex(completed.stdout, r"(?m)^Codex preferences:\s+UPDATED$")
+        self.assertEqual(
+            tomllib.loads(config.read_text())["tui"]["status_line"],
+            self.expected_status_line,
+        )
+        self.assertEqual(
+            unchanged_before,
+            {path: self.path_snapshot(path) for path in unchanged_paths},
+        )
+
+    def test_sync_expect_refuses_drift_outside_the_list(self) -> None:
+        self.install_current_managed_state()
+        self.drift_status_line()
+        before = {path: self.path_snapshot(path) for path in self.managed_paths()}
+
+        completed = self.sync_cli("--expect=Codex AGENTS.md")
+
+        self.assertEqual(completed.returncode, 1, completed.stderr)
+        self.assertIn(
+            "Result: drift outside the expected areas: Codex preferences",
+            completed.stdout,
+        )
+        self.assertIn("Drift detected:", completed.stdout)
+        self.assertIn("tui.status_line", completed.stdout)
+        self.assertIn("No files were modified.", completed.stdout)
+        self.assertNotIn("Changes to apply:", completed.stdout)
+        self.assertEqual(
+            before,
+            {path: self.path_snapshot(path) for path in self.managed_paths()},
+        )
+
+    def test_sync_expect_refuses_when_any_drifted_area_is_unlisted(self) -> None:
+        self.install_current_managed_state()
+        self.drift_status_line()
+        agents = self.codex_home / "AGENTS.md"
+        text = agents.read_text()
+        self.assertEqual(text.count("## Safety Floor"), 1)
+        agents.write_text(text.replace("## Safety Floor", "## Safety Floor (edited)"))
+        before = {path: self.path_snapshot(path) for path in self.managed_paths()}
+
+        # Spaces around a label are ignored.
+        completed = self.sync_cli("--expect= Codex preferences ")
+
+        self.assertEqual(completed.returncode, 1, completed.stderr)
+        self.assertIn(
+            "Result: drift outside the expected areas: Codex AGENTS.md",
+            completed.stdout,
+        )
+        self.assertEqual(
+            before,
+            {path: self.path_snapshot(path) for path in self.managed_paths()},
+        )
+
+    def test_sync_expect_rejects_an_unknown_label_before_writing(self) -> None:
+        self.install_current_managed_state()
+        self.drift_status_line()
+        before = {path: self.path_snapshot(path) for path in self.managed_paths()}
+
+        for value in (
+            "--expect=Codex preference",
+            "--expect=Codex preferences;Codex preference",
+            "--expect= ; ",
+        ):
+            with self.subTest(value=value):
+                completed = self.sync_cli(value)
+                self.assertEqual(completed.returncode, 1)
+                self.assertIn("--expect", completed.stderr)
+                self.assertIn("No files were modified.", completed.stderr)
+                self.assertEqual(
+                    before,
+                    {path: self.path_snapshot(path) for path in self.managed_paths()},
+                )
+
+    def test_make_sync_expect_applies_when_current_or_listed(self) -> None:
+        self.install_current_managed_state()
+        env = self.isolated_env()
+        env["SYNC_EXPECT"] = "Codex preferences"
+
+        current = self.make_target("sync", env=env)
+        self.assertEqual(current.returncode, 0, current.stderr)
+        self.assertIn("Result: everything is already current.", current.stdout)
+
+        self.drift_status_line()
+        completed = self.make_target("sync", env=env)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertNotIn("Apply these changes?", completed.stdout)
+        self.assertRegex(completed.stdout, r"(?m)^Codex preferences:\s+UPDATED$")
+
+        self.drift_status_line()
+        env["SYNC_EXPECT"] = "Codex AGENTS.md"
+        refused = self.make_target("sync", env=env)
+        self.assertNotEqual(refused.returncode, 0)
+        self.assertIn("drift outside the expected areas", refused.stdout)
+
+    def test_sync_expect_is_its_own_mode_and_reaches_the_script_unexpanded(self) -> None:
+        self.install_current_managed_state()
+        both = subprocess.run(
+            [*self.sync_args(None, None), "--check", "--expect=Codex AGENTS.md"],
+            capture_output=True,
+            text=True,
+            env=self.isolated_env(),
+            check=False,
+        )
+        self.assertEqual(both.returncode, 2)
+        self.assertIn("not allowed with argument", both.stderr)
+
+        env = self.isolated_env()
+        for label in ("Codex preferences$HOME", "Codex preferences'x"):
+            with self.subTest(label=label):
+                env["SYNC_EXPECT"] = label
+                completed = self.make_target("sync", env=env)
+                self.assertNotEqual(completed.returncode, 0)
+                self.assertIn(label, completed.stderr)
+
     def test_agent_sync_check_reports_drift_and_never_writes(self) -> None:
         self.install_current_managed_state()
         self.drift_status_line()
@@ -1351,6 +1491,7 @@ class CodexConfigSyncTests(unittest.TestCase):
             python="python3",
             check=True,
             interactive=False,
+            expect=None,
         )
 
         stdout = StringIO()
@@ -1426,6 +1567,7 @@ class CodexConfigSyncTests(unittest.TestCase):
             python="python3",
             check=False,
             interactive=False,
+            expect=None,
         )
         stdout = StringIO()
         stderr = StringIO()
@@ -2299,6 +2441,49 @@ class CodexConfigSyncTests(unittest.TestCase):
         for entry_id in ("W-R62", "W-R65"):
             self.assertEqual(feedback.count(f"- **{entry_id} ("), 1)
             self.assertIn(entry_id, row)
+
+    def test_temporary_files_keep_reusable_work(self) -> None:
+        # Before removing its temporary files, an agent proposes moving what
+        # will be needed again to its owner (W-R75); both adapters route the
+        # removal moment, not only creation.
+        rule = (self.rules_dir / "temporary-files.md").read_text()
+        lifecycle = rule.split("## Lifecycle", 1)[1].split("\n## ", 1)[0]
+        lifecycle = " ".join(lifecycle.split()).lower()
+        for invariant in (
+            "before removing them, sort out what will be needed again",
+            "propose to the operator to move each such item to its owner",
+            "a script that will run again into its project as a tool",
+            "an evaluation scenario into the project's evaluation tree",
+            "remove only the rest",
+            "what was moved or proposed for moving to an owner",
+        ):
+            self.assertIn(invariant, lifecycle)
+
+        for adapter in (
+            self.agents_template.read_text(),
+            (ROOT / "CLAUDE.md").read_text(),
+        ):
+            routes = [
+                line
+                for line in adapter.splitlines()
+                if line.startswith("| ") and "rules/temporary-files.md`" in line
+            ]
+            self.assertEqual(len(routes), 1)
+            self.assertIn("creating or removing temporary files", routes[0])
+
+        self.assertIn(
+            "a script or scenario that will be needed again deleted",
+            self.design_map_entry("temporary-files.md"),
+        )
+
+        feedback = (ROOT / "feedback-register.md").read_text()
+        self.assertEqual(feedback.count("- **W-R75 ("), 1)
+        row = next(
+            line
+            for line in feedback.splitlines()
+            if line.startswith("| `.agents/rules/temporary-files.md`")
+        )
+        self.assertIn("W-R75", row)
 
     def test_project_bootstrap_has_routed_owners(self) -> None:
         # Projects get their missing agent entry files without asking (W-R73).

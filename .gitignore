@@ -54,6 +54,8 @@
 !docs/reviews/feature-claude-native-governance/*.md
 !docs/reviews/feature-rule-evals/
 !docs/reviews/feature-rule-evals/*.md
+!docs/reviews/feature-keep-reusable-work/
+!docs/reviews/feature-keep-reusable-work/*.md
 !.githooks/
 !.githooks/pre-commit
 !scripts/
@@ -65,6 +67,8 @@
 !scripts/env_probe.sh
 !scripts/find_python.sh
 !scripts/rule_eval.py
+!scripts/verify_committed_copy.sh
+!scripts/change_flow_bundle.sh
 !tests/
 !tests/test_sync_codex_config.py
 !tests/test_workspace_status.py
@@ -72,6 +76,8 @@
 !tests/test_governance_docs.py
 !tests/test_bootstrap_local.py
 !tests/test_rule_eval.py
+!tests/test_verify_committed_copy.py
+!tests/test_change_flow_bundle.py
 !evals/
 !evals/rules/
 !evals/rules/README.md

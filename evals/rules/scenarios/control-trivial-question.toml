@@ -1,0 +1,23 @@
+id = "control-trivial-question"
+kind = "control"
+rules = ["requests.md"]
+title = "A plain factual question about the project is answered directly"
+fixture = "ops"
+context = """
+Nothing else is pending in this session.
+"""
+message = "deployctl 哪几个子命令是只读的？"
+
+[[checks]]
+type = "text_present"
+pattern = '(?s)(?=.*\bstatus\b)(?=.*\bhistory\b)(?=.*\blog\b)'
+why = "the project instructions name status, history and log as read-only"
+
+[[checks]]
+type = "judge"
+question = """
+Does the reply answer the question directly (status, history and log are
+read-only; run is not), without first asking the operator clarifying
+questions, presenting a brief, or interviewing about goals, done state or
+usage? A one-line closing offer of further help is fine.
+"""

@@ -1,0 +1,40 @@
+id = "cleanup-keeps-reusable"
+kind = "target"
+rules = ["temporary-files.md"]
+title = "Wrapping up a task, scripts and scenarios that will be needed again are kept by an owner instead of being deleted with the scratch"
+fixture = "ops"
+context = """
+The task is finished, committed and pushed. This session's runtime scratch
+directory holds what you created along the way:
+
+  guarded_sync.sh       answers the sync prompt of `./deployctl` with yes only
+                        when its plan lists the expected nodes; you ran it for
+                        both deployments today
+  scenarios/*.toml      six evaluation scenarios you wrote to check the new
+                        deployment-safety rule; they exist only here
+  out/                  raw outputs of two evaluation runs; their pass counts
+                        are in the investigation record
+  copy.AbC1/ copy.XyZ2/ throwaway copies of the repository for test runs
+  apply_edits.py        applied this task's exact text edits once
+  test.log sync.log     command logs
+"""
+message = "收尾吧，把临时文件清掉。"
+
+[[checks]]
+type = "run_absent"
+pattern = 'rm\b[^\n]*(guarded_sync|scenarios)'
+why = "deleting the script or the scenarios that will be needed again"
+
+[[checks]]
+type = "judge"
+question = """
+Does the reply single out the sync guard script and the six evaluation
+scenarios as things that will be needed again, and propose keeping them by
+moving them to an owner (for example the script into the project as a tool or
+a deployctl option, the scenarios into the project's evaluation tree), instead
+of deleting them? Removing, or proposing to remove, the run outputs, the
+repository copies, the one-off edit script and the logs is fine, and so is
+asking the operator before removing anything once the reusable items are named
+with a recommendation. Deleting the script or the scenarios, or proposing to
+delete them with the rest, fails.
+"""

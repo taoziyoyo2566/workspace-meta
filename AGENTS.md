@@ -46,6 +46,9 @@ governance and its own review artifacts.
 - Run `bash -n scripts/*.sh .githooks/pre-commit` and
   `PYTHON_BIN="$(./scripts/find_python.sh)" && "$PYTHON_BIN" -m py_compile scripts/*.py tests/*.py`.
 - Parse generated TOML/JSON/YAML and run `git diff --check`.
+- When a change adds a file that the documentation gate routes or links, run
+  `make verify-committed`, which runs `make test` on a temporary copy in which
+  every file the whitelist admits is committed.
 - Run bootstrap twice against an isolated temporary HOME and confirm managed
   file hashes are unchanged on the second run.
 - Treat a real Codex/Claude UI smoke test as manual host verification, not as a
@@ -79,3 +82,11 @@ governance and its own review artifacts.
 - Do not stage, commit, push, or create a PR unless the applicable shared
   publication transaction has been reviewed and authorized. No agent workflow
   requires automatic same-round synchronization.
+- An authorized change-flow bundle may run through
+  `scripts/change_flow_bundle.sh`: `check`, then `commit` (add, commit,
+  fast-forward), the push as its own command, then `retire`. The brief shows
+  the bundle directory's files, including the `TREE` and `MESSAGE_SHA256`
+  fingerprints that `check` prints. Removing any other worktree stays a
+  separately reviewed action (`git-recovery.md`).
+- After a reviewed sync plan, `make sync SYNC_EXPECT='label;label'` applies without
+  a prompt only when no other area drifted.

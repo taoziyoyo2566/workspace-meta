@@ -1943,6 +1943,15 @@ def _warn_hook_and_override(plan: SyncPlan, args: argparse.Namespace) -> None:
         )
 
 
+def expected_labels(values: list[str]) -> set[str]:
+    labels = {
+        label.strip() for value in values for label in value.split(";")
+    } - {""}
+    if not labels:
+        raise SyncError("--expect names no area label")
+    return labels
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--agents-template", required=True, type=Path)
@@ -1990,6 +1999,15 @@ def parse_args() -> argparse.Namespace:
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--check", action="store_true")
     mode.add_argument("--interactive", action="store_true")
+    mode.add_argument(
+        "--expect",
+        action="append",
+        metavar="LABELS",
+        help=(
+            "apply without a prompt only when every drifted area is listed; "
+            "area labels as the status lines print them, separated by ';'"
+        ),
+    )
     return parser.parse_args()
 
 
@@ -2007,8 +2025,24 @@ def main() -> int:
         _print_error(exc)
         return 1
 
+    expected = None
+    if args.expect:
+        try:
+            expected = expected_labels(args.expect)
+            unknown = sorted(expected - {area.label for area in plan.areas})
+            if unknown:
+                raise SyncError(
+                    "--expect names unknown area labels: "
+                    + "; ".join(unknown)
+                    + ". Known labels: "
+                    + "; ".join(area.label for area in plan.areas)
+                )
+        except SyncError as exc:
+            _print_error(exc)
+            return 1
+
     drifted = any(area.drifted for area in plan.areas)
-    if args.check or args.interactive:
+    if args.check or args.interactive or expected is not None:
         print("Managed configuration dry-run:")
         print_area_statuses(plan.areas)
         if drifted:
@@ -2022,6 +2056,22 @@ def main() -> int:
         print("\nResult: managed configuration drift detected.")
         print("No files were modified.")
         return 1
+
+    if expected is not None:
+        drifted_labels = [area.label for area in plan.areas if area.drifted]
+        unexpected = [label for label in drifted_labels if label not in expected]
+        if unexpected:
+            print("\nResult: drift outside the expected areas: " + "; ".join(unexpected))
+            print("No files were modified.")
+            return 1
+        print_changes_to_apply(plan.areas)
+        current = [
+            area.label
+            for area in plan.areas
+            if area.label in expected and not area.drifted
+        ]
+        if current:
+            print("\nExpected but already current: " + "; ".join(current))
 
     if args.interactive:
         print_changes_to_apply(plan.areas)
@@ -2059,7 +2109,7 @@ def main() -> int:
         )
         return 1
 
-    if args.interactive:
+    if args.interactive or expected is not None:
         print("\nFinal managed configuration:")
     print_area_statuses(plan.areas, written_paths)
     updated_count = sum(

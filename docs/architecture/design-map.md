@@ -47,6 +47,7 @@ Related maps, not copied here:
 | A permission prompt or auto-mode pass is treated as approval to commit, push, or deploy | [Authorization](#authorization), [Publication](#publication) |
 | A secret value appears in chat, a plan, or a diff, or remediation starts right after discovery | [Secrets](#secrets) |
 | Temporary space fills, scratch is left behind, or another session's files are removed | [Temporary files](#temporary-files) |
+| A script or scenario that will be needed again is deleted with the temporary files | [Temporary files](#temporary-files) |
 | "Not installed" stated from memory, or a check marked blocked without a fresh probe | [Environment truth](#environment-truth), [Environment registry](#environment-registry) |
 | `git status` needs permission, or a freshness check becomes a pull | [Git inspection and state](#git-inspection-and-state) |
 | Unknown files are reset, cleaned, or stashed | [Git inspection and state](#git-inspection-and-state), [Recovery](#recovery-and-destructive-git) |
@@ -140,22 +141,24 @@ alone authorizes no remediation.
 
 ### Temporary Files
 
-Where temporary files go by size and filesystem, who removes them, and what to
-do when temporary space fills.
+Where temporary files go by size and filesystem, who removes them, what is
+kept from them by its owner, and what to do when temporary space fills.
 
 - **Owner**: [`temporary-files.md`](../../.agents/rules/temporary-files.md):
   [Placement](../../.agents/rules/temporary-files.md#placement),
   [Lifecycle](../../.agents/rules/temporary-files.md#lifecycle),
   [Full Or Filling Temporary Space](../../.agents/rules/temporary-files.md#full-or-filling-temporary-space),
   [Host Settings](../../.agents/rules/temporary-files.md#host-settings).
-- **Routed by**: its row in both adapters (creating temporary files, or
-  temporary space full or filling); the [SessionStart
+- **Routed by**: its row in both adapters (creating or removing temporary
+  files, or temporary space full or filling); the [SessionStart
   evaluator](#sessionstart-evaluator) warning, which names the owner.
 - **Enforced by**: the evaluator's free-space check, which warns the operator
-  and the agent; temporary-space tests in `tests/test_workspace_status.py`.
+  and the agent; temporary-space tests in `tests/test_workspace_status.py`;
+  Lifecycle phrase tests in `tests/test_sync_codex_config.py`.
 - **Project may add**: an ignored local directory for large data.
 - **Symptoms**: no space left on the temporary filesystem; scratch left after
-  the task; no temporary-files line in the final report; another session's
+  the task; a script or scenario that will be needed again deleted with the
+  scratch; no temporary-files line in the final report; another session's
   files deleted.
 
 ### Environment Truth
@@ -239,8 +242,12 @@ reviewed command bundle, under the operator's identity and with no AI trailers.
 - **Routed by**: its row in both adapters (stage, commit, push, or PR
   publication), with `authorization.md` and `git.md`; the safety floor.
 - **Enforced by**: the gate's safety-floor binding; publication-contract tests
-  in `tests/test_sync_codex_config.py`; the bootstrap's global-identity check.
-  No commit-message hook.
+  in `tests/test_sync_codex_config.py`; the bootstrap's global-identity check;
+  `scripts/change_flow_bundle.sh`, which runs a reviewed bundle from its
+  bundle directory, binds the reviewed tree and message by fingerprint, stops
+  on the drifts it checks, never force-removes a worktree, and leaves the push
+  a separate command (`tests/test_change_flow_bundle.py`). No commit-message
+  hook.
 - **Project may add**: message format, checks, CI, PR fields.
 - **Symptoms**: `Co-Authored-By` or `Signed-off-by` in a commit, or a
   repository-local identity; a commit right after a permission prompt with no
@@ -763,11 +770,13 @@ parsed before the first write.
   `scripts/bootstrap-local.sh`. Ownership classes:
   [layer model](../../.agents/host-templates/README-agents.md#managed-and-host-local-surfaces).
   Design: [configuration architecture](codex-config-management.md).
-- **Routed by**: the operator running `make sync` (asks before writing),
+- **Routed by**: the operator running `make sync` (asks before writing; with
+  `SYNC_EXPECT`, applies without asking only when no unlisted area drifted),
   `make agent-sync-check` (never writes), or `make bootstrap`.
 - **Enforced by**: `tests/test_sync_codex_config.py` (render, migrate,
-  preserve, refuse, idempotence, semantic drift, and fan-out across config
-  dirs, isolated from the real config dirs); `tests/test_bootstrap_local.py`
+  preserve, refuse, idempotence, semantic drift, expected-change refusals, and
+  fan-out across config dirs, isolated from the real config dirs);
+  `tests/test_bootstrap_local.py`
   (discovery, explicit lists, the no-Python fallback, refusals before any
   write, idempotence).
 - **Project may add**: nothing; project settings belong to the project layer.
@@ -877,9 +886,12 @@ guidance, the runbook headings, and that routed files are tracked.
 
 - **Owner**: `scripts/check_documentation.py`; the truth classes it enforces:
   [`documentation.md` Keep Truth Classes Explicit](../../.agents/rules/documentation.md#keep-truth-classes-explicit).
-- **Routed by**: `make docs-check`; `make test` runs it first.
+- **Routed by**: `make docs-check`; `make test` runs it first;
+  `make verify-committed` runs `make test` on a temporary copy in which every
+  file the whitelist admits is committed, so the tracked-file check sees the
+  commit before it is made.
 - **Enforced by**: `tests/test_governance_docs.py` (the repository passes, and
-  each check rejects a broken fixture).
+  each check rejects a broken fixture); `tests/test_verify_committed_copy.py`.
 - **Project may add**: its own gate.
 - **Symptoms**: a broken link or anchor merged; a dated incident in current
   guidance; a new rule owner not routed or not mapped here.
