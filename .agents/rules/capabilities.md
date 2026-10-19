@@ -120,6 +120,11 @@ terminal to read from, so a passphrase, password, or confirmation prompt
 returns without the user's answer.
 
 - Name the host and account it runs as.
+- Say how the user opens that terminal from where they are: first check how
+  the session runs, such as inside a terminal multiplexer or over SSH, from
+  what the session can read about itself or by asking the user; then give the
+  steps, such as the multiplexer's keys for a new window and how to get back,
+  and say when the keys given are only the defaults.
 - When its effect must reach the session, such as a key loaded into an agent
   or a login token, first check that a new terminal of theirs reaches the same
   agent, store, or environment.

@@ -24,13 +24,20 @@ Read it as deeply as it needs:
 
 - A question with a factual answer, or a change whose target the request
   names and whose result fits in one sentence: do it, with step 1 in mind.
-- A reported problem, a correction, an idea, a request that describes a need
-  through examples, or another change: do steps 1, 3, 5, and 6. Before the
-  first change, state the goal and any reading or assumption you took; report
-  the done check and the similar problems with the result.
+- A reported problem, a correction, a request that describes a need through
+  examples, or another change: do steps 1, 3, 5, and 6. Before the first
+  change, state the goal and any reading or assumption you took; report the
+  done check and the similar problems with the result.
 - An investigation, a comparison of options, a design, work across projects,
-  hosts, or sessions, or a long task the operator will not watch: do every
-  step, and give the brief below before the work.
+  hosts, or sessions, a long task the operator will not watch, or an idea the
+  operator floats for new or changed behavior, also when it comes with
+  examples: do every step, and give the brief below before the work.
+
+A request that floats an idea for new or changed behavior takes the last
+depth even when it also reports a problem, makes a correction, or fits the
+first depth; an idea that only renames or rewords takes the first, unless the
+request also reports a problem or makes a correction, which keeps the middle
+depth.
 
 1. State the goal behind the request in one sentence: what the operator wants
    to be true afterwards. For a request in several parts, state each part's
@@ -47,7 +54,8 @@ Read it as deeply as it needs:
 4. Carry each requirement you derived as an assumption (`reasoning.md`): show
    it, and do not use it to rule options out.
 5. State what done means: the observable result, the quality it needs, and the
-   check that shows it.
+   check that shows it; for an idea, what done would mean once the idea is
+   carried out.
 6. Find the similar problems the request stands for (Similar Problems).
 7. Judge options scenario by scenario. Different tools for different scenarios
    is a valid answer, and so is "an existing feature already covers this".

@@ -8,26 +8,39 @@ host templates that is meant to change behavior.
 ## Run
 
 ```sh
-make rule-eval BEFORE=main AFTER=. OUT=~/.cache/workspace-meta/rule-eval
+make rule-eval BEFORE=main AFTER=. JUDGE_MODEL=<judge model> \
+  OUT=~/.local/share/workspace-meta/rule-eval/<date>-<topic>-1
 ```
 
 `BEFORE` and `AFTER` are a Git ref of this repository or a directory holding
 the rules (`.` is the current checkout). `OUT` must be outside the
-repository and on disk rather than a memory-backed `/tmp`: a full run writes
-hundreds of trial directories. Both versions run with the same pinned model (`MODEL`, default
-`claude-opus-5-5` for Claude). `AGENT=codex` runs Codex. The judge is the
+repository, on disk rather than a memory-backed `/tmp`, and new for every
+comparison (Keeping Runs): a full run writes hundreds of trial directories.
+Both versions run with the same pinned model (`MODEL`, default
+`claude-opus-5-5` for Claude). `AGENT=codex` runs Codex; set `MODEL` for it,
+because otherwise Codex runs at its default model, `results.json` records
+`model` as null, and the run belongs to no window (Deciding). The judge is the
 other agent (Claude judges with `sonnet`) unless `--judge-agent` says
-otherwise; `JUDGE_MODEL` overrides its model. Results
-are in `OUT/before/results.json` and `OUT/after/results.json`, each trial's
-reply and session log beside them. A run of every scenario with three trials
-costs a few US dollars.
+otherwise; `JUDGE_MODEL` sets its model. Without it a Codex judge runs at
+Codex's default model, which neither `results.json` nor the judge's log
+records, so the run belongs to no window (Deciding). `make` cannot choose the
+judge agent; for a Claude judge, run `scripts/rule_eval.py run --judge-agent
+claude`. `TRIALS` sets the trials per scenario (default 3); a confirmation or
+a drop rerun needs five or more graded ones (Deciding). Results are in
+`OUT/before/results.json` and `OUT/after/results.json`, each trial's reply
+and session log beside them. With a Claude judge, a trial cost about $0.14
+on 2026-10-19, so a run of every scenario with three trials costs about $14
+per version, and `make rule-eval` runs two versions; `results.json` does not
+price a Codex judge's usage.
 
-Single version or a few scenarios:
+A few scenarios, with a Claude judge:
 
 ```sh
-python3 scripts/rule_eval.py run --rules main --label before \
-  --out ~/.cache/workspace-meta/re-before --trials 3 --scenario read-without-sudo
-python3 scripts/rule_eval.py compare ~/.cache/workspace-meta/re-before/results.json ~/.cache/workspace-meta/re-after/results.json
+R=~/.local/share/workspace-meta/rule-eval/<date>-<topic>-2
+S="--model claude-opus-5-5 --judge-agent claude --trials 6 --scenario canary-rules-loaded --scenario read-without-sudo"
+python3 scripts/rule_eval.py run --rules main --label before --out "$R/before" $S
+python3 scripts/rule_eval.py run --rules . --label after --out "$R/after" $S
+python3 scripts/rule_eval.py compare "$R/before/results.json" "$R/after/results.json"
 ```
 
 ## Agents and accounts
@@ -84,10 +97,46 @@ fixture TOML.
 
 ## Deciding
 
+- Compare versions only within one window: runs made back to back whose
+  `results.json` files agree in `model`, `cli`, `judge_agent`,
+  `judge_model`, and `judge_votes`, with the agent and judge models pinned:
+  `model` and `judge_model` set in both files, not null. An alias such as
+  `sonnet` counts, because each Claude judge log records the model it resolved
+  to. Runs started together
+  count as back to back. A score from another window, such as another day's
+  run, is no baseline.
 - The canary passes in every trial.
-- No scenario's pass rate drops. Rerun a drop with `--trials 5` before
-  accepting it or revising the change.
-- A target counts as improved only when its pass rate rises. A target that
-  already passes every trial shows nothing; say so in the Changelog.
+- No scenario's pass rate drops. Rerun a drop with five or more graded trials
+  per version, with the canary, before accepting it or revising the change.
+- A target counts as improved only when its pass rate rises and a second,
+  fresh comparison of the same two versions (the same `rules` values) on the
+  same scenario file, in one window, with five or more graded trials each and
+  the canary, shows the rise again. Until then, report the improvement as
+  pending confirmation, and as failed confirmation when the second comparison
+  does not show the rise. Report every run this change's evaluation made on
+  that target, before and after versions alike and whatever version it
+  measured, each with its directory and `rules` value (Keeping Runs); a later
+  run never replaces an earlier one. A target that already passes every trial shows nothing; say so
+  in the Changelog.
 - Three trials show only large effects: report "no difference detected", not
   "no difference".
+
+## Keeping Runs
+
+- Give every comparison its own new output directory, such as
+  `~/.local/share/workspace-meta/rule-eval/<date>-<topic>-<n>/<label>` with a
+  new `<n>` for each comparison, the confirmation included, outside any cache
+  directory. A run into an existing directory deletes its `rules/` export and
+  the trial directories it repeats and replaces its `results.json`, so never
+  point a run at a directory a record cites.
+- A record that cites a run names, for each `results.json` it cites, the
+  directory as a path under `~` and the `rules` value: the `git:` commit, or
+  for a directory version its `sha256:` digest with the branch and the commit
+  it was based on, noted when the run starts because `results.json` records
+  neither, and never the path of the rules directory.
+- Keep a cited run's directory until a later record supersedes every result
+  cited from it. That record says so, and its session removes the directory
+  after sorting it (`temporary-files.md`). A run that no record reports, such
+  as a void or aborted run, is removed by the session that made it once it is
+  finished with it. For a directory version, the run's `rules/` export is the
+  only copy of what was measured.

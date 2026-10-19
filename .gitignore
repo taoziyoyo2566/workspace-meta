@@ -56,6 +56,8 @@
 !docs/reviews/feature-rule-evals/*.md
 !docs/reviews/feature-keep-reusable-work/
 !docs/reviews/feature-keep-reusable-work/*.md
+!docs/reviews/refactor-intake-evals-terminal/
+!docs/reviews/refactor-intake-evals-terminal/*.md
 !.githooks/
 !.githooks/pre-commit
 !scripts/

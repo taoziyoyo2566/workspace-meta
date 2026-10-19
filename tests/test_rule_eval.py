@@ -294,6 +294,76 @@ class RuleContentTests(unittest.TestCase):
                             "an approval request"):
                 self.assertIn(trigger, row, adapter)
 
+    def test_deciding_confirms_improvements_and_keeps_cited_runs(self) -> None:
+        readme = (ROOT / "evals" / "rules" / "README.md").read_text()
+
+        def section(heading: str) -> str:
+            self.assertEqual(readme.count(f"\n## {heading}\n"), 1, heading)
+            body = readme.split(f"\n## {heading}\n", 1)[1].split("\n## ", 1)[0]
+            return " ".join(body.split()).lower()
+
+        run = section("Run")
+        for phrase in (
+            "new for every comparison (keeping runs)",
+            "without it a codex judge runs at codex's default model",
+            "judge_model=<judge model>",
+            "<date>-<topic>-1",
+            "<date>-<topic>-2",
+            "a confirmation or a drop rerun needs five or more graded ones",
+            "--judge-agent claude --trials 6 --scenario canary-rules-loaded",
+        ):
+            self.assertIn(phrase, run)
+        self.assertNotIn("~/.cache", readme)
+
+        deciding = section("Deciding")
+        for phrase in (
+            "compare versions only within one window: runs made back to back whose "
+            "`results.json` files agree in `model`, `cli`, `judge_agent`, "
+            "`judge_model`, and `judge_votes`, with the agent and judge models "
+            "pinned: `model` and `judge_model` set in both files, not null",
+            "an alias such as `sonnet` counts, because each claude judge log records "
+            "the model it resolved to",
+            "a score from another window, such as another day's run, is no baseline",
+            "rerun a drop with five or more graded trials per version, with the canary",
+            "a target counts as improved only when its pass rate rises and a second, "
+            "fresh comparison of the same two versions (the same `rules` values) on "
+            "the same scenario file, in one window, with five or more graded trials "
+            "each and the canary, shows the rise again",
+            "until then, report the improvement as pending confirmation, and as "
+            "failed confirmation when the second comparison does not show the rise",
+            "report every run this change's evaluation made on that target, before "
+            "and after versions alike and whatever version it measured, each with "
+            "its directory and `rules` value (keeping runs); a later run never "
+            "replaces an earlier one",
+        ):
+            self.assertIn(phrase, deciding)
+
+        keeping = section("Keeping Runs")
+        for phrase in (
+            "give every comparison its own new output directory",
+            "with a new `<n>` for each comparison, the confirmation included, outside "
+            "any cache directory",
+            "never point a run at a directory a record cites",
+            "names, for each `results.json` it cites, the directory as a path under `~` "
+            "and the `rules` value: the `git:` commit, or for a directory version its "
+            "`sha256:` digest with the branch and the commit it was based on, noted "
+            "when the run starts because `results.json` records neither",
+            "never the path of the rules directory",
+            "keep a cited run's directory until a later record supersedes every "
+            "result cited from it",
+            "its session removes the directory after sorting it",
+            "a run that no record reports, such as a void or aborted run, is removed "
+            "by the session that made it once it is finished with it",
+            "is the only copy of what was measured",
+        ):
+            self.assertIn(phrase, keeping)
+
+        harness = (ROOT / "docs" / "architecture" / "design-map.md").read_text()
+        harness = harness.split("\n### Rule Evaluation Harness\n", 1)[1].split("\n### ", 1)[0]
+        harness = " ".join(harness.split()).lower()
+        self.assertIn("an improvement recorded from one small run", harness)
+        self.assertIn("a cited run whose outputs and measured rules were removed", harness)
+
     def test_register_entries_are_one_rule_and_one_source(self) -> None:
         lines = (ROOT / "feedback-register.md").read_text().splitlines()
         for number in range(66, 71):

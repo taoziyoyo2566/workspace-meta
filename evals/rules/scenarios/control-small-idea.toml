@@ -1,0 +1,23 @@
+# Control for over-briefing: a floated idea that only renames one line of the
+# roadmap gets a direct answer, not the full brief that an idea for new or
+# changed behavior gets.
+id = "control-small-idea"
+kind = "control"
+rules = ["requests.md"]
+title = "A floated one-line rename gets a direct answer or the edit, not a multi-part brief"
+fixture = "ops"
+context = """
+Nothing else is pending in this session.
+"""
+message = 'roadmap 里 "Node memory headroom" 那一条，我觉得改叫 "Node memory budget" 更好，你看呢？'
+
+[[checks]]
+type = "judge"
+question = """
+The operator floats renaming one roadmap item. Pass when the reply answers it
+directly: an opinion on the rename with a short reason, the edit itself, or a
+one-line offer to make it, with at most one short question. Fail a reply that
+turns the rename into a structured brief (goal, done, scope, constraints,
+options per scenario, risks), or that asks about the goal, what done means, or
+usage scenarios before answering.
+"""

@@ -2485,6 +2485,74 @@ class CodexConfigSyncTests(unittest.TestCase):
         )
         self.assertIn("W-R75", row)
 
+    def test_handed_over_commands_say_how_to_open_the_terminal(self) -> None:
+        # A command for the user's own terminal comes with the steps to open
+        # that terminal from where they are (W-R76).
+        capabilities = (self.rules_dir / "capabilities.md").read_text()
+        section = capabilities.split("## Commands The User Runs", 1)[1]
+        section = " ".join(section.split("\n## ", 1)[0].split()).lower()
+        self.assertIn(
+            "- say how the user opens that terminal from where they are: first "
+            "check how the session runs, such as inside a terminal multiplexer or "
+            "over ssh, from what the session can read about itself or by asking "
+            "the user; then give the steps, such as the multiplexer's keys for a "
+            "new window and how to get back, and say when the keys given are only "
+            "the defaults.",
+            section,
+        )
+
+        self.assertIn(
+            "a command handed over without the steps to open the terminal",
+            self.design_map_entry("capabilities.md"),
+        )
+
+        feedback = (ROOT / "feedback-register.md").read_text()
+        self.assertEqual(feedback.count("- **W-R76 ("), 1)
+        row = next(
+            line
+            for line in feedback.splitlines()
+            if line.startswith("| `.agents/rules/capabilities.md`")
+        )
+        self.assertIn("W-R76", row)
+
+    def test_a_floated_idea_gets_the_brief_before_the_work(self) -> None:
+        # An idea floated for new or changed behavior gets the brief, with what
+        # done means and the usage scenarios, before any work; the middle
+        # depth reports its done check only with the result.
+        requests = (self.rules_dir / "requests.md").read_text()
+        section = requests.split("## Understand The Request", 1)[1].split("\n## ", 1)[0]
+        whole = " ".join(section.split()).lower()
+        depths = [
+            " ".join(item.split()).lower()
+            for item in section.split("\n\n1. ", 1)[0].split("\n- ")[1:]
+        ]
+        idea = [d for d in depths if "an idea the operator floats" in d]
+        self.assertEqual(len(idea), 1)
+        self.assertIn("an idea the operator floats for new or changed behavior, also "
+                      "when it comes with examples", idea[0])
+        self.assertIn("do every step, and give the brief below before the work", idea[0])
+        self.assertEqual([d for d in depths if "idea" in d], idea)
+        middle = [d for d in depths if d.startswith("a reported problem")]
+        self.assertEqual(len(middle), 1)
+        self.assertIn("report the done check and the similar problems with the result",
+                      middle[0])
+        for invariant in (
+            "a request that floats an idea for new or changed behavior takes the last "
+            "depth even when it also reports a problem, makes a correction, or fits "
+            "the first depth; an idea that only renames or rewords takes the first, "
+            "unless the request also reports a problem or makes a correction, which "
+            "keeps the middle depth",
+            "for an idea, what done would mean once the idea is carried out",
+            "the brief has six parts: the goal; done;",
+            "the options per scenario",
+        ):
+            self.assertIn(invariant, whole)
+
+        self.assertIn(
+            "a floated idea answered without what done would mean",
+            self.design_map_entry("requests.md"),
+        )
+
     def test_project_bootstrap_has_routed_owners(self) -> None:
         # Projects get their missing agent entry files without asking (W-R73).
         documentation = (self.rules_dir / "documentation.md").read_text()

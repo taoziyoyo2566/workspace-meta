@@ -35,7 +35,7 @@ number. Never renumber. Numbering accumulates; mark replacements rather than del
 | `.agents/rules/releases.md` | W-R57 |
 | `.agents/rules/review.md` | W-R13, W-R20, W-R33 and accepted W-R32 refinements, refined by W-R56, problem reports W-R59 |
 | `.agents/rules/problem-follow-up.md` | W-R56 |
-| `.agents/rules/capabilities.md` | W-R18 and accepted W-R32 refinements, refined by W-R44, W-R52, W-R53 and W-R55, quality before speed W-R60, where the user runs a command W-R62, command length W-R65, delegation W-R72 |
+| `.agents/rules/capabilities.md` | W-R18 and accepted W-R32 refinements, refined by W-R44, W-R52, W-R53 and W-R55, quality before speed W-R60, where the user runs a command W-R62, command length W-R65, delegation W-R72, opening the user's terminal W-R76 |
 | `.agents/rules/claude-runtime.md` | Claude mechanics for W-R71, W-R72 and W-R73 |
 | `.agents/host-templates/README-agents.md` | W-R28, W-R36, every agent config dir W-R74 |
 | `.agents/rules/secrets.md` | W-R13, refined by W-R53 |
@@ -259,3 +259,5 @@ Distilled cross-project rules. Numbering accumulates — do not delete old rules
     - Source: 2026-10-17, workspace-meta: after the operator added a second Claude account, its sessions ran under a second config dir that received none of the managed session-start check, status line, or skill.
 - **W-R75 (2026-10-18)** — **Before removing its temporary files, an agent sorts out what will be needed again and proposes moving it to its owner, such as a script into its project as a tool or an evaluation scenario into the evaluation tree, and removes only the rest.**
     - Source: 2026-10-18, workspace-meta: a session's scratch cleanup removed evaluation scenarios and a guarded-sync script that would be needed again, and the operator asked that scripts which will be reused be kept.
+- **W-R76 (2026-10-19)** — **A command handed to the user for a terminal of their own comes with the steps to open that terminal from where they are, found by first checking how the session runs or by asking the user.**
+    - Source: 2026-10-19, workspace-meta: a cleanup handed over only for "a new terminal of your own", with the host and account named, was not run, and the operator answered that they had not been told how to run it.

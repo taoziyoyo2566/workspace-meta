@@ -61,6 +61,7 @@ Related maps, not copied here:
 | One case is fixed while identical ones elsewhere go unmentioned | [Understanding requests](#understanding-requests) |
 | Questions the repository could answer, several rounds of questions, or none on an ambiguous request | [Understanding requests](#understanding-requests), [Claude runtime](#claude-runtime) |
 | Work stops while the operator is away, or grows because nobody could object | [Understanding requests](#understanding-requests), [Claude runtime](#claude-runtime) |
+| A floated idea is answered without what done would mean or how it would be used | [Understanding requests](#understanding-requests) |
 | A claim from memory, another session, or the operator stated as fact; "confirmed" after ruling out one cause | [Technical reasoning](#technical-reasoning) |
 | A decision lives only in chat or memory, or status from memory contradicts the Plan | [Planning and handoff](#planning-and-handoff), [Memory](#memory) |
 | Two sessions redo one investigation, or the operator relays instructions between sessions | [Planning and handoff](#planning-and-handoff) |
@@ -76,10 +77,11 @@ Related maps, not copied here:
 | Every agent of a workflow runs at the session model and effort, with no allocation shown | [Capabilities and delegation](#capabilities-and-delegation) |
 | A delegated agent breaks a workspace rule or lacks context the main session had | [Capabilities and delegation](#capabilities-and-delegation), [Claude runtime](#claude-runtime) |
 | Effort, agents, or verification are cut to save time without asking | [Capabilities and delegation](#capabilities-and-delegation) |
-| A command for the operator is suggested for the agent's own prompt (`!`), or breaks when copied | [Capabilities and delegation](#capabilities-and-delegation) |
+| A command for the operator is suggested for the agent's own prompt (`!`), breaks when copied, or comes without the steps to open a terminal | [Capabilities and delegation](#capabilities-and-delegation) |
 | A correction is saved to memory but never routed, or a rule lands in the wrong layer | [Rule authoring and feedback](#rule-authoring-and-feedback) |
 | A read runs with `sudo` without asking, or a denied command is retried another way | [Authorization](#authorization) |
 | A rule change is judged only by its wording, or an evaluation scenario quotes the rule it tests | [Rule evaluation harness](#rule-evaluation-harness) |
+| A recorded evaluation result reads higher than later runs, or the rules a cited run measured are gone | [Rule evaluation harness](#rule-evaluation-harness) |
 | Codex asks approval for each safe read, or broad allow rules appear | [Codex runtime](#codex-runtime) |
 | The two adapters disagree, or portable behavior lives only in one adapter | [Adapters](#adapters) |
 | Sessions under one Claude config dir lack a startup warning, status line, or skill that another has | [Sync engine](#sync-engine-and-managed-surfaces), [Managed skills](#managed-skills) |
@@ -372,7 +374,8 @@ stands for, and whether to ask the operator or proceed on stated assumptions.
 - **Symptoms**: the wording done and the goal missed; examples treated as the
   whole need or as constraints; one case fixed while identical ones go
   unlisted; questions the repository could answer, a second round, or none on
-  an ambiguous request; work stopped while the operator is away.
+  an ambiguous request; work stopped while the operator is away; a floated
+  idea answered without what done would mean or its usage scenarios.
 
 ### Technical Reasoning
 
@@ -619,7 +622,8 @@ reported), and where and how the operator runs a command handed to them.
   without asking; a delegated result reported without checking its evidence;
   a command for the operator suggested for the agent's own prompt, such as
   Claude Code's `!` prefix, where a passphrase prompt returns unanswered; a
-  multi-line or overlong command handed over to paste.
+  multi-line or overlong command handed over to paste; a command handed over
+  without the steps to open the terminal it needs.
 
 ### Rule Authoring And Feedback
 
@@ -912,14 +916,19 @@ versions, graded by checks and a voting judge, and compared.
   rule-changing session runs `make rule-eval`, which spends model usage, and
   the evals README explains the scenario format.
 - **Enforced by**: `tests/test_rule_eval.py` (the runner with fake agents,
-  scenario hygiene including a check that no scenario repeats rule text, and
-  structural checks of the rules it was built with).
+  scenario hygiene including a check that no scenario repeats rule text,
+  structural checks of the rules it was built with, and phrase checks of the
+  README's Deciding and Keeping Runs rules); nothing checks how a record
+  reports or keeps a run, and the harness neither refuses a used output
+  directory nor compares the recorded window fields.
 - **Project may add**: nothing; a project evaluates its own rules with its
   own tools.
 - **Symptoms**: a rule change judged only by its wording; a scenario that
   quotes the rule it tests; a comparison in which one version's trials went
   ungraded; an evaluation run that read the real workspace or a real config
-  dir instead of copies.
+  dir instead of copies; an improvement recorded from one small run, or a
+  score compared with another day's; a cited run whose outputs and measured
+  rules were removed.
 
 ### Pre-Commit Guard
 
