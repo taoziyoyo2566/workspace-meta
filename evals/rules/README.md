@@ -15,7 +15,8 @@ make rule-eval BEFORE=main AFTER=. JUDGE_MODEL=<judge model> \
 `BEFORE` and `AFTER` are a Git ref of this repository or a directory holding
 the rules (`.` is the current checkout). `OUT` must be outside the
 repository, on disk rather than a memory-backed `/tmp`, and new for every
-comparison (Keeping Runs): a full run writes hundreds of trial directories.
+comparison (Keeping Runs): a full run writes hundreds of trial directories,
+and `run` refuses a directory that already holds anything.
 Both versions run with the same pinned model (`MODEL`, default
 `claude-opus-5-5` for Claude). `AGENT=codex` runs Codex; set `MODEL` for it,
 because otherwise Codex runs at its default model, `results.json` records
@@ -69,7 +70,9 @@ python3 scripts/rule_eval.py compare "$R/before/results.json" "$R/after/results.
 - Checks: `run_absent`/`run_present` (regex on `run` blocks),
   `text_absent`/`text_present` (regex on the reply), `file_unchanged`,
   `file_changed` (optional `contains` regex), and `judge` (a pass condition
-  graded by another model, majority of `--judge-votes`, blind to the version).
+  graded by another model, majority of `--judge-votes`, blind to the version;
+  in each answer, the last JSON object with a verdict counts, and a vote
+  whose last verdict is neither pass nor fail has none).
   A trial passes when every check passes; a failed run or an undecided judge
   leaves it ungraded.
 
@@ -99,12 +102,24 @@ fixture TOML.
 
 - Compare versions only within one window: runs made back to back whose
   `results.json` files agree in `model`, `cli`, `judge_agent`,
-  `judge_model`, and `judge_votes`, with the agent and judge models pinned:
-  `model` and `judge_model` set in both files, not null. An alias such as
-  `sonnet` counts, because each Claude judge log records the model it resolved
-  to. Runs started together
-  count as back to back. A score from another window, such as another day's
-  run, is no baseline.
+  `judge_model`, `judge_votes`, and `judge_cli`, with the agent and judge
+  models pinned: `model` and `judge_model` set in both files, not null. For
+  the judge, an alias such as `sonnet` counts, because each Claude judge log
+  records the model it resolved to; a Codex judge records no resolved model,
+  so give it a full model name. Give the agent a full model name too:
+  `compare` does not check what an agent alias resolved to. Runs made back to
+  back: the later one starts within an
+  hour of the earlier one's end, and runs started together count. A score
+  from another window, such as another day's run, is no baseline. `compare`
+  checks the window and gives no verdict, exiting non-zero, outside one:
+  - the fields above;
+  - a CLI version that changed during a run (`cli` against `cli_end`,
+    `judge_cli` against `judge_cli_end`);
+  - the models a Claude judge's votes resolved to (`judge_models`);
+  - the run times (`started`, `finished`).
+
+  Runs recorded before these fields existed cannot be checked, so `compare`
+  fails them.
 - The canary passes in every trial.
 - No scenario's pass rate drops. Rerun a drop with five or more graded trials
   per version, with the canary, before accepting it or revising the change.
@@ -116,8 +131,8 @@ fixture TOML.
   does not show the rise. Report every run this change's evaluation made on
   that target, before and after versions alike and whatever version it
   measured, each with its directory and `rules` value (Keeping Runs); a later
-  run never replaces an earlier one. A target that already passes every trial shows nothing; say so
-  in the Changelog.
+  run never replaces an earlier one. A target that already passes every trial
+  shows nothing; say so in the Changelog.
 - Three trials show only large effects: report "no difference detected", not
   "no difference".
 
@@ -126,9 +141,8 @@ fixture TOML.
 - Give every comparison its own new output directory, such as
   `~/.local/share/workspace-meta/rule-eval/<date>-<topic>-<n>/<label>` with a
   new `<n>` for each comparison, the confirmation included, outside any cache
-  directory. A run into an existing directory deletes its `rules/` export and
-  the trial directories it repeats and replaces its `results.json`, so never
-  point a run at a directory a record cites.
+  directory. Never point a run at a directory a record cites; `run` refuses a
+  directory that already holds anything.
 - A record that cites a run names, for each `results.json` it cites, the
   directory as a path under `~` and the `rules` value: the `git:` commit, or
   for a directory version its `sha256:` digest with the branch and the commit

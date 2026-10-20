@@ -399,19 +399,37 @@ def run_agent(agent: str, prompt: str, cwd: Path, workspace: Path | None, write:
                       opts.timeout, getattr(opts, "claude_config_dir", None))
 
 
+def last_verdict(text: str) -> dict:
+    """The last JSON object in a judge answer that has a verdict, or {}.
+
+    A judge sometimes writes a verdict, reconsiders, and writes another; the
+    last one is its answer. When that one is neither pass nor fail, the vote
+    has no verdict rather than falling back to the one the judge withdrew.
+    """
+    decoder, found = json.JSONDecoder(), {}
+    index = text.find("{")
+    while index != -1:
+        try:
+            data, end = decoder.raw_decode(text, index)
+        except json.JSONDecodeError:
+            index = text.find("{", index + 1)
+            continue
+        if isinstance(data, dict) and "verdict" in data:
+            found = data
+        index = text.find("{", end)
+    return found if found.get("verdict") in ("pass", "fail") else {}
+
+
 def judge_once(prompt: str, opts: argparse.Namespace, log: Path) -> dict:
     with tempfile.TemporaryDirectory(prefix="rule-eval-judge-") as empty:
         out = run_agent(opts.judge_agent, prompt, Path(empty), None, False, opts,
                         opts.judge_model, log)
-    match = re.search(r"\{.*\}", out["text"], re.DOTALL)
-    try:
-        data = json.loads(match.group(0)) if match else {}
-    except json.JSONDecodeError:
-        data = {}
-    verdict = data.get("verdict")
-    if verdict not in ("pass", "fail"):
-        return {"ok": None, "reason": f"no verdict: {out['text'][:200]}", "cost": out["cost"]}
-    return {"ok": verdict == "pass", "reason": data.get("reason", ""), "cost": out["cost"]}
+    data = last_verdict(out["text"])
+    if not data:
+        return {"ok": None, "reason": f"no verdict: {out['text'][:200]}", "cost": out["cost"],
+                "model": out["model"]}
+    return {"ok": data["verdict"] == "pass", "reason": data.get("reason", ""),
+            "cost": out["cost"], "model": out["model"]}
 
 
 def judge(scenario: dict, reply: str, diff: str, question: str, opts: argparse.Namespace,
@@ -424,13 +442,15 @@ def judge(scenario: dict, reply: str, diff: str, question: str, opts: argparse.N
                for n in range(opts.judge_votes)]
     cast = [b for b in ballots if b["ok"] is not None]
     cost = sum(b["cost"] for b in ballots)
+    models = sorted({b["model"] for b in ballots if b.get("model")})
     yes = sum(1 for b in cast if b["ok"])
     if not cast or yes * 2 == len(cast):
         return {"ok": None, "reason": "judge undecided: " + " | ".join(b["reason"] for b in ballots),
-                "cost": cost, "votes": f"{yes}/{len(cast)}"}
+                "cost": cost, "votes": f"{yes}/{len(cast)}", "models": models}
     ok = yes * 2 > len(cast)
     reason = next(b["reason"] for b in cast if b["ok"] == ok)
-    return {"ok": ok, "reason": reason, "cost": cost, "votes": f"{yes}/{len(cast)}"}
+    return {"ok": ok, "reason": reason, "cost": cost, "votes": f"{yes}/{len(cast)}",
+            "models": models}
 
 
 # ---------------------------------------------------------------- checks
@@ -522,28 +542,43 @@ def filesystem_type(path: Path, mounts: str | None = None) -> str:
     return kind
 
 
+def now() -> str:
+    return dt.datetime.now().astimezone().isoformat(timespec="seconds")
+
+
 def cmd_run(args: argparse.Namespace) -> int:
     scenarios = load_scenarios(args.scenario)
+    if not Path(args.rules).expanduser().is_dir() and subprocess.run(
+            ["git", "-C", str(ROOT), "rev-parse", "--verify", "--quiet",
+             f"{args.rules}^{{commit}}"], capture_output=True).returncode != 0:
+        raise SystemExit(f"--rules {args.rules}: neither a directory nor a commit of "
+                         "this repository")
     out_dir = Path(args.out).expanduser()
+    used = (f"{out_dir} already holds something; every run writes into a new output "
+            "directory, never an earlier run's (evals/rules/README.md Keeping Runs).")
+    if os.path.lexists(out_dir) and (not out_dir.is_dir() or any(out_dir.iterdir())):
+        raise SystemExit(used)
     out_dir.mkdir(parents=True, exist_ok=True)
     if filesystem_type(out_dir) == "tmpfs" and not args.allow_tmpfs:
         raise SystemExit(f"{out_dir} is memory-backed (tmpfs); a run writes hundreds of trial "
                          "directories there. Use a disk-backed directory, or --allow-tmpfs.")
     rules_dir = out_dir / "rules"
-    if rules_dir.exists():
-        shutil.rmtree(rules_dir)
+    try:  # claim the directory, so two runs started together cannot share it
+        rules_dir.mkdir()
+    except FileExistsError:
+        raise SystemExit(used) from None
     version = export_rules(args.rules, rules_dir)
     if args.judge_agent is None:
         args.judge_agent = "codex" if args.agent == "claude" else "claude"
     if args.judge_model is None and args.judge_agent == "claude":
         args.judge_model = "sonnet"
+    # The window a later compare checks: versions and times at both ends.
+    started, cli, judge_cli = now(), cli_version(args.agent), cli_version(args.judge_agent)
     jobs, labels = [], []
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.jobs) as pool:
         for scenario in scenarios:
             for trial in range(args.trials):
                 trial_dir = out_dir / scenario["id"] / f"trial-{trial + 1}"
-                if trial_dir.exists():
-                    shutil.rmtree(trial_dir)
                 jobs.append(pool.submit(run_trial, rules_dir, scenario, trial_dir, args))
                 labels.append((scenario["id"], trial_dir))
         trials = []
@@ -556,11 +591,14 @@ def cmd_run(args: argparse.Namespace) -> int:
                                "denied": [], "executed": [], "dir": str(trial_dir),
                                "crash": traceback.format_exc()[-1500:]})
     summary = summarize(scenarios, trials)
+    judge_models = sorted({m for t in trials for c in t["checks"] for m in c.get("models", [])})
     report = {"label": args.label, "rules": version, "agent": args.agent,
               "trials_per_scenario": args.trials, "model": args.model,
               "judge_agent": args.judge_agent, "judge_model": args.judge_model,
-              "judge_votes": args.judge_votes, "cli": cli_version(args.agent),
-              "started": dt.datetime.now().astimezone().isoformat(timespec="seconds"),
+              "judge_votes": args.judge_votes, "judge_models": judge_models,
+              "cli": cli, "cli_end": cli_version(args.agent),
+              "judge_cli": judge_cli, "judge_cli_end": cli_version(args.judge_agent),
+              "started": started, "finished": now(),
               "summary": summary, "trials": trials}
     (out_dir / "results.json").write_text(json.dumps(report, indent=2, ensure_ascii=False),
                                           encoding="utf-8")
@@ -630,12 +668,63 @@ def compare(before: dict, after: dict) -> tuple[str, bool]:
     return "\n".join(lines), acceptable
 
 
+WINDOW_FIELDS = ("model", "cli", "judge_agent", "judge_model", "judge_votes", "judge_cli")
+WINDOW_GAP = dt.timedelta(hours=1)
+UNRECORDED = (None, "", "unknown")
+
+
+def window_problems(before: dict, after: dict) -> list[str]:
+    """Why two runs are not one window (evals/rules/README.md Deciding), if they are not.
+
+    One window: the same pinned agent and judge, unchanged CLIs, and runs made
+    back to back, the later one starting within WINDOW_GAP of the earlier one's
+    end. Runs from before these fields were recorded cannot be checked.
+    """
+    problems = []
+    for field in WINDOW_FIELDS:
+        b, a = before.get(field), after.get(field)
+        if b in UNRECORDED or a in UNRECORDED:
+            problems.append(f"{field} is not recorded or not pinned (before {b!r}, after {a!r})")
+        elif b != a:
+            problems.append(f"{field} differs: before {b!r}, after {a!r}")
+    for report in (before, after):
+        for start, end in (("cli", "cli_end"), ("judge_cli", "judge_cli_end")):
+            if end not in report:
+                problems.append(f"{report.get('label')}: {end} is not recorded")
+            elif report[end] != report.get(start):
+                problems.append(f"{report.get('label')}: {start} changed during the run "
+                                f"({report.get(start)!r} to {report[end]!r})")
+    b_models, a_models = before.get("judge_models"), after.get("judge_models")
+    if b_models and a_models and b_models != a_models:
+        problems.append(f"the judge resolved to other models: before {b_models}, "
+                        f"after {a_models}")
+    try:
+        times = [(dt.datetime.fromisoformat(r["started"]), dt.datetime.fromisoformat(r["finished"]))
+                 for r in (before, after)]
+    except (KeyError, TypeError, ValueError):
+        problems.append("started and finished are not both recorded for both runs")
+        return problems
+    if any(t.tzinfo is None for span in times for t in span):
+        problems.append("started or finished has no time zone, so the runs cannot be ordered")
+        return problems
+    (_, first_end), (second_start, _) = sorted(times)
+    if second_start - first_end > WINDOW_GAP:
+        problems.append(f"not back to back: {second_start - first_end} between the runs")
+    return problems
+
+
 def cmd_compare(args: argparse.Namespace) -> int:
     before = json.loads(Path(args.before).read_text(encoding="utf-8"))
     after = json.loads(Path(args.after).read_text(encoding="utf-8"))
     table, acceptable = compare(before, after)
+    problems = window_problems(before, after)
     print(table)
     print()
+    if problems:
+        print("no verdict: the runs are not one window (evals/rules/README.md Deciding):")
+        for problem in problems:
+            print(f"- {problem}")
+        return 1
     print("acceptable: no scenario got worse" if acceptable
           else "NOT acceptable: a scenario got worse; inspect it and rerun with more trials")
     return 0 if acceptable else 1

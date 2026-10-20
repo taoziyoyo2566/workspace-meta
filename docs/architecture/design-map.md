@@ -915,12 +915,19 @@ versions, graded by checks and a voting judge, and compared.
 - **Routed by**: no rule routes an agent to it; the operator or a
   rule-changing session runs `make rule-eval`, which spends model usage, and
   the evals README explains the scenario format.
-- **Enforced by**: `tests/test_rule_eval.py` (the runner with fake agents,
-  scenario hygiene including a check that no scenario repeats rule text,
-  structural checks of the rules it was built with, and phrase checks of the
-  README's Deciding and Keeping Runs rules); nothing checks how a record
-  reports or keeps a run, and the harness neither refuses a used output
-  directory nor compares the recorded window fields.
+- **Enforced by**: `tests/test_rule_eval.py`:
+  - the runner with fake agents, including the fields a run records and the
+    refusal of a used output directory;
+  - the window check and the judge-answer parsing;
+  - scenario hygiene, including a check that no scenario repeats rule text,
+    and the deletion pattern of `user-run-open-terminal`;
+  - structural checks of the rules the harness was built with, and phrase
+    checks of the README's Run, How a trial runs, Deciding, and Keeping Runs
+    rules and of this entry.
+
+  The harness refuses an output directory that already holds anything, and
+  `compare` exits non-zero outside one window. Nothing checks how a record
+  reports or keeps a run.
 - **Project may add**: nothing; a project evaluates its own rules with its
   own tools.
 - **Symptoms**: a rule change judged only by its wording; a scenario that
