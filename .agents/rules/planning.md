@@ -197,8 +197,9 @@ versions and scope it holds for, and a recheck condition when it rests on
 volatile external facts. Do not hold it for handoff or closeout; a concurrent
 session is not a handoff and sees only what is on disk. A conclusion about a
 shared component or dependency belongs in that component's record, which
-feature Plans link, not inside one feature's Plan. Routine attempts, command
-output, and unverified hypotheses remain transient.
+feature Plans link, not inside one feature's Plan. Routine attempts and
+operations, their checks, command output, and unverified hypotheses remain
+transient.
 
 Do not edit a document that another session has left uncommitted unless the
 operator hands that document to your task. Otherwise record your finding in

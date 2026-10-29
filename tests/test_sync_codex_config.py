@@ -1650,6 +1650,10 @@ class CodexConfigSyncTests(unittest.TestCase):
             "completion report authorizes only read-only verification", normalized
         )
         self.assertIn("Integration and cleanup are separate", normalized)
+        self.assertIn("One Proposal Per Result", normalized)
+        self.assertIn(
+            "one approval accepts the content and authorizes the bundle", normalized
+        )
         self.assertNotIn("Commit and push are separate transactions", normalized)
 
     def test_protected_git_routes_require_action_brief(self) -> None:

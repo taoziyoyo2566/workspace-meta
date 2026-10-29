@@ -4,11 +4,11 @@ Agent-neutral workspace rule for staging, commit, push, and remote PR creation.
 
 ## Ownership
 
-This file owns ordinary publication review and execution, including the
-change-flow bundle. Projects add commit-message format, required checks/CI, PR
-template fields, and protected branch constraints. Integration and cleanup are
-separate transactions, except inside a disclosed change-flow bundle. Release
-tags follow `releases.md`.
+This file owns when publication is proposed and ordinary publication review
+and execution, including the change-flow bundle. Projects add commit-message
+format, required checks/CI, PR template fields, and protected branch
+constraints. Integration and cleanup are separate transactions, except inside
+a disclosed change-flow bundle. Release tags follow `releases.md`.
 
 Read `git.md` for the current state snapshot before publication.
 
@@ -21,6 +21,23 @@ must precede the exact command bundle; this module's result review and command
 bundle fields supplement the brief and do not replace it. A command-only
 confirmation is insufficient for publication.
 
+## One Proposal Per Result
+
+A commit publishes, so propose publication only when a coherent result is
+finished (`planning.md` Handoff And Closeout), when the operator asks for it,
+or when another machine or agent needs the change. Put every repository change
+of that result into one proposal: one brief and one approval, with a bundle
+for each repository.
+
+A routine update after publication, such as the record of an operation and its
+check, a status line, or a follow-up that has since closed, gets no proposal
+of its own: report it in the conversation. It enters a repository only when it
+constrains later work (`planning.md` Record Findings When Confirmed), and then
+with that repository's next proposal.
+
+Red flags: "a small commit keeps the checkout clean"; "the record is stale, so
+commit the update now"; "one more quick bundle".
+
 ## Checkpoint A — Result Review
 
 After edits and validation, present:
@@ -30,7 +47,9 @@ After edits and validation, present:
 - exclusions/follow-ups;
 - branch and dirty state.
 
-Wait for ordinary content acceptance before preparing publication.
+Present Checkpoint B after it in the same message, so that one approval
+accepts the content and authorizes the bundle. When the operator asks for a
+content change instead, make it and present both again.
 
 ## Checkpoint B — One Command Bundle
 

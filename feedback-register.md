@@ -21,14 +21,14 @@ number. Never renumber. Numbering accumulates; mark replacements rather than del
 | `.agents/rules/authorization.md` | W-R13 authorization boundary, W-R23, W-R29–W-R31, W-R34–W-R35, refined by W-R54, elevated reads W-R66, approval labels W-R68, runtime denials W-R69, standing bootstrap authority W-R73 |
 | `.agents/rules/git.md` | W-R21 inspection/freshness, W-R23, refined by W-R57 |
 | `.agents/rules/git-branches.md` | W-R21–W-R22 and W-R32 branch-contract design refined by W-R40, change flow W-R58 |
-| `.agents/rules/git-publication.md` | W-R25, W-R30 refined by W-R31, change-flow bundle W-R58, remote visibility W-R77 |
+| `.agents/rules/git-publication.md` | W-R25, W-R30 refined by W-R31, change-flow bundle W-R58, remote visibility W-R77, one proposal per result W-R78 refining W-R31 |
 | `.agents/rules/git-integration.md` | W-R21 and the accepted W-R32 terminal-evidence refinement, refined by W-R54, W-R57 and W-R58 |
 | `.agents/rules/git-recovery.md` | W-R19–W-R20, refined by W-R57 and W-R58 |
 | `.agents/rules/requests.md` | W-R63, moved from `planning.md`, extended by W-R71 |
-| `.agents/rules/planning.md` | W-R1–W-R7, W-R12, W-R18 and accepted W-R32 refinements, refined by W-R44, W-R46, W-R47, W-R50, W-R51, W-R56 and W-R57, exceptions to recorded decisions W-R67, remembered restrictions W-R70 |
+| `.agents/rules/planning.md` | W-R1–W-R7, W-R12, W-R18 and accepted W-R32 refinements, refined by W-R44, W-R46, W-R47, W-R50, W-R51, W-R56 and W-R57, exceptions to recorded decisions W-R67, remembered restrictions W-R70, routine operations stay transient W-R78 |
 | `.agents/rules/reasoning.md` | W-R43, refined by W-R63 |
 | `.agents/rules/implementation.md` | W-R37 refined by W-R44, W-R48 and W-R53 |
-| `.agents/rules/documentation.md` | W-R38 refined by W-R39, W-R41 entry-point loadability refined by W-R42, Plan/Changelog lifecycle refined by W-R44, W-R46 and W-R47, investigation records refined by W-R50, seams for W-R53 and W-R57, project bootstrap W-R73 restoring W-R11 in a narrower form |
+| `.agents/rules/documentation.md` | W-R38 refined by W-R39, W-R41 entry-point loadability refined by W-R42, Plan/Changelog lifecycle refined by W-R44, W-R46 and W-R47, investigation records refined by W-R50, seams for W-R53 and W-R57, project bootstrap W-R73 restoring W-R11 in a narrower form, committed Changelogs not added to W-R78 |
 | `.agents/rules/verification.md` | W-R15–W-R17, refined by W-R53 |
 | `.agents/rules/file-checks.md` | W-R53 |
 | `.agents/rules/deployment.md` | W-R54 refined by W-R57 |
@@ -263,3 +263,5 @@ Distilled cross-project rules. Numbering accumulates — do not delete old rules
     - Source: 2026-10-19, workspace-meta: a cleanup handed over only for "a new terminal of your own", with the host and account named, was not run, and the operator answered that they had not been told how to run it.
 - **W-R77 (2026-10-29)** — **A publication review shows whether the target remote is public and, for a public remote, which host or personal details the pushed content reveals, before the push is proposed.**
     - Source: 2026-10-29, invoice_automation: host deployment notes were pushed to an n8n-hosting fork that turned out to be public, because the review checked identity, refs, and the content for secrets but never the remote's visibility.
+- **W-R78 (2026-10-29)** — **A commit publishes, so publication is proposed once per finished result, with its result review and a bundle for each repository it changed under one approval (refining W-R31); a later routine operation, its check, or a status change is reported in the conversation, not committed, and a committed Changelog is not added to.**
+    - Source: 2026-10-29, invoice_automation: three commits were proposed in two turns, the last only to add the operator's routine tunnel change and its check to an already committed Changelog, and the operator asked why unneeded content was recorded and for fewer, less scattered commit tasks.

@@ -54,6 +54,7 @@ Related maps, not copied here:
 | A commit lands directly on the main branch, or a branch is created without a state report | [Change flow](#change-flow-branches-worktrees-and-stash) |
 | A commit carries an AI trailer or the wrong author, or one commit and push needs four confirmations | [Publication](#publication) |
 | Host or personal details are pushed to a remote nobody checked was public | [Publication](#publication) |
+| A commit proposed for each small step, or one that only records a routine operation or adds to a committed Changelog | [Publication](#publication), [Documentation and entry files](#documentation-and-project-entry-files) |
 | A PR exists only to record a merge, or a branch is deleted while a server runs its commit | [Integration and retirement](#integration-and-retirement) |
 | A force push, `branch -D`, `--no-verify`, or an amend after a hook failure | [Recovery](#recovery-and-destructive-git) |
 | An invented version, a moved tag, or one-line release notes | [Releases and versions](#releases-and-versions) |
@@ -233,10 +234,12 @@ content.
 
 ### Publication
 
-Stage, commit, push, or open a PR only after a result review and one exact
-reviewed command bundle, under the operator's identity and with no AI trailers.
+Propose publication once per finished result; stage, commit, push, or open a
+PR only after one approval of its result review and exact command bundle,
+under the operator's identity and with no AI trailers.
 
 - **Owner**: [`git-publication.md`](../../.agents/rules/git-publication.md):
+  [One Proposal Per Result](../../.agents/rules/git-publication.md#one-proposal-per-result),
   Checkpoint A and Checkpoint B,
   [Change-Flow Bundle](../../.agents/rules/git-publication.md#change-flow-bundle),
   [Execution Choices](../../.agents/rules/git-publication.md#execution-choices).
@@ -256,7 +259,8 @@ reviewed command bundle, under the operator's identity and with no AI trailers.
   repository-local identity; a commit right after a permission prompt with no
   content review; separate confirmations for add, commit, push, and PR;
   `git add -A`; host or personal details pushed to a public remote whose
-  visibility nobody checked.
+  visibility nobody checked; a commit proposed for each small step or routine
+  record; content accepted in one turn and its bundle approved in the next.
 
 ### Integration And Retirement
 
@@ -495,7 +499,7 @@ runtime in use actually loads, created when a project lacks them.
   `AGENTS.md` or workspace rules; entry files written by a delegated or
   read-only agent, or tracked files added to someone else's clone; dated
   incident narrative in current guidance; a new document instead of an update
-  to its owner.
+  to its owner; a section added to a Changelog after it was committed.
 
 ### File Checks
 

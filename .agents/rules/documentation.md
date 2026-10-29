@@ -93,10 +93,15 @@ correction under `planning.md` may revise the existing Changelog because it has
 not yet become durable history. After correction and final verification, that
 same Changelog records the actual final outcome. Once the result is committed,
 preserve its Changelog as the historical verified outcome; later work must not
-rewrite it, including between commit and push. A later workstream gets its own
-Changelog only when proportional planning gives that workstream the persistent
-Plan/Changelog lifecycle; neither a new commit nor a routine fix creates one
-automatically.
+rewrite it or add to it, including between commit and push. An operation done
+afterwards, its check, or a residual gap that has since closed is reported in
+the conversation, or recorded with the later work that needs it. A later
+workstream gets its own Changelog only when proportional planning gives that
+workstream the persistent Plan/Changelog lifecycle; neither a new commit nor a
+routine fix creates one automatically.
+
+Red flags: "its follow-ups are out of date now"; "an update section below the
+outcome".
 
 ## Make Agent Instructions Loadable
 
