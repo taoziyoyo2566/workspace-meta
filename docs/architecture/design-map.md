@@ -53,6 +53,7 @@ Related maps, not copied here:
 | Unknown files are reset, cleaned, or stashed | [Git inspection and state](#git-inspection-and-state), [Recovery](#recovery-and-destructive-git) |
 | A commit lands directly on the main branch, or a branch is created without a state report | [Change flow](#change-flow-branches-worktrees-and-stash) |
 | A commit carries an AI trailer or the wrong author, or one commit and push needs four confirmations | [Publication](#publication) |
+| Host or personal details are pushed to a remote nobody checked was public | [Publication](#publication) |
 | A PR exists only to record a merge, or a branch is deleted while a server runs its commit | [Integration and retirement](#integration-and-retirement) |
 | A force push, `branch -D`, `--no-verify`, or an amend after a hook failure | [Recovery](#recovery-and-destructive-git) |
 | An invented version, a moved tag, or one-line release notes | [Releases and versions](#releases-and-versions) |
@@ -254,7 +255,8 @@ reviewed command bundle, under the operator's identity and with no AI trailers.
 - **Symptoms**: `Co-Authored-By` or `Signed-off-by` in a commit, or a
   repository-local identity; a commit right after a permission prompt with no
   content review; separate confirmations for add, commit, push, and PR;
-  `git add -A`.
+  `git add -A`; host or personal details pushed to a public remote whose
+  visibility nobody checked.
 
 ### Integration And Retirement
 

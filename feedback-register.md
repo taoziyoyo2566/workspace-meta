@@ -21,7 +21,7 @@ number. Never renumber. Numbering accumulates; mark replacements rather than del
 | `.agents/rules/authorization.md` | W-R13 authorization boundary, W-R23, W-R29–W-R31, W-R34–W-R35, refined by W-R54, elevated reads W-R66, approval labels W-R68, runtime denials W-R69, standing bootstrap authority W-R73 |
 | `.agents/rules/git.md` | W-R21 inspection/freshness, W-R23, refined by W-R57 |
 | `.agents/rules/git-branches.md` | W-R21–W-R22 and W-R32 branch-contract design refined by W-R40, change flow W-R58 |
-| `.agents/rules/git-publication.md` | W-R25, W-R30 refined by W-R31, change-flow bundle W-R58 |
+| `.agents/rules/git-publication.md` | W-R25, W-R30 refined by W-R31, change-flow bundle W-R58, remote visibility W-R77 |
 | `.agents/rules/git-integration.md` | W-R21 and the accepted W-R32 terminal-evidence refinement, refined by W-R54, W-R57 and W-R58 |
 | `.agents/rules/git-recovery.md` | W-R19–W-R20, refined by W-R57 and W-R58 |
 | `.agents/rules/requests.md` | W-R63, moved from `planning.md`, extended by W-R71 |
@@ -261,3 +261,5 @@ Distilled cross-project rules. Numbering accumulates — do not delete old rules
     - Source: 2026-10-18, workspace-meta: a session's scratch cleanup removed evaluation scenarios and a guarded-sync script that would be needed again, and the operator asked that scripts which will be reused be kept.
 - **W-R76 (2026-10-19)** — **A command handed to the user for a terminal of their own comes with the steps to open that terminal from where they are, found by first checking how the session runs or by asking the user.**
     - Source: 2026-10-19, workspace-meta: a cleanup handed over only for "a new terminal of your own", with the host and account named, was not run, and the operator answered that they had not been told how to run it.
+- **W-R77 (2026-10-29)** — **A publication review shows whether the target remote is public and, for a public remote, which host or personal details the pushed content reveals, before the push is proposed.**
+    - Source: 2026-10-29, invoice_automation: host deployment notes were pushed to an n8n-hosting fork that turned out to be public, because the review checked identity, refs, and the content for secrets but never the remote's visibility.

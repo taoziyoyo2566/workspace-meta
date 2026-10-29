@@ -43,8 +43,10 @@ applicable:
 - one `gh pr create`.
 
 Also display branch; exact staged name/status/stat; full message; identity
-source/result; remote URL/name; source/destination refs; exact range/count and
-divergence; force/upstream mode; checks/gaps; PR base/head/options.
+source/result; remote URL/name and whether the remote is public, and for a
+public remote the host or personal details the pushed content reveals;
+source/destination refs; exact range/count and divergence; force/upstream mode;
+checks/gaps; PR base/head/options.
 
 Never use `git add .`, `git add -A`, or a broad path containing unreviewed
 content. Review the complete staged diff.
