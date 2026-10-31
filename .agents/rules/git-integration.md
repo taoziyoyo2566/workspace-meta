@@ -5,9 +5,10 @@ boundary before branch/worktree retirement.
 
 ## Ownership
 
-This file owns the generic integration transaction and post-integration
-separation. Its ordinary case is merging a change branch into the main branch
-under the change flow (`git-branches.md`). Projects add topology, permitted
+This file owns the generic integration transaction, post-integration
+separation, and keeping a pre-release channel's branch up to date. Its ordinary
+case is merging a change branch into the main branch, or into a declared
+pre-release channel's branch, under the change flow (`git-branches.md`). Projects add topology, permitted
 routes, prerequisites, children/dependents, required CI, and archive tooling;
 release fields follow `releases.md`.
 
@@ -29,6 +30,8 @@ Integration is separate from publication. Before execution present:
 - required local/remote checks and gaps;
 - project topology/prerequisite/child/dependent fields, and release fields
   (`releases.md`);
+- for a project with a pre-release channel, whether the source holds anything
+  only the channel has (`git-branches.md` Change Flow);
 - excluded follow-ups and post-integration actions.
 
 Changed tips, base, commits/diff, mode, state, checks, conflict result, or
@@ -37,8 +40,25 @@ project fields expire the authorization.
 One integration authorization excludes conflict resolution, push, tag, ref
 deletion, branch/worktree cleanup, archive, downstream integration, and
 post-merge commits. A change-flow bundle (`git-publication.md`) may include the
-push and the retirement of the merged branch it discloses. Inspect and report
-the resulting target before proposing a follow-up.
+push, bringing a pre-release channel's branch up to date, and the retirement of
+the merged branch it discloses. Inspect and report the resulting target before
+proposing a follow-up.
+
+## Pre-Release Channel Branch
+
+When the project declares a pre-release channel (`deployment.md`):
+
+- every integration into or out of the channel branch, whether a change, an
+  update from the main branch, or a promotion, is a fast-forward or a merge
+  commit, never a squash or a rebase, since containing the main tip, promotion,
+  and a lasting withdrawal all rely on ancestry;
+- after each push to the main branch, bring the channel branch up to date with
+  it: a fast-forward when the channel branch has no commit that the main branch
+  lacks, otherwise a merge commit; a conflict is resolved on a short-lived
+  branch (`git-branches.md` Change Flow);
+- a promotion is an integration into the main branch, by fast-forward or merge
+  commit even where the project's route squashes, from a source that meets the
+  promotion condition in `deployment.md` Pre-Release Channels.
 
 ## Terminal Evidence
 

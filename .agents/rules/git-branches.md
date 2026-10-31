@@ -25,15 +25,28 @@ one exception is the additive worktree that Change Flow reports instead.
 
 Every repository change goes through a short-lived branch:
 
-- it starts from the main branch, and its name starts with its type from the
+- it starts from the main branch, except a branch for something only a
+  pre-release channel has (below), and its name starts with its type from the
   project's list, for example `docs/`, `fix/`, or `feat/`, followed by its
   topic;
 - the change is made and its checks run on the branch (`file-checks.md`,
-  `verification.md`); then it is integrated into the main branch by the
-  project's route (`git-integration.md`);
+  `verification.md`); then it is integrated into the main branch, or first
+  into a pre-release channel's branch (below), by the project's route
+  (`git-integration.md`);
 - nothing is committed directly to the main branch;
 - a fix follows it too; `releases.md` Fixes decides when a fix on an older
-  release line branches from that release's tag instead.
+  line branches from an older verified state instead.
+
+When the project declares a pre-release channel (`deployment.md`), a change
+whose Plan or brief sends it through the channel is integrated into the
+channel branch first and reaches the main branch only by promotion. Nothing is
+committed directly to the channel branch either. A branch that holds something
+only the channel has, such as a fix to a change still on the channel, a
+withdrawal, or a resolved conflict with the main branch, starts from the pushed
+channel branch, or for such a fix from the change's own branch, and returns to
+the channel branch, never straight to the main branch. Merging a withdrawn
+change's branch again does not bring back what the withdrawal reverted;
+reverting the revert, or new commits, do.
 
 The flow governs commits, not edits. Uncommitted edits may start in the current
 checkout; before the first commit at the latest, they move to the change's
@@ -42,8 +55,9 @@ Non-Interference). So an operator decision is still recorded in the same turn
 (`planning.md`), and authorized edits still proceed without another
 confirmation (`authorization.md`).
 
-Creating an additive worktree on a new branch from the main branch, for a
-change the user has already authorized, is part of that change when its path
+Creating an additive worktree on a new branch from the main branch, or from a
+declared pre-release channel's branch for something only the channel has, for
+a change the user has already authorized, is part of that change when its path
 is outside the checkout or ignored by it and the action carries no uncommitted
 edits. Report the branch, its base, the worktree path, and the command when you
 create it, instead of asking first. Every other branch action keeps its review,

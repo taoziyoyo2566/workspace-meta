@@ -59,6 +59,7 @@ Related maps, not copied here:
 | A force push, `branch -D`, `--no-verify`, or an amend after a hook failure | [Recovery](#recovery-and-destructive-git) |
 | An invented version, a moved tag, or one-line release notes | [Releases and versions](#releases-and-versions) |
 | Production runs a feature-branch commit, or a drill instance is left running | [Deployment](#deployment) |
+| A change reaches the main branch around its pre-release channel, or the channel branch is rewritten or deployed behind the main branch | [Deployment](#deployment), [Change flow](#change-flow-branches-worktrees-and-stash), [Integration and retirement](#integration-and-retirement) |
 | The literal wording was done and the goal missed, or examples were treated as the whole requirement | [Understanding requests](#understanding-requests) |
 | One case is fixed while identical ones elsewhere go unmentioned | [Understanding requests](#understanding-requests) |
 | Questions the repository could answer, several rounds of questions, or none on an ambiguous request | [Understanding requests](#understanding-requests), [Claude runtime](#claude-runtime) |
@@ -209,8 +210,9 @@ work is never discarded.
 ### Change Flow, Branches, Worktrees, And Stash
 
 Every repository change goes through a short-lived typed branch from the main
-branch and reaches it by the project's route; branch mechanics never change
-content.
+branch, or from a declared pre-release channel's branch for what only the
+channel has, and reaches the main branch by the project's route, directly or
+by promotion from the channel; branch mechanics never change content.
 
 - **Owner**: [`git-branches.md`](../../.agents/rules/git-branches.md):
   [Change Flow](../../.agents/rules/git-branches.md#change-flow),
@@ -227,10 +229,10 @@ content.
   main branch.
 - **Project may add**: main branch, type prefixes, merge route, checks,
   topology, and an optional durable contract carrier.
-- **Symptoms**: a commit directly on the main branch; confirmation asked for a
-  worktree of an authorized change; the checkout switched in place or dirty
-  edits carried along; branch metadata written into a Plan; an automatic
-  stash.
+- **Symptoms**: a commit directly on the main branch or on a pre-release
+  channel's branch; confirmation asked for a worktree of an authorized change;
+  the checkout switched in place or dirty edits carried along; branch metadata
+  written into a Plan; an automatic stash.
 
 ### Publication
 
@@ -249,11 +251,12 @@ under the operator's identity and with no AI trailers.
   publication), with `authorization.md` and `git.md`; the safety floor.
 - **Enforced by**: the gate's safety-floor binding; publication-contract tests
   in `tests/test_sync_codex_config.py`; the bootstrap's global-identity check;
-  `scripts/change_flow_bundle.sh`, which runs a reviewed bundle from its
-  bundle directory, binds the reviewed tree and message by fingerprint, stops
-  on the drifts it checks, never force-removes a worktree, and leaves the push
-  a separate command (`tests/test_change_flow_bundle.py`). No commit-message
-  hook.
+  `scripts/change_flow_bundle.sh`, which runs a reviewed fast-forward bundle
+  into the main branch from its bundle directory, binds the reviewed tree and
+  message by fingerprint, stops on the drifts it checks, never force-removes a
+  worktree, and leaves the push a separate command
+  (`tests/test_change_flow_bundle.py`); the steps on a pre-release channel's
+  branch are not scripted. No commit-message hook.
 - **Project may add**: message format, checks, CI, PR fields.
 - **Symptoms**: `Co-Authored-By` or `Signed-off-by` in a commit, or a
   repository-local identity; a commit right after a permission prompt with no
@@ -270,6 +273,7 @@ a commit only the retiring branch holds.
 
 - **Owner**: [`git-integration.md`](../../.agents/rules/git-integration.md):
   [Integration Review](../../.agents/rules/git-integration.md#integration-review),
+  [Pre-Release Channel Branch](../../.agents/rules/git-integration.md#pre-release-channel-branch),
   [Terminal Evidence](../../.agents/rules/git-integration.md#terminal-evidence),
   [Retirement Boundary](../../.agents/rules/git-integration.md#retirement-boundary).
 - **Routed by**: its row in both adapters (merge, integration, or
@@ -279,7 +283,8 @@ a commit only the retiring branch holds.
 - **Project may add**: routes, topology, prerequisites, CI, archive policy.
 - **Symptoms**: a closeout PR created only to record a merge; a push, tag, or
   deletion after a merge without its own review; conflicts resolved under the
-  merge approval; a branch deleted while a server runs its commit.
+  merge approval; a branch deleted while a server runs its commit; a squash or
+  rebase into or out of a pre-release channel's branch.
 
 ### Recovery And Destructive Git
 
@@ -300,13 +305,14 @@ force, and recovery refs.
 - **Project may add**: stricter ref policy and archive tooling.
 - **Symptoms**: a force push or remote branch deletion in a proposal;
   `reset --hard` or `clean -fd` to tidy up; an amend or `--no-verify` after a
-  hook failure; a pushed release tag moved.
+  hook failure; a pushed release tag moved; a pre-release channel's branch
+  rewritten.
 
 ### Releases And Versions
 
 Each released state gets an annotated SemVer tag whose message is the release
 notes; fixes reach released versions by a defined route; the rollback target is
-the newest good release.
+the newest verified state without the fault.
 
 - **Owner**: [`releases.md`](../../.agents/rules/releases.md):
   [Applies To](../../.agents/rules/releases.md#applies-to),
@@ -328,17 +334,20 @@ the newest good release.
 - **Symptoms**: a version invented for a project with no recorded scheme; a
   tag placed before post-release verification; `git push --tags`; one-line
   notes; a fix shipped on the main branch only while production runs an older
-  line.
+  line; a pre-release channel's deployment tagged; a rollback that skips the
+  newest verified state for an older tag.
 
 ### Deployment
 
-Only commits reachable from the pushed main deployment branch serve users;
-anything else is a temporary deployment with an end condition; deploy
-promptly, check before an older release and hold after it, and report
-instances outside the inventory.
+Only commits reachable from the pushed main deployment branch serve users,
+apart from a declared pre-release channel, whose commits contain it and reach
+it only by promotion; anything else is a temporary deployment with an end
+condition; deploy promptly, check before an older version and hold after it,
+and report instances outside the inventory.
 
 - **Owner**: [`deployment.md`](../../.agents/rules/deployment.md):
   [Main Branch](../../.agents/rules/deployment.md#main-branch),
+  [Pre-Release Channels](../../.agents/rules/deployment.md#pre-release-channels),
   [Cadence](../../.agents/rules/deployment.md#cadence),
   [Temporary Deployments](../../.agents/rules/deployment.md#temporary-deployments),
   [Deploying An Older Release](../../.agents/rules/deployment.md#deploying-an-older-release),
@@ -346,14 +355,19 @@ instances outside the inventory.
 - **Routed by**: its row in both adapters (deploying, what may serve users, a
   temporary deployment, or an instance outside the inventory), with
   `authorization.md`.
-- **Enforced by**: a brief route test; each project's deploy entry points and
+- **Enforced by**: a brief route test; the pre-release channel test in
+  `tests/test_sync_codex_config.py`; each project's deploy entry points and
   guards; host-local Claude `autoMode` rules where the operator sets them.
-- **Project may add**: main deployment branch, targets and inventory, entry
-  points and guards, deployment record, environment tiers, rollback procedure.
+- **Project may add**: main deployment branch, a pre-release channel's
+  declaration, targets and inventory, entry points and guards, deployment
+  record, environment tiers, rollback procedure.
 - **Symptoms**: production on a feature-branch or unpushed commit; a pushed
   change left undeployed; a drill instance left running; an unknown instance
-  changed before it is reported; a rollback without secret, schema, and
-  interface checks.
+  changed before it is reported; a rollback without its checks of secrets,
+  schemas, interfaces, and channels; a pre-release change merged straight into
+  the main branch;
+  a channel instance on a commit without the main branch's tip; a shared part
+  deployed from the channel branch.
 
 ## Requests, Reasoning, And Planning
 

@@ -2519,6 +2519,117 @@ class CodexConfigSyncTests(unittest.TestCase):
         )
         self.assertIn("W-R76", row)
 
+    def test_pre_release_channel_and_verified_rollback_targets(self) -> None:
+        # deployment.md owns the declared pre-release channel (W-R84): the
+        # change flow, integration, and release owners state their part of it,
+        # and git-recovery.md points to its no-rewrite floor. Every rollback
+        # goes to the newest verified state without the fault, not only to a
+        # tag (W-R85).
+        owners = [
+            path.name
+            for path in sorted(self.rules_dir.glob("*.md"))
+            if "## Pre-Release Channels" in path.read_text()
+        ]
+        self.assertEqual(owners, ["deployment.md"])
+
+        def section(name: str, title: str) -> str:
+            text = (self.rules_dir / name).read_text()
+            text = text.split(f"## {title}", 1)[1].split("\n## ", 1)[0]
+            return " ".join(text.split()).lower()
+
+        self.assertIn(
+            "unless it is an instance of a declared pre-release channel "
+            "(pre-release channels) or a temporary deployment",
+            section("deployment.md", "Main Branch"),
+        )
+        channel = section("deployment.md", "Pre-Release Channels")
+        for invariant in (
+            "- a channel instance runs a pushed commit of the channel branch "
+            "that contains the tip of the pushed main branch when it is deployed.",
+            "- the channel branch is never rewritten, so every commit that ran "
+            "stays on it.",
+            "nothing they share with the main-branch instances, such as data, "
+            "schemas, or a control plane, is deployed from the channel branch,",
+            "promoting a commit promotes every change in it, so a change that is "
+            "not ready is withdrawn first, or the promotion waits;",
+        ):
+            self.assertIn(invariant, channel)
+        self.assertIn(
+            "a deployment other than a declared pre-release channel's is "
+            "temporary when",
+            section("deployment.md", "Temporary Deployments"),
+        )
+        self.assertIn(
+            "a rollback deploys the verified state that `releases.md` rollback "
+            "target names.",
+            section("deployment.md", "Deploying An Older Release"),
+        )
+        change_flow = section("git-branches.md", "Change Flow")
+        for invariant in (
+            "is integrated into the channel branch first and reaches the main "
+            "branch only by promotion.",
+            "returns to the channel branch, never straight to the main branch.",
+        ):
+            self.assertIn(invariant, change_flow)
+        channel_branch = section("git-integration.md", "Pre-Release Channel Branch")
+        for invariant in (
+            "- every integration into or out of the channel branch, whether a "
+            "change, an update from the main branch, or a promotion, is a "
+            "fast-forward or a merge commit, never a squash or a rebase,",
+            "- a promotion is an integration into the main branch, by "
+            "fast-forward or merge commit even where the project's route "
+            "squashes,",
+        ):
+            self.assertIn(invariant, channel_branch)
+        self.assertIn(
+            "and a pre-release channel's deployments, are not tagged;",
+            section("releases.md", "When And What To Tag"),
+        )
+        rollback = section("releases.md", "Rollback Target")
+        self.assertIn(
+            "roll back to the newest verified state that the running commit "
+            "descends from and that does not contain the change at fault.",
+            rollback,
+        )
+        self.assertNotIn("newest release", rollback)
+        self.assertIn(
+            "a declared pre-release channel's branch is never rewritten "
+            "(`deployment.md`).",
+            section("git-recovery.md", "Ownership"),
+        )
+
+        self.assertIn(
+            "a pre-release change merged straight into the main branch",
+            self.design_map_entry("deployment.md"),
+        )
+        self.assertIn(
+            "a rollback that skips the newest verified state for an older tag",
+            self.design_map_entry("releases.md"),
+        )
+
+        feedback = (ROOT / "feedback-register.md").read_text()
+        rows = {
+            owner: next(
+                line
+                for line in feedback.splitlines()
+                if line.startswith(f"| `.agents/rules/{owner}`")
+            )
+            for owner in (
+                "deployment.md",
+                "git-branches.md",
+                "git-integration.md",
+                "git-publication.md",
+                "git-recovery.md",
+                "releases.md",
+            )
+        }
+        self.assertEqual(feedback.count("- **W-R84 ("), 1)
+        for row in rows.values():
+            self.assertIn("W-R84", row)
+        self.assertEqual(feedback.count("- **W-R85 ("), 1)
+        for owner in ("deployment.md", "git-branches.md", "releases.md"):
+            self.assertIn("W-R85", rows[owner])
+
     def test_a_floated_idea_gets_the_brief_before_the_work(self) -> None:
         # An idea floated for new or changed behavior gets the brief, with what
         # done means and the usage scenarios, before any work; the middle

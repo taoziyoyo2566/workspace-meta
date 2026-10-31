@@ -79,22 +79,34 @@ identity, repo-local override, or mismatch. Add no AI attribution,
 For a change on its own branch (`git-branches.md` Change Flow), one bundle
 under one brief may cover the whole disclosed sequence:
 
-1. the exact-path add and commit on the change branch;
-2. when the project only fast-forwards and the main branch has moved past the
-   change's base, a rebase of the change's own unpushed branch onto the main
-   tip disclosed in the brief, then the change's checks again; the pre-rebase
-   tip is reported as the recovery point;
-3. the project's merge into the main branch (`git-integration.md`);
-4. the push of the main branch;
+1. the exact-path add and commit on the change branch, or for a withdrawal the
+   reviewed revert there (`git-recovery.md`);
+2. when the project only fast-forwards into the main branch and the main branch
+   has moved past the change's base, a rebase of the change's own unpushed
+   branch onto the main tip disclosed in the brief, then the change's checks
+   again; the pre-rebase tip is reported as the recovery point;
+3. the project's merge into the main branch, or into a declared pre-release
+   channel's branch when the change goes through the channel
+   (`git-integration.md`);
+4. the push of that branch; after a push of the main branch, bringing the
+   channel branch up to date with it and pushing it;
 5. retirement of the merged change: removal of the worktree that Change Flow
-   created for it, then local deletion of its branch with `git branch -d`.
+   created for it, then local deletion of its branch with `git branch -d`,
+   which for a change merged into a channel branch runs in a checkout of that
+   branch.
+
+A promotion (`deployment.md` Pre-Release Channels) may run as steps 3 and 4
+alone, with step 3 a fast-forward or merge commit (`git-integration.md`
+Pre-Release Channel Branch). Steps on a channel branch run in a checkout of it;
+the bundle names that checkout, with its creation and removal when it is not a
+standing one.
 
 The bundle shows the fields of Checkpoint B and of the integration review, and
 for step 5 the worktree's untracked and ignored files. It stops at the step
-where anything drifts, including the main tip moving after the brief; where a
-rebase or merge conflicts or cannot fast-forward; where a check fails; or where
-the worktree holds untracked or ignored files. Remote branch deletion stays a
-separately reviewed action (`git-recovery.md`).
+where anything drifts, including the main or channel tip moving after the
+brief; where a rebase or merge conflicts or cannot fast-forward; where a check
+fails; or where the worktree holds untracked or ignored files. Remote branch
+deletion stays a separately reviewed action (`git-recovery.md`).
 
 ## Execution Choices
 

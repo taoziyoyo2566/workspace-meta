@@ -72,8 +72,8 @@ governance and its own review artifacts.
   fields), the `make` targets, and the rule file names that adapters and
   projects route to. Rule wording inside an owner is not part of it.
 - Status surface: `git -C ~/workspace describe --match 'v[0-9]*'` on each
-  host. No rollback procedure is written yet: the notes name the target
-  release, and a bad release is fixed forward with a patch release that each
+  host. No rollback procedure is written yet: the notes name the rollback
+  target, and a bad release is fixed forward with a patch release that each
   host syncs.
 
 ## Commit And Sync

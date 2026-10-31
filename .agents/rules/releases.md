@@ -2,7 +2,7 @@
 
 Agent-neutral workspace rule for which released states are versions, how they
 are numbered and tagged, what their notes record, how a released version is
-fixed, and which release is the rollback target.
+fixed, and which verified state is the rollback target.
 
 ## Ownership
 
@@ -31,7 +31,7 @@ its first release; never invent them.
 
 - **Release** — a commit that was deployed, or published as the project
   defines it, and verified, marked by a version tag. It is on the main branch,
-  or on an older line cut from a release tag (Fixes).
+  or on an older line cut from an older verified state (Fixes).
 - **Milestone** — a release that closes a batch. A batch is one functional or
   improvement change, often one Plan's workstream.
 - **Patch release** — a release made for a fix.
@@ -55,8 +55,10 @@ since the previous release, and the notes list it under scope.
 
 Tag when a deployment releases a closed batch (a milestone) or a fix (a patch
 release). Other deployments, such as the prompt deploys after each push
-(`deployment.md` Cadence), are not tagged; `git describe` shows them as commits
-after the latest release.
+(`deployment.md` Cadence) and a pre-release channel's deployments, are not
+tagged; `git describe` shows them as commits after the latest release. A change
+that went through a pre-release channel is released only by a deployment to the
+main-branch instances after its promotion, tagged as above.
 
 Tag right after the release is deployed and its post-release checks pass
 (`verification.md` Release Evidence). The tag records what was released; it
@@ -68,7 +70,8 @@ Tag the exact commit that the release runs, as the project's deployment record
 shows it; with pull requests, that is the merge or squash commit on the main
 branch. Every component that the range changes runs a commit whose content for
 that component's paths equals the tagged commit's; a component the range does
-not change needs no redeploy.
+not change needs no redeploy. A pre-release channel's instances are not
+counted, since they may already run later changes.
 
 Each milestone names one batch. Parallel sessions interleave commits, so the
 range may also hold fixes, documentation, or parts of other work; the notes
@@ -97,9 +100,9 @@ one line:
    the range; the Plan and Changelog paths; the project's command that shows
    which version each part runs;
 6. verification: the post-release checks and their results, with gaps named;
-7. rollback: the target release, whether going back crosses a one-way change in
-   the range, such as secrets, credentials, or a data schema, and which project
-   procedure handles it.
+7. rollback: the rollback target (Rollback Target), whether going back crosses
+   a one-way change in the range, such as secrets, credentials, or a data
+   schema, and which project procedure handles it.
 
 The notes hold no secret values and are written to a file in the session
 scratch location (`temporary-files.md`). Each narrative has one copy: the
@@ -126,16 +129,17 @@ release it replaces.
 ## Fixes
 
 Normally a fix follows the change flow in `git-branches.md`: a fix branch from
-the main branch, checked there, merged into the main branch, and released from
-it as a patch of the current version. The notes name the release that
+the main branch, checked there, merged into the main branch, directly or by
+promotion from a pre-release channel, and released from it as a patch of the
+current version. The notes name the release that
 introduced the problem.
 
-Only when production has rolled back to an older release and must be fixed
-there:
+Only when production has rolled back to an older verified state (Rollback
+Target) and must be fixed there:
 
-- the fix branch starts from that release's tag;
-- the patch takes the next number on that line, for example `v2.1.3` while the
-  main branch is at `v2.2.x`;
+- the fix branch starts from that state's commit;
+- the patch takes the next number after the release that state descends from,
+  for example `v2.1.3` while the main branch is at `v2.2.x`;
 - it is verified and released as a temporary deployment (`deployment.md`);
 - the fix is then carried into the main branch by the project's route, and
   verified and released again there.
@@ -149,18 +153,25 @@ the tag keeps its commits.
 
 ## Rollback Target
 
-Roll back to the newest release that the running commit descends from and that
-does not contain the change at fault:
+Roll back to the newest verified state that the running commit descends from
+and that does not contain the change at fault. A verified state is a release,
+or a later deployment of the same instances that the project's deployment
+record shows passed its checks. For example:
 
-- when the fault is in commits merged after the latest release, that release is
-  the target, for example `v2.2.0` when production runs `v2.2.0-3-g…`;
-- when the fault is in the latest milestone's batch, the target is the latest
-  release of the previous milestone line, including its patches, for example
-  `v2.1.2` rather than `v2.1.0`.
+- production runs `v2.2.0-3-g…` and only its third commit is at fault: the
+  target is `v2.2.0-2-g…` if that deployment passed its checks, otherwise
+  `v2.2.0`;
+- the fault is in the batch that milestone `v2.2.0` released: the target is
+  the newest verified state before the faulty commit, such as `v2.1.2` or a
+  verified deployment after it, not `v2.1.0`.
+
+A pre-release channel's instance rolls back instead to a verified state, its
+own or the corresponding main-branch instances', that does not contain the
+change at fault; usually that is what those main-branch instances run.
 
 Going back further discards verified work and crosses more one-way changes.
 Projects own the procedure; `deployment.md` owns the checks before an older
-release is deployed and the hold after it.
+version is deployed and the hold after it.
 
 ## Visibility
 

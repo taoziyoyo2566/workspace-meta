@@ -20,10 +20,10 @@ number. Never renumber. Numbering accumulates; mark replacements rather than del
 |---|---|
 | `.agents/rules/authorization.md` | W-R13 authorization boundary, W-R23, W-R29–W-R31, W-R34–W-R35, refined by W-R54, elevated reads W-R66, approval labels W-R68, runtime denials W-R69, standing bootstrap authority W-R73 |
 | `.agents/rules/git.md` | W-R21 inspection/freshness, W-R23, refined by W-R57 |
-| `.agents/rules/git-branches.md` | W-R21–W-R22 and W-R32 branch-contract design refined by W-R40, change flow W-R58 |
-| `.agents/rules/git-publication.md` | W-R25, W-R30 refined by W-R31, change-flow bundle W-R58, remote visibility W-R77, one proposal per result W-R78 refining W-R31 |
-| `.agents/rules/git-integration.md` | W-R21 and the accepted W-R32 terminal-evidence refinement, refined by W-R54, W-R57 and W-R58 |
-| `.agents/rules/git-recovery.md` | W-R19–W-R20, refined by W-R57 and W-R58 |
+| `.agents/rules/git-branches.md` | W-R21–W-R22 and W-R32 branch-contract design refined by W-R40, change flow W-R58, pre-release channels W-R84, older-line fixes from a verified state W-R85 |
+| `.agents/rules/git-publication.md` | W-R25, W-R30 refined by W-R31, change-flow bundle W-R58, remote visibility W-R77, one proposal per result W-R78 refining W-R31, pre-release channels W-R84 |
+| `.agents/rules/git-integration.md` | W-R21 and the accepted W-R32 terminal-evidence refinement, refined by W-R54, W-R57 and W-R58, pre-release channels W-R84 |
+| `.agents/rules/git-recovery.md` | W-R19–W-R20, refined by W-R57 and W-R58, pre-release channels W-R84 |
 | `.agents/rules/requests.md` | W-R63, moved from `planning.md`, extended by W-R71 |
 | `.agents/rules/planning.md` | W-R1–W-R7, W-R12, W-R18 and accepted W-R32 refinements, refined by W-R44, W-R46, W-R47, W-R50, W-R51, W-R56 and W-R57, exceptions to recorded decisions W-R67, remembered restrictions W-R70, routine operations stay transient W-R78 |
 | `.agents/rules/reasoning.md` | W-R43, refined by W-R63 |
@@ -31,8 +31,8 @@ number. Never renumber. Numbering accumulates; mark replacements rather than del
 | `.agents/rules/documentation.md` | W-R38 refined by W-R39, W-R41 entry-point loadability refined by W-R42, Plan/Changelog lifecycle refined by W-R44, W-R46 and W-R47, investigation records refined by W-R50, seams for W-R53 and W-R57, project bootstrap W-R73 restoring W-R11 in a narrower form, committed Changelogs not added to W-R78 |
 | `.agents/rules/verification.md` | W-R15–W-R17, refined by W-R53 |
 | `.agents/rules/file-checks.md` | W-R53 |
-| `.agents/rules/deployment.md` | W-R54 refined by W-R57 |
-| `.agents/rules/releases.md` | W-R57 |
+| `.agents/rules/deployment.md` | W-R54 refined by W-R57, pre-release channels W-R84, verified rollback targets W-R85 |
+| `.agents/rules/releases.md` | W-R57, pre-release channels W-R84, verified rollback targets W-R85 |
 | `.agents/rules/review.md` | W-R13, W-R20, W-R33 and accepted W-R32 refinements, refined by W-R56, problem reports W-R59 |
 | `.agents/rules/problem-follow-up.md` | W-R56 |
 | `.agents/rules/capabilities.md` | W-R18 and accepted W-R32 refinements, refined by W-R44, W-R52, W-R53 and W-R55, quality before speed W-R60, where the user runs a command W-R62, command length W-R65, delegation W-R72, opening the user's terminal W-R76 |
@@ -265,3 +265,7 @@ Distilled cross-project rules. Numbering accumulates — do not delete old rules
     - Source: 2026-10-29, invoice_automation: host deployment notes were pushed to an n8n-hosting fork that turned out to be public, because the review checked identity, refs, and the content for secrets but never the remote's visibility.
 - **W-R78 (2026-10-29)** — **A commit publishes, so publication is proposed once per finished result, with its result review and a bundle for each repository it changed under one approval (refining W-R31); a later routine operation, its check, or a status change is reported in the conversation, not committed, and a committed Changelog is not added to.**
     - Source: 2026-10-29, invoice_automation: three commits were proposed in two turns, the last only to add the operator's routine tunnel change and its check to an already committed Changelog, and the operator asked why unneeded content was recorded and for fewer, less scattered commit tasks.
+- **W-R84 (2026-10-25)** — **A project may declare a pre-release channel: a lasting part of production whose instances serve the users who choose it with checked, pushed commits of a channel branch that contains the main branch and is never rewritten; changes enter it by fast-forward or merge commit and leave by promotion or revert, shared parts are never deployed from it, only a main-branch deployment after promotion is released, and a channel instance rolls back to a verified state, its own or the main-branch instances'.**
+    - Source: 2026-10-25, reality-ops: a pre-release instance serving opt-in users beside the stable one, with changes not yet on the main branch, fit neither the main-branch rule nor temporary deployments, and the change flow, downstream integration, tagging, and rollback had no route for it.
+- **W-R85 (2026-10-30)** — **In every project a rollback goes to the newest verified state without the fault, a release or a later deployment that the project's deployment record shows passed its checks, and a fix on an older line starts from that state.**
+    - Source: 2026-10-30, reality-ops: its approved default rollback returns each host to its last verified deployment while the rule allowed only release tags, so rolling back a pre-release channel's first round would have gone past the untagged channel build and removed the channel.

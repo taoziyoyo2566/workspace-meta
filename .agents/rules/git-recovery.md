@@ -10,7 +10,8 @@ ref/config/history mutation, discarding checkout/restore/reset/clean, forced
 updates/deletion, amend, hook bypass, and recovery. Creating a release tag
 follows `releases.md`, and the rebase inside a change-flow bundle follows
 `git-publication.md`. A pushed release tag is never moved or deleted
-(`releases.md`). Projects add archive tooling and stricter ref policy.
+(`releases.md`). A declared pre-release channel's branch is never rewritten
+(`deployment.md`). Projects add archive tooling and stricter ref policy.
 
 Read `git.md` for the current state snapshot before using this module.
 
