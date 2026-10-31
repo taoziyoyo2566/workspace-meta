@@ -97,9 +97,10 @@ under one brief may cover the whole disclosed sequence:
 
 A promotion (`deployment.md` Pre-Release Channels) may run as steps 3 and 4
 alone, with step 3 a fast-forward or merge commit (`git-integration.md`
-Pre-Release Channel Branch). Steps on a channel branch run in a checkout of it;
-the bundle names that checkout, with its creation and removal when it is not a
-standing one.
+Pre-Release Channel Branch). A merge into a channel branch, and the branch
+deletion in step 5, run in a checkout of it; the bundle names that checkout,
+with its creation and removal when it is not a standing one. A fast-forward of
+the channel branch needs no checkout.
 
 The bundle shows the fields of Checkpoint B and of the integration review, and
 for step 5 the worktree's untracked and ignored files. It stops at the step

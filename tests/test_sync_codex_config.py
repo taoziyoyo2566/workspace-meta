@@ -2551,7 +2551,7 @@ class CodexConfigSyncTests(unittest.TestCase):
             "nothing they share with the main-branch instances, such as data, "
             "schemas, or a control plane, is deployed from the channel branch,",
             "promoting a commit promotes every change in it, so a change that is "
-            "not ready is withdrawn first, or the promotion waits;",
+            "not ready is withdrawn first, or the promotion waits.",
         ):
             self.assertIn(invariant, channel)
         self.assertIn(
@@ -2581,6 +2581,24 @@ class CodexConfigSyncTests(unittest.TestCase):
             "squashes,",
         ):
             self.assertIn(invariant, channel_branch)
+        self.assertIn(
+            "a promotion (`deployment.md` pre-release channels) may run as steps "
+            "3 and 4 alone, with step 3 a fast-forward or merge commit",
+            section("git-publication.md", "Change-Flow Bundle"),
+        )
+        for invariant in (
+            "a change needed on the main branch sooner than another on the "
+            "channel gets there the same way, never straight from its own "
+            "branch;",
+            "it takes the channel's instances back to older code, so the checks "
+            "in deploying an older release apply to what the revert undoes.",
+        ):
+            self.assertIn(invariant, channel)
+        self.assertIn(
+            "for main-branch instances to the main branch, or to an older line "
+            "(`releases.md` fixes); for a channel's, to the channel branch.",
+            section("deployment.md", "Deploying An Older Release"),
+        )
         self.assertIn(
             "and a pre-release channel's deployments, are not tagged;",
             section("releases.md", "When And What To Tag"),

@@ -365,11 +365,11 @@ and report instances outside the inventory.
   record, environment tiers, rollback procedure.
 - **Symptoms**: production on a feature-branch or unpushed commit; a pushed
   change left undeployed; a drill instance left running; an unknown instance
-  changed before it is reported; a rollback without its checks of secrets,
-  schemas, interfaces, and channels; a pre-release change merged straight into
-  the main branch;
-  a channel instance on a commit without the main branch's tip; a shared part
-  deployed from the channel branch.
+  changed before it is reported; a rollback or a channel withdrawal without
+  its checks of secrets, schemas, interfaces, and channels; a pre-release
+  change merged straight into the main branch; a channel instance on a commit
+  without the main branch's tip; a shared part deployed from the channel
+  branch.
 
 ## Requests, Reasoning, And Planning
 

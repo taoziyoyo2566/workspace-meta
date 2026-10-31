@@ -43,10 +43,10 @@ channel branch first and reaches the main branch only by promotion. Nothing is
 committed directly to the channel branch either. A branch that holds something
 only the channel has, such as a fix to a change still on the channel, a
 withdrawal, or a resolved conflict with the main branch, starts from the pushed
-channel branch, or for such a fix from the change's own branch, and returns to
-the channel branch, never straight to the main branch. Merging a withdrawn
-change's branch again does not bring back what the withdrawal reverted;
-reverting the revert, or new commits, do.
+channel branch, or for such a fix from the change's own branch while it is
+kept, and returns to the channel branch, never straight to the main branch.
+Merging a withdrawn change's branch again does not bring back what the
+withdrawal reverted; reverting the revert, or new commits, do.
 
 The flow governs commits, not edits. Uncommitted edits may start in the current
 checkout; before the first commit at the latest, they move to the change's

@@ -8,9 +8,9 @@ boundary before branch/worktree retirement.
 This file owns the generic integration transaction, post-integration
 separation, and keeping a pre-release channel's branch up to date. Its ordinary
 case is merging a change branch into the main branch, or into a declared
-pre-release channel's branch, under the change flow (`git-branches.md`). Projects add topology, permitted
-routes, prerequisites, children/dependents, required CI, and archive tooling;
-release fields follow `releases.md`.
+pre-release channel's branch, under the change flow (`git-branches.md`).
+Projects add topology, permitted routes, prerequisites, children/dependents,
+required CI, and archive tooling; release fields follow `releases.md`.
 
 Read `git.md` for the current state snapshot before integration.
 

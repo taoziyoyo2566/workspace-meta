@@ -68,9 +68,13 @@ pre-releases, and the route by which changes enter the channel branch.
     a later channel commit with the same content for every component the
     channel ran, and the main-branch instances then run that content. Promoting
     a commit promotes every change in it, so a change that is not ready is
-    withdrawn first, or the promotion waits;
+    withdrawn first, or the promotion waits. A change needed on the main
+    branch sooner than another on the channel gets there the same way, never
+    straight from its own branch;
   - withdrawal: a revert of what brought the change in enters the channel
-    branch and is deployed forward.
+    branch and is deployed forward. It takes the channel's instances back to
+    older code, so the checks in Deploying An Older Release apply to what the
+    revert undoes.
 - Cadence applies to the channel branch as to the main branch. How changes
   reach the channel branch is `git-branches.md` Change Flow; how it keeps up
   with the main branch is `git-integration.md` Pre-Release Channel Branch.
@@ -125,11 +129,12 @@ changed in four places, and follow the project's procedure for each:
   only after the main-branch instances leave their hold.
 
 The rollback is a deployment under this rule, and the fix goes forward
-(`releases.md` Fixes). The deployment record shows the rollback, and the
+(`releases.md` Fixes). The deployment record shows the rollback. The
 rolled-back instances stay on their rollback target until a commit that
-carries the fix is pushed to the branch they deploy from: the main branch for
-main-branch instances, the channel branch for a channel's. Until then, Cadence
-does not propose deploying that branch to them.
+carries the fix is pushed: for main-branch instances to the main branch, or to
+an older line (`releases.md` Fixes); for a channel's, to the channel branch.
+Until then, Cadence does not propose deploying the main or the channel branch
+to them.
 
 ## Instances Outside The Inventory
 

@@ -120,9 +120,10 @@ one line:
    the range; the Plan and Changelog paths; the project's command that shows
    which version each part runs;
 6. verification: the post-release checks and their results, with gaps named;
-7. rollback: the rollback target (Rollback Target), whether going back crosses
-   a one-way change in the range, such as secrets, credentials, or a data
-   schema, and which project procedure handles it.
+7. rollback: where to go back if this release's own changes are at fault
+   (Rollback Target), whether going back crosses a one-way change in the
+   range, such as secrets, credentials, or a data schema, and which project
+   procedure handles it.
 
 The notes hold no secret values and are written to a file in the session
 scratch location (`temporary-files.md`). Each narrative has one copy: the
@@ -157,8 +158,8 @@ Only when production has rolled back to an older verified state (Rollback
 Target) and must be fixed there:
 
 - the fix branch starts from that state's commit;
-- the patch takes the next number after the release that state descends from,
-  for example `v2.1.3` while the main branch is at `v2.2.x`;
+- the patch takes the next free number on the line of the release that state
+  descends from, for example `v2.1.3` while the main branch is at `v2.2.x`;
 - it is verified and released as a temporary deployment (`deployment.md`);
 - the fix is then carried into the main branch by the project's route,
   verified there, and carried by its next release.
@@ -178,8 +179,8 @@ or a later deployment of the same instances that the project's deployment
 record shows passed its checks. For example:
 
 - production runs `v2.2.0-3-g…` and only its third commit is at fault: the
-  target is `v2.2.0-2-g…` if that deployment passed its checks, otherwise
-  `v2.2.0`;
+  target is `v2.2.0-2-g…` if that deployment passed its checks, otherwise the
+  newest verified state before it, such as `v2.2.0-1-g…` or `v2.2.0`;
 - the fault is in the batch that milestone `v2.2.0` released: the target is
   the newest verified state before the faulty commit, such as `v2.1.2` or a
   verified deployment after it, not `v2.1.0`.
