@@ -335,7 +335,9 @@ the newest verified state without the fault.
   tag placed before post-release verification; `git push --tags`; one-line
   notes; a fix shipped on the main branch only while production runs an older
   line; a pre-release channel's deployment tagged; a rollback that skips the
-  newest verified state for an older tag.
+  newest verified state for an older tag; MINOR raised for a fix or for an
+  improvement inside an existing component; a fix tagged on its own with
+  neither an older line nor the operator's decision.
 
 ### Deployment
 

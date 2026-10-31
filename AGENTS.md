@@ -64,17 +64,20 @@ governance and its own review artifacts.
   reverse whitelist ignores. Changes reach `main` by fast-forward only.
 - Workspace-meta releases the rules and host templates it syncs to hosts
   (`releases.md`). "Released" means pushed to `main`, with `make sync` applied
-  and verified on each host. A closed batch or a fix released this way is
-  tagged; release tags are annotated, unsigned, and named
-  `v<MAJOR>.<MINOR>.<PATCH>`, and the first is `v1.0.0`.
+  and verified on each host. Release tags are annotated, unsigned, and named
+  `v<MAJOR>.<MINOR>.<PATCH>`; the first is `v1.0.0`. Its modules, for version
+  numbers: the rules and adapters, the host sync with its templates, the
+  SessionStart evaluator, the status line, the managed skills, the rule-eval
+  harness, the documentation gate, and the change-flow bundle script; a new
+  rule, rule owner, or skill is an improvement inside one of them.
 - Compatibility surface: the managed host surfaces (the marked Codex blocks,
   the Claude SessionStart group and status line, the declared preference
   fields), the `make` targets, and the rule file names that adapters and
   projects route to. Rule wording inside an owner is not part of it.
 - Status surface: `git -C ~/workspace describe --match 'v[0-9]*'` on each
   host. No rollback procedure is written yet: the notes name the rollback
-  target, and a bad release is fixed forward with a patch release that each
-  host syncs.
+  target, and a bad release is fixed forward (`releases.md` Fixes) and each
+  host syncs the fix.
 
 ## Commit And Sync
 

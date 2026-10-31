@@ -102,7 +102,7 @@ A patch on an older release line (`releases.md` Fixes) is a temporary
 deployment that ends only when:
 
 - its commit becomes reachable from the main branch through a plain merge;
-- a release from the main branch that carries the fix replaces it;
+- a verified deployment from the main branch that carries the fix replaces it;
 - or the instance is removed.
 
 A cherry-picked or squashed copy on the main branch does not end it. Until it

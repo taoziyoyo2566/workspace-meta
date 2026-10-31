@@ -2630,6 +2630,63 @@ class CodexConfigSyncTests(unittest.TestCase):
         for owner in ("deployment.md", "git-branches.md", "releases.md"):
             self.assertIn("W-R85", rows[owner])
 
+    def test_version_numbers_and_fix_tags(self) -> None:
+        # MINOR marks a new modular feature, not a pre-release channel or an
+        # improvement inside an existing component; a fix is not a batch and
+        # rides with the next release unless it is on an older line or the
+        # operator decides otherwise (W-R86).
+        def section(name: str, title: str) -> str:
+            text = (self.rules_dir / name).read_text()
+            text = text.split(f"## {title}", 1)[1].split("\n## ", 1)[0]
+            return " ".join(text.split()).lower()
+
+        self.assertIn(
+            "- **batch** — one new feature or improvement, often one plan's "
+            "workstream; a fix is not a batch, even with its own plan.",
+            section("releases.md", "Applies To"),
+        )
+        numbers = section("releases.md", "Version Numbers")
+        for invariant in (
+            "- otherwise, a new modular feature raises minor and resets patch: "
+            "something the project did not have, delivered as its own module or "
+            "component, such as a new deployed component; a new file, command, "
+            "task, view, record, metric, or rule inside an existing one is not, "
+            "and neither is a pre-release channel or what only its instances "
+            "run, since it changes how the project ships, not what it offers;",
+            "a new modular feature counts in the first release whose range "
+            "contains it deployed, finished or not.",
+        ):
+            self.assertIn(invariant, numbers)
+        self.assertNotIn("a closed batch raises minor", numbers)
+        self.assertIn(
+            "a deployed fix, alone or with others, is not tagged on its own: "
+            "the next release carries it and lists it under scope. a fix gets a "
+            "release of its own only on an older line (fixes), or when the "
+            "operator decides it needs one before the next release,",
+            section("releases.md", "When And What To Tag"),
+        )
+        self.assertIn(
+            "- a verified deployment from the main branch that carries the fix "
+            "replaces it;",
+            section("deployment.md", "Temporary Deployments"),
+        )
+
+        self.assertIn(
+            "minor raised for a fix or for an improvement inside an existing "
+            "component",
+            self.design_map_entry("releases.md"),
+        )
+
+        feedback = (ROOT / "feedback-register.md").read_text()
+        self.assertEqual(feedback.count("- **W-R86 ("), 1)
+        for owner in ("deployment.md", "releases.md"):
+            row = next(
+                line
+                for line in feedback.splitlines()
+                if line.startswith(f"| `.agents/rules/{owner}`")
+            )
+            self.assertIn("W-R86", row)
+
     def test_a_floated_idea_gets_the_brief_before_the_work(self) -> None:
         # An idea floated for new or changed behavior gets the brief, with what
         # done means and the usage scenarios, before any work; the middle

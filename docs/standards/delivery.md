@@ -52,18 +52,19 @@
 
 ## 版本与发布说明
 
-一批功能或改进收尾、或一个修复发布时，在部署完成、发布后检查通过之后，马上在实际运行的提交上打带注释的版本标签；平时推送后的例行部署不打标签。一批功能或改进收尾升 MINOR，破坏兼容面升 MAJOR，修复升 PATCH。标签说明就是发布说明，按 [releases.md](../../.agents/rules/releases.md) 的七个部分写，Plan 和 Changelog 只链接、不复制。下面是一个示例项目的样例：
+一批新功能或改进收尾、部署完成且发布后检查通过之后，马上在实际运行的提交上打带注释的版本标签；平时推送后的例行部署和先行版渠道的部署不打标签，修复不单独打，随下一个版本发布。版本号由范围内最大的变动决定（见 [releases.md](../../.agents/rules/releases.md#version-numbers) 的 Version Numbers）：破坏兼容面升 MAJOR，新增项目原来没有、作为独立模块或组件交付的功能升 MINOR（先行版渠道这类只改变发布方式的不算），其余升 PATCH。标签说明就是发布说明，按 [releases.md](../../.agents/rules/releases.md) 的七个部分写，Plan 和 Changelog 只链接、不复制。下面是一个示例项目的样例：
 
 ```text
 v2.3.0 milestone, 2026-10-20, commit 1a2b3c4, previous v2.2.1
 
-Why: 主节点故障时，订阅服务自动切换到备用节点。
+Why: 新增备用节点组件：主节点故障时，订阅服务自动切换到它。
 
 How: 见 docs/reviews/feature-failover/plan-failover-2026-10-01.md
 和 docs/reviews/feature-failover/changelog-failover-2026-10-19.md。
 
-Scope: console、subs 两个组件。v2.2.1..v2.3.0 共 14 个提交，
-另含 fix/heartbeat-timeout 的 2 个提交和 3 个文档提交。
+Scope: 新增 standby 组件，改了 console、subs。v2.2.1..v2.3.0 共 14 个提交，
+另含 fix/heartbeat-timeout 的 2 个提交（修复 v2.2.0 引入的心跳超时）
+和 3 个文档提交。
 
 Inspect:
   git show v2.3.0

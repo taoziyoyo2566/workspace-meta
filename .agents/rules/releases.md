@@ -32,9 +32,10 @@ its first release; never invent them.
 - **Release** — a commit that was deployed, or published as the project
   defines it, and verified, marked by a version tag. It is on the main branch,
   or on an older line cut from an older verified state (Fixes).
-- **Milestone** — a release that closes a batch. A batch is one functional or
-  improvement change, often one Plan's workstream.
-- **Patch release** — a release made for a fix.
+- **Batch** — one new feature or improvement, often one Plan's workstream; a
+  fix is not a batch, even with its own Plan.
+- **Milestone** — a release that raises MAJOR or MINOR (Version Numbers).
+- **Patch release** — a release that raises only PATCH.
 
 ## Version Numbers
 
@@ -44,26 +45,42 @@ largest change in the range since the previous release decides the number:
 - a change that breaks the project's compatibility surface raises MAJOR. The
   project names that surface, for example client configuration, data formats,
   operator commands, or APIs; SemVer calls it the public API;
-- otherwise, a closed batch raises MINOR and resets PATCH;
+- otherwise, a new modular feature raises MINOR and resets PATCH: something
+  the project did not have, delivered as its own module or component, such as
+  a new deployed component; a new file, command, task, view, record, metric,
+  or rule inside an existing one is not, and neither is a pre-release channel
+  or what only its instances run, since it changes how the project ships, not
+  what it offers;
 - otherwise, the release raises PATCH.
 
-This departs from strict SemVer: because merged work is deployed promptly, a
-patch released from the main branch also carries any unfinished work merged
-since the previous release, and the notes list it under scope.
+A new modular feature counts in the first release whose range contains it
+deployed, finished or not.
+
+This departs from strict SemVer in two ways. New functionality inside an
+existing component, which SemVer counts as MINOR, raises PATCH here, so that
+MINOR marks a new part of the project. And because merged work is deployed
+promptly, a patch released from the main branch also carries any other
+unfinished work merged since the previous release, and the notes list it under
+scope.
 
 ## When And What To Tag
 
-Tag when a deployment releases a closed batch (a milestone) or a fix (a patch
-release). Other deployments, such as the prompt deploys after each push
-(`deployment.md` Cadence) and a pre-release channel's deployments, are not
-tagged; `git describe` shows them as commits after the latest release. A change
-that went through a pre-release channel is released only by a deployment to the
+Tag when a deployment releases a closed batch, or a fix that gets a release of
+its own. A deployed fix, alone or with others, is not tagged on its own: the
+next release carries it and lists it under scope. A fix gets a release of its
+own only on an older line (Fixes), or when the operator decides it needs one
+before the next release, for example because users or hosts must know which
+version holds it; an agent proposes that only with such a reason. Other
+deployments, such as the prompt deploys after each push (`deployment.md`
+Cadence) and a pre-release channel's deployments, are not tagged;
+`git describe` shows them as commits after the latest release. A change that
+went through a pre-release channel is released only by a deployment to the
 main-branch instances after its promotion, tagged as above.
 
 Tag right after the release is deployed and its post-release checks pass
 (`verification.md` Release Evidence). The tag records what was released; it
-does not claim that the release has no problems, and a problem found later
-becomes a patch release. A release whose checks fail is not tagged; it is fixed
+does not claim that the release has no problems, and a problem found later is
+fixed as Fixes says. A release whose checks fail is not tagged; it is fixed
 forward or rolled back (`deployment.md`).
 
 Tag the exact commit that the release runs, as the project's deployment record
@@ -73,9 +90,10 @@ that component's paths equals the tagged commit's; a component the range does
 not change needs no redeploy. A pre-release channel's instances are not
 counted, since they may already run later changes.
 
-Each milestone names one batch. Parallel sessions interleave commits, so the
-range may also hold fixes, documentation, or parts of other work; the notes
-list them under scope. The tag never waits for that work or squashes it.
+Each release names the batch it closes, or the fix it releases on its own.
+Parallel sessions interleave commits, so the range may also hold fixes,
+documentation, or parts of other work; the notes list them under scope. The
+tag never waits for that work or squashes it.
 
 Release tags are annotated, named `v<MAJOR>.<MINOR>.<PATCH>` unless the project
 names its own prefix because its repository also carries upstream or other
@@ -90,12 +108,14 @@ one line:
 
 1. version and kind (milestone or patch), date, the commit, and the previous
    release;
-2. why: the batch's goal; for a patch, the problem and the release that
-   introduced it;
+2. why: the batch's goal, and the new modular feature or breaking change that
+   set the number when there is one; for a fix released on its own, the
+   problem and the release that introduced it;
 3. how: a short paragraph, or links to the Plan and Changelog where they exist,
    without copying them;
 4. scope: the components and surfaces changed, the range `<previous>..<this>`
-   with its commit count, and the other work in the range;
+   with its commit count, and the other work in the range, with each carried
+   fix and the release that introduced it;
 5. how to inspect: `git show`; `git log --oneline` and `git diff --stat` over
    the range; the Plan and Changelog paths; the project's command that shows
    which version each part runs;
@@ -123,16 +143,15 @@ the remote.
 
 A pushed release tag is never moved or deleted: Git advises a new name over
 re-tagging, and SemVer says a released version's contents must not change. A
-wrong tag or a bad release gets the next patch version, whose notes say which
-release it replaces.
+wrong tag gets the next patch version, whose notes say which tag it replaces; a
+bad release is fixed forward (Fixes).
 
 ## Fixes
 
 Normally a fix follows the change flow in `git-branches.md`: a fix branch from
 the main branch, checked there, merged into the main branch, directly or by
-promotion from a pre-release channel, and released from it as a patch of the
-current version. The notes name the release that
-introduced the problem.
+promotion from a pre-release channel, deployed, and carried by the next
+release, whose notes name the release that introduced the problem.
 
 Only when production has rolled back to an older verified state (Rollback
 Target) and must be fixed there:
@@ -141,11 +160,11 @@ Target) and must be fixed there:
 - the patch takes the next number after the release that state descends from,
   for example `v2.1.3` while the main branch is at `v2.2.x`;
 - it is verified and released as a temporary deployment (`deployment.md`);
-- the fix is then carried into the main branch by the project's route, and
-  verified and released again there.
+- the fix is then carried into the main branch by the project's route,
+  verified there, and carried by its next release.
 
-Either way, a fix is complete only when every line that needs it has been
-verified and released. When the problem also reproduces on the main branch,
+Either way, a fix is complete only when it is deployed and verified on every
+line that needs it. When the problem also reproduces on the main branch,
 fixing it there first and carrying it to the older line keeps it from being
 forgotten; the order is left open because the completion condition covers that
 risk. Once the patch's tag exists, the older line's branch may be retired, as
