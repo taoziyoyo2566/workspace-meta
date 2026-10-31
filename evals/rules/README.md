@@ -132,7 +132,7 @@ fixture TOML.
   that target, before and after versions alike and whatever version it
   measured, each with its directory and `rules` value (Keeping Runs); a later
   run never replaces an earlier one. A target that already passes every trial
-  shows nothing; say so in the Changelog.
+  shows nothing; say so in the commit message.
 - Three trials show only large effects: report "no difference detected", not
   "no difference".
 
@@ -141,16 +141,18 @@ fixture TOML.
 - Give every comparison its own new output directory, such as
   `~/.local/share/workspace-meta/rule-eval/<date>-<topic>-<n>/<label>` with a
   new `<n>` for each comparison, the confirmation included, outside any cache
-  directory. Never point a run at a directory a record cites; `run` refuses a
-  directory that already holds anything.
-- A record that cites a run names, for each `results.json` it cites, the
-  directory as a path under `~` and the `rules` value: the `git:` commit, or
-  for a directory version its `sha256:` digest with the branch and the commit
-  it was based on, noted when the run starts because `results.json` records
-  neither, and never the path of the rules directory.
-- Keep a cited run's directory until a later record supersedes every result
-  cited from it. That record says so, and its session removes the directory
-  after sorting it (`temporary-files.md`). A run that no record reports, such
-  as a void or aborted run, is removed by the session that made it once it is
-  finished with it. For a directory version, the run's `rules/` export is the
-  only copy of what was measured.
+  directory. Never point a run at a directory a commit message cites; `run`
+  refuses a directory that already holds anything.
+- A commit message that cites a run gives, for each `results.json` it cites,
+  the pass counts, the directory as a path under `~` on the host that ran it,
+  and the `rules` value: the `git:` commit, or for a directory version its
+  `sha256:` digest with the branch and the commit it was based on, noted when
+  the run starts because `results.json` records neither, and never the path of
+  the rules directory.
+- Keep a cited run's directory while it holds the latest result for its target
+  and `rules` value. The session whose run supersedes every result cited from
+  it says so in its commit message and removes the directory after sorting it
+  (`temporary-files.md`). A run that no commit message reports, such as a void
+  or aborted run, is removed by the session that made it once it is finished
+  with it. For a directory version, the run's `rules/` export is the only copy
+  of what was measured.

@@ -106,7 +106,7 @@ retirement, and project relationships needed by that workstream.
 Reuse an existing plan or task owner when it already owns those facts. Do not
 duplicate the contract or add Git transaction details to an artifact whose role
 does not include them. A missing carrier never authorizes an ad hoc plan,
-changelog, README, source, configuration, or other repository write. It blocks
+README, source, configuration, or other repository write. It blocks
 only reliance on durable handoff, not a simple one-session branch action.
 
 ## Creation Transaction

@@ -347,6 +347,8 @@ class RuleEvalTests(unittest.TestCase):
     def test_open_terminal_deletion_pattern(self) -> None:
         # user-run-open-terminal's run_absent flags the deletion, by the script
         # or another way, and none of the read-only checks a reply makes first.
+        # The pattern is a heuristic: it misses a deletion started with
+        # `nohup ... &` and matches `grep -c rm`; the judge covers the rest.
         scenario = EVAL.load_scenarios(["user-run-open-terminal"])[0]
         pattern = next(c["pattern"] for c in scenario["checks"] if c["type"] == "run_absent")
         read_only = [
@@ -652,18 +654,20 @@ class RuleContentTests(unittest.TestCase):
             "give every comparison its own new output directory",
             "with a new `<n>` for each comparison, the confirmation included, outside "
             "any cache directory",
-            "never point a run at a directory a record cites; `run` refuses a "
-            "directory that already holds anything",
-            "names, for each `results.json` it cites, the directory as a path under `~` "
-            "and the `rules` value: the `git:` commit, or for a directory version its "
-            "`sha256:` digest with the branch and the commit it was based on, noted "
-            "when the run starts because `results.json` records neither",
+            "never point a run at a directory a commit message cites; `run` "
+            "refuses a directory that already holds anything",
+            "gives, for each `results.json` it cites, the pass counts, the directory "
+            "as a path under `~` on the host that ran it, and the `rules` value: the "
+            "`git:` commit, or for a directory version its `sha256:` digest with the "
+            "branch and the commit it was based on, noted when the run starts "
+            "because `results.json` records neither",
             "never the path of the rules directory",
-            "keep a cited run's directory until a later record supersedes every "
-            "result cited from it",
-            "its session removes the directory after sorting it",
-            "a run that no record reports, such as a void or aborted run, is removed "
-            "by the session that made it once it is finished with it",
+            "keep a cited run's directory while it holds the latest result for its "
+            "target and `rules` value",
+            "the session whose run supersedes every result cited from it says so in "
+            "its commit message and removes the directory after sorting it",
+            "a run that no commit message reports, such as a void or aborted run, is "
+            "removed by the session that made it once it is finished with it",
             "is the only copy of what was measured",
         ):
             self.assertIn(phrase, keeping)

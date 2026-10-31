@@ -10,7 +10,7 @@ the agent proposing how work should be done, or reporting a handled problem.
 `verification.md` owns the agent's own failing checks, `review.md` owns review
 findings and closeout, `reasoning.md` owns how a cause is established, and
 `planning.md` owns where decisions and deferrals are recorded. Projects own
-their incident records and the owners of deferred work.
+where incident findings are recorded and their progress owner.
 
 ## Check A Proposal Against What Is Already Decided
 
@@ -20,8 +20,8 @@ report, check it against the rules and recorded operator decisions it touches:
 
 - the shared rules;
 - the project's agent instructions;
-- the Plans and decision records on the same ground (`planning.md` Before
-  Planning).
+- the running plans, decision records, and progress owner on the same ground
+  (`planning.md` Before Planning).
 
 Host-local memory is a lead, not a record. A decision found only there is
 reported as unrecorded, with the owner it must reach (`planning.md`).
@@ -69,6 +69,6 @@ Otherwise propose the rule, and record the mechanism as deferred.
 
 ## Deferral
 
-A deferred proposal is recorded in its owning artifact with an owner and a
+A deferred proposal is recorded in the progress owner with an owner and a
 restart condition (`planning.md`). Until the operator names an owner, a memory
 entry may hold it, marked unowned and unrecorded.

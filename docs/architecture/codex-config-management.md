@@ -107,7 +107,8 @@ memory、向 operator 提问、委派和长时间无人值守运行等机制由 
 | `tests/test_governance_docs.py` | 文档闸门的仓库正例与关键负向场景 |
 | `tests/test_sync_codex_config.py` | 安装、迁移、保留、拒绝和幂等测试 |
 | `tests/test_bootstrap_local.py` | 在临时仓库副本和临时 HOME 中运行 bootstrap：配置目录发现、显式列表、无 Python 回退、拒绝相对路径和幂等 |
-| `docs/reviews/` | 非小型变更的已批准 Plan（意图/执行合同）与验证完成、可提交时的 Changelog（结果） |
+| `docs/backlog.md` | 延后事项（含负责人与重启条件）、后续阶段与遗留缺口；事项关闭即移除 |
+| `docs/plans/` | 进行中的计划，只留在本机主检出、被忽略，永不提交；验收后删除 |
 | `projects/<project>/` | 独立项目仓库；不属于 workspace-meta 的跟踪范围 |
 
 ## 启动检查流程
@@ -204,9 +205,12 @@ Codex 可能把 `[hooks.state]` 写入 inline managed block 的结束标记之�
 warning，而纯文本 stdout 会进入额外 developer context。本项目因此统一使用
 JSON 协议。两家文档都把 `hookSpecificOutput.additionalContext`（配合
 `hookEventName: "SessionStart"`）定义为给模型的额外上下文，临时空间警告用它
-同时到达 agent。版本化源码核验和 UI 探测属于 dated evidence，保存在
-[hook 同步验证记录](../reviews/refactor-codex-sync/round1-2026-07-11.changelog.md)，
-不嵌入当前架构说明。
+同时到达 agent。这一点按 Codex 0.144.1 核验过：官方 hooks 文档与该版本源码
+（标签 `rust-v0.144.1` 的 `codex-rs/hooks/src/events/session_start.rs`）都把
+JSON `systemMessage` 当作 UI 警告、把纯文本 stdout 当作 developer context；用
+`--dangerously-bypass-hook-trust` 启动的 TUI 会话和 `codex exec --json` 只显示
+绕过警告、不显示 `systemMessage`，所以 runbook 不让它替代真实的 `/hooks` 信任
+验收。Codex 升级后 SessionStart 警告不再出现，或文档改了输出字段时，重新核验。
 
 ## 同步与迁移
 
@@ -315,13 +319,16 @@ session，不扫描私有 transcript，也不写死某个模型的价格。具�
 以 `scripts/claude_status_line.py` 为准，本文不维护第二份清单。token 分项
 是当前上下文/最近响应数据；美元金额是 Claude 客户端给出的 session 估算
 值；额度窗口按剩余百分比加重置倒计时显示，payload 缺少该数据时整段省略。
+官方 status line 文档或 changelog 改动 `rate_limits` 时，重新核验脚本里按版本
+记下的字段事实。
 某个 Claude 配置目录的 status line 属于其他工具时，该目录不安装此 renderer，
 由那个工具负责它的显示。
 
 Codex 继续使用 `.agents/host-templates/codex-preferences.toml` 中的原生
 `tui.status_line`；该模板是项目与 Git、模型、用量和额度展示顺序的唯一 owner。
 原生字段在当前线程没有可用值时可不显示，缺少 pull request 或估算成本不是同步
-错误。
+错误。模板中的各项 status item 标识已在 Codex 0.153.4 的二进制中逐一核对存在；
+调整列表或升级 Codex 后重新核对。
 
 ## 运维与治理入口
 
@@ -333,9 +340,8 @@ Codex 继续使用 `.agents/host-templates/codex-preferences.toml` 中的原生
 为准，领域与 owner 以 [设计地图](design-map.md) 为准。主机 credentials、trust、
 authorization、history、auto memory、cache 和生成状态不属于版本化架构载体；
 受保护动作、Git 发布和验证分别由对应 `.agents/rules/` owner 定义。Claude
-客户端加载与配置目录行为的版本化证据和复核条件见
-[Claude Code 运行时调查记录](../reviews/feature-claude-native-governance/investigation-claude-code-runtime-2026-10-17.md)，
-不嵌入当前架构说明。
+客户端加载与配置目录行为的版本与复核条件见
+[`claude-runtime.md`](../../.agents/rules/claude-runtime.md)。
 
 ## 参考
 

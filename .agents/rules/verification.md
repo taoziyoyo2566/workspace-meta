@@ -25,8 +25,9 @@ that gives commands, paths, links, or procedures verifies those references and
 executes safe representative commands when feasible.
 
 A run's result reports the warnings it newly shows against the last verified
-run of the same check. Each fails the run as a new warning fails a file check
-(`file-checks.md` Warnings).
+run of the same check (a run on the base commit when no earlier result is at
+hand). Each fails the run as a new warning fails a file check (`file-checks.md`
+Warnings).
 
 ## Risk-Triggered Behavior Checks
 

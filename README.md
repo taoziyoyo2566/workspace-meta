@@ -25,7 +25,7 @@ project-local personal files below, is in
 ### Workspace directory layout
 
 The `~/workspace` root is intentionally reserved for workspace-meta governance:
-shared rules, adapters, templates, bootstrap scripts, and review evidence.
+shared rules, adapters, templates, and bootstrap scripts.
 Independent project repositories live below `~/workspace/projects/<project>/`.
 Each project keeps its own nearest `.git` root, so project Git commands do not
 mix with workspace-meta history.
@@ -128,8 +128,9 @@ Full provenance: `feedback-register.md` entry **W-R26**.
   recovery, and troubleshooting procedures.
 - [Feedback register](feedback-register.md) preserves rule provenance and
   historical dispositions; `.agents/rules/` contains the current behavior.
-- `docs/reviews/` contains dated plans, verification records, and changelogs;
-  those records are evidence rather than current configuration authority.
+- [Backlog](docs/backlog.md) holds deferred work, later stages, and residual
+  gaps. Running plans live in the ignored `docs/plans/` of a host's main
+  checkout and are never committed.
 - [Rule evaluation](evals/rules/README.md) replays incident scenarios against
   a headless agent with two rules versions (`make rule-eval`), to judge a rule
   change by the behavior it produces.
@@ -290,16 +291,3 @@ installer are the versioned carriers; generated host files are not.
   auto-merge. The real hazard is a **W-R number collision** when two machines
   mint entries concurrently — current model assumes a single writer at a time;
   on collision, renumber the later entry before pushing.
-
-## Future improvements
-
-- **Register scaling** — deferred until there is real pressure. Trigger when
-  `feedback-register.md` becomes hard to scan (rough guide: 300-500 lines),
-  merge conflicts become frequent, or domain-based lookup starts costing time.
-  Likely shape: split by domain while keeping W-R numbering global, then leave
-  this file or a small index as the navigation entry point.
-- **Cross-machine W-R allocation** — deferred until concurrent rule-writing on
-  multiple machines becomes routine. First next step should be a lightweight
-  process rule (fetch before minting, inspect latest W-R, write, push
-  immediately, renumber on collision) before considering heavier ID schemes
-  such as machine suffixes, date-based IDs, or reserved ranges.

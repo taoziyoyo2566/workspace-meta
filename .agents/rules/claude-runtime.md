@@ -18,11 +18,28 @@ runtime's own guidance they adjust. Host values, such as the configured
 model and effort, permissions, trust, and installed plugins, stay in each
 Claude config dir.
 
-The facts below were verified against Claude Code 2.1.302; the evidence and
-recheck conditions are in the
-[investigation record](../../docs/reviews/feature-claude-native-governance/investigation-claude-code-runtime-2026-10-17.md).
-After an upgrade that changes a behavior described here, recheck it before
-relying on it and update this file.
+The facts below were verified against Claude Code 2.1.302 on one Linux host,
+from the installed binary and its documentation: on code.claude.com the pages
+memory, claude-directory, settings, settings-reference,
+server-managed-settings, permissions, permission-modes, hooks, skills,
+sub-agents, agent-teams, model-config, env-vars, commands, tools-reference,
+goal, workflows, worktrees, and changelog; on platform.claude.com pricing,
+effort, and the pages on choosing a model. The evidence is kept in the host
+evidence store. Re-verify a fact a change relies on after `claude update`, and
+at once when the changelog names its feature, then update this file. The
+features to watch:
+
+- instruction loading, imports, and discovery, or a different set of files in
+  `/context`; `AGENTS.md` and `instructionFiles`;
+- `CLAUDE_CONFIG_DIR`, and where `.claude.json` lives;
+- auto memory keying, loading limits, and subagent memory;
+- `/init` and other generators;
+- settings precedence, trust, and SessionStart output; skill discovery and
+  frontmatter;
+- the Agent tool's parameters, subagent frontmatter, the model lineup, prices,
+  and the effort advice;
+- `/goal`, workflows, AskUserQuestion, and auto mode;
+- plugins, and a config dir's `remote-settings.json` once it is not `{}`.
 
 ## Configuration Layers
 
@@ -52,6 +69,11 @@ relying on it and update this file.
   **Project instructions** value `claude-md-and-agents-md` would load every
   ancestor `AGENTS.md`, including the workspace-meta repository's own, into
   every project session, so it is not used here.
+- Interactive sessions hold back hooks from every settings file, user settings
+  included, until the folder is trusted. Trust is keyed on the Git root, does
+  not extend into a nested repository, and is stored per config dir in
+  `.claude.json`, so a hook such as the workspace-meta status check runs only
+  in a folder trusted under that config dir.
 - `/doctor prompt-audit` reports stale or conflicting guidance across the
   instruction files, rules, skills, and subagents Claude loads; use it when
   auditing them.
@@ -90,8 +112,7 @@ Claude Code itself creates auto memory, session transcripts,
 `.claude/settings.local.json` when an approval is kept for the project.
 `/team-onboarding` writes `ONBOARDING.md` for people, not for agents. Project
 settings, rules, skills, subagents, `.mcp.json`, and output styles are created
-deliberately when a project needs them, never by the bootstrap; the
-investigation record lists each artifact and what creates it.
+deliberately when a project needs them, never by the bootstrap.
 
 ## Memory
 
@@ -101,6 +122,9 @@ investigation record lists each artifact and what creates it.
   25 KB; topic files load when Claude reads them.
 - Each config dir keeps its own memory, so a session under one account does not
   see what another account recorded.
+- `autoMemoryDirectory` and `CLAUDE_CODE_PROJECT_DIR_NAME` each name one fixed
+  directory, so either one set at user scope would merge every project's
+  memory into one place (the merge is inferred; recheck); leave them unset.
 - Subagents do not receive the main session's memory or conversation; a fork
   does.
 - Claude accepts any `.git` entry as a repository root, even an empty
@@ -145,9 +169,10 @@ it sets an effort.
   then the session level, all capped by `maxEffortLevel`. A fork runs on the
   session's own model and effort.
 - Models, strongest first: `fable` for the hardest reasoning and long-horizon
-  work, at about two and a half times the per-token price of `opus` and with
-  long turns; `opus`; `sonnet` for routine coding and reading-heavy workers;
-  `haiku` for high-volume mechanical sweeps.
+  work, at about two and a half times the per-token price of `opus` (list
+  prices per million input and output tokens: `fable` $10 and $50, `opus` $4
+  and $20) and with long turns; `opus`; `sonnet` for routine coding and
+  reading-heavy workers; `haiku` for high-volume mechanical sweeps.
 - Effort levels, as Claude Code's documentation describes them for the current
   models: `low` for quick exchanges and small changes reviewed one by one;
   `medium`, the models' own default, for clear-scope day-to-day work; `high`

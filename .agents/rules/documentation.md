@@ -1,9 +1,14 @@
 # Documentation Information Architecture
 
+Agent-neutral workspace rule for what project documentation holds, where each
+kind lives, which records are committed, and how a project's agent entry files
+are bootstrapped.
+
 ## Ownership
 
 This file is the sole portable owner for project-documentation roles,
-information architecture, truth lifecycles, migration boundaries, and the
+information architecture, truth lifecycles, which records are committed and
+which are temporary, where a running plan lives, migration boundaries, and the
 bootstrap of a project's agent entry files.
 `planning.md` owns approved scope and handoff, `implementation.md` owns the
 shape of changed artifacts generally, `file-checks.md` owns the checks each
@@ -18,7 +23,8 @@ Before writing or moving documentation:
 1. Name the intended reader and the task or question they need to complete.
 2. Find the existing canonical owner for that topic before creating a file.
 3. Classify the content as desired state, reusable guidance, live state, a
-   dated verification snapshot, historical record, decision, or future work.
+   verified fact with the version and scope it holds for, a decision, future
+   work, or temporary working content.
 4. Choose one artifact role. Split mixed material at the section boundary when
    different parts answer different retrieval tasks.
 5. State what source or command makes volatile claims authoritative.
@@ -34,74 +40,69 @@ of the truth classes conflict.
 | Discover and navigate the project | `README` and documentation index | purpose, audience, first actions, topic-owner links |
 | Learn through a guided exercise | tutorial | safe learning path with a defined outcome |
 | Complete or recover an operational task | how-to or runbook | prerequisites, ordered actions, verification, stop/rollback/escalation |
-| Look up exact facts | reference | precise contracts, options, schemas, compatibility, generated facts |
-| Understand design or tradeoffs | explanation or architecture | context, boundaries, relationships, rationale |
+| Look up exact facts | reference | precise contracts, options, schemas, compatibility, generated facts, verified facts with their version, scope, and recheck trigger |
+| Understand design or tradeoffs | explanation or architecture | context, boundaries, relationships, rationale, alternatives not adopted |
 | Preserve an accepted choice | decision record | status, context, decision, consequences, supersession links |
-| Preserve what happened or was observed | incident or verification record | date, scope, environment, evidence, outcome, follow-up links |
-| Preserve what was investigated or verified for later work | investigation record | question and scope, dated evidence, conclusions with the versions and scope they hold for, recheck conditions, supersession links |
-| Preserve approved implementation intent | Plan | goal, approval-time state, intended change, scope/non-goals, acceptance criteria, approved deviations, lifecycle status |
-| Preserve a verified implementation outcome | Changelog | Plan link, summary, meaningful changed surface, final verification, implemented deviations and residual gaps when relevant |
-| Track possible future work | issue or backlog | owner, status, acceptance boundary; never presented as current behavior |
+| Carry one running workstream | running plan (temporary) | goal, approval-time state, intended change, scope and non-goals, acceptance, approval and deviations, its holder (Committed And Temporary Records) |
+| Track possible future work | issue or backlog (the progress owner) | owner, status, acceptance boundary, a deferral's restart condition; an entry leaves when it closes; never presented as current behavior |
 | Constrain coding agents | project agent instructions | project facts, commands, constraints, and routes; not a human manual |
 
 Tutorials, operational guides, reference, and explanation serve different user
-needs. Historical records and decisions serve lifecycle needs. Directory names
-may vary, but the roles and ownership boundaries must remain visible.
+needs; decisions and the backlog serve lifecycle needs. Directory names may
+vary, but the roles and ownership boundaries must remain visible.
 
-## Separate Plan, Execution, And Changelog
+## Committed And Temporary Records
 
-A Plan owns one coherent workstream's approved Goal, approval-time Current
-State, Intended Change, Scope and non-goals, Acceptance Criteria, approved
-Material Deviations, and lifecycle Status. Current State is a decision snapshot,
-not a live environment registry. `planning.md` owns workstream identity, Plan
-reuse, approval, freeze, deviation, and completion workflow.
+A repository commits only durable content that concerns the whole project,
+kept current and edited in place; Git is its history. Review content is
+temporary: running plans, reviews, investigation notes, verification and
+operation records, and evaluation outputs. Evidence that must outlive a
+session goes to the evidence store (Control Growth).
+
+A running plan carries one coherent workstream (`planning.md`): its goal,
+approval-time current state, intended change, scope and non-goals,
+acceptance, the approval and its deviations, and the session that holds it.
+Each workstream has one, edited in place, without dated copies. It lives at
+`docs/plans/<topic>.md` in the project's main checkout, a path the repository
+ignores:
+
+- a public repository never commits it;
+- a private repository commits it only when another machine or agent needs it
+  or the operator asks (`git-publication.md` One Proposal Per Result);
+- a repository's visibility is the one its `AGENTS.md` declares, and a
+  repository that declares none counts as public. Making a private repository
+  public publishes every plan in its history.
+
+Where the path is not ignored yet, ignore it before writing the first plan
+there: in the repository's ignore rules, or in the exclude list of a clone of
+someone else's repository (Project Bootstrap).
 
 Routine progress, intermediate hypotheses, failed attempts, routine fixes,
-command output, retry loops, and intermediate verification belong in transient
-task context. Do not create another durable execution journal for them. A
-verified finding that constrains other work is not routine progress;
-`planning.md` requires recording it when it is confirmed.
+command output, retry loops, and intermediate verification stay in transient
+task context; the plan holds none of them. When the operator asks for stepwise
+tracking or operational records, or continuity, audit, or recovery needs them,
+keep them in the evidence store with the target, revision, prerequisites,
+consequential actions, results, and unresolved work needed to resume or assess
+the operation.
 
-When the user requests stepwise tracking or operational records, or continuity,
-audit, or recovery requires them, use the existing project task/evidence store
-or a separate compact checklist/record. Keep completion state and actual
-operation outcomes there, outside the frozen Plan. Retain only the target,
-revision, prerequisites, consequential actions, results, evidence locations,
-and unresolved work needed to resume or assess the operation; raw logs and
-secrets follow their existing owners. This conditional record does not create
-an additional Plan or Changelog per step.
+A verified finding that constrains other work goes to its owner when it is
+confirmed (`planning.md`), not into the plan. Before a plan is removed, the
+rest of its durable content moves:
 
-A Changelog is the final verified outcome record for a coherent workstream,
-created at content-complete, commit-ready closeout. Normally one Plan produces
-one final Changelog; implementation rounds, conversational turns, operator
-feedback, remediation, and re-verification do not produce intermediate or
-round-specific Changelogs. This is a scope default, not a mechanical
-cardinality requirement for every Plan.
+| Content | Owner |
+|---|---|
+| design the code embodies; decisions with lasting rationale; alternatives not adopted | architecture or a decision record |
+| verified facts | the document that states the fact, with the version and scope it holds for and its recheck trigger |
+| procedures | runbooks |
+| deferrals, later stages, residual gaps | the progress owner |
+| the verified outcome | the owners the change updates, its commit messages, and the release notes (`releases.md`) |
 
-The Changelog records the final outcome, meaningful changed surface, final
-verification summary, approved deviations actually implemented, and relevant
-residual gaps. It is not a chronological interaction log: do not require
-command-by-command transcripts, per-file diaries where Git already owns exact
-history, duplicated Plan goal/scope/risk text, or a copied verification
-procedure. Preserve an intermediate failure only when it explains a lasting
-limitation or material final correction. `verification.md` continues to own
-check execution and verdicts. Release notes (`releases.md`) link the Changelog
-and never copy it.
+A product `CHANGELOG.md` that releases generate is release notes, not a review
+record.
 
-Before the workstream result is committed, a legitimate pre-commit closeout
-correction under `planning.md` may revise the existing Changelog because it has
-not yet become durable history. After correction and final verification, that
-same Changelog records the actual final outcome. Once the result is committed,
-preserve its Changelog as the historical verified outcome; later work must not
-rewrite it or add to it, including between commit and push. An operation done
-afterwards, its check, or a residual gap that has since closed is reported in
-the conversation, or recorded with the later work that needs it. A later
-workstream gets its own Changelog only when proportional planning gives that
-workstream the persistent Plan/Changelog lifecycle; neither a new commit nor a
-routine fix creates one automatically.
-
-Red flags: "its follow-ups are out of date now"; "an update section below the
-outcome".
+Red flags: "the plan has it"; "keep the plan for reference"; "the code cites
+the plan"; "commit the plan so the checkout stays clean"; "a dated copy of the
+plan".
 
 ## Make Agent Instructions Loadable
 
@@ -136,10 +137,12 @@ only when the operator asks. A linked worktree without entry files of its own
 is not bootstrapped itself: its main checkout is, and the branch receives the
 files by merge.
 
-Only the session in conversation with the operator bootstraps. A delegated
-agent, and any task whose operator instruction or brief forbids writes, reports
-the missing entry file instead of creating it; the delegating session
-bootstraps before it hands out work in the project.
+Only the session in conversation with the operator bootstraps, because parallel
+agents would race to write the same files and their reports reach only the
+session that delegated them. A delegated agent, and any task whose operator
+instruction or brief forbids writes, reports the missing entry file instead of
+creating it; the delegating session bootstraps before it hands out work in the
+project.
 
 At the first substantive work in a project, including read-only review, check
 the entry file for the runtime in use and create what is missing:
@@ -162,8 +165,9 @@ the entry file for the runtime in use and create what is missing:
 4. In a clone of a repository the operator does not own, write only the
    runtime's local entry file, holding the import of the clone's own owner or,
    when it has none, the survey notes, and exclude it through the clone's own
-   Git exclude list, never its tracked `.gitignore`. A runtime without a local
-   entry file gets nothing written there; report the gap.
+   Git exclude list, never its tracked `.gitignore`: a tracked file there
+   diverges from upstream and can leak into a pull request to it. A runtime
+   without a local entry file gets nothing written there; report the gap.
 5. Never overwrite or rewrite an existing entry file. When a project's files
    conflict, such as an adapter that does not import an existing owner or two
    files that both state rules, report it with a proposed fix and change it
@@ -177,7 +181,8 @@ needs no further confirmation (`authorization.md`). Agent runtime modules own
 each runtime's entry files, import syntax, local-only file, and how the survey
 is run. A session-start check that reports a project without an entry file is
 a backstop, not the owner; the project's own documentation gate still enforces
-its adapter.
+its adapter. No hook or sweep writes entry files: each project is its own Git
+root, and such a write would go unreviewed.
 
 ## Keep Truth Classes Explicit
 
@@ -187,10 +192,11 @@ its adapter.
   dated incident narration and session transcripts do not belong there.
 - Live state is answered by an identified runtime query or monitoring surface.
   A static document may preserve only a labeled snapshot, not claim permanence.
-- Verification records state time, environment, revision or scope, commands,
-  results, and gaps. They are evidence, not current configuration authority.
-- Decisions retain rationale and consequences. Superseded decisions remain
-  historical and point to their replacement.
+- Verification evidence states time, environment, revision or scope,
+  commands, results, and gaps. It is evidence, not current configuration
+  authority, and lives in the evidence store or a commit message.
+- Decisions retain rationale and consequences. A superseded decision is
+  replaced by its successor; Git keeps the old text.
 - Future intent remains an issue or plan until implemented and verified.
 
 Assign each normative fact one canonical owner. Other pages link to that owner
@@ -211,36 +217,38 @@ retrieval. Judge sufficiency by whether the reader can explain what changes,
 why, and how to verify it, not by heading count. Optional templates illustrate
 the rules; they do not create another normative owner or mandatory artifact.
 
-Plans are the exception to updating an existing owner: a Plan's owner is its
-workstream. When proportional planning warrants a persistent Plan, the design
-of an independent capability gets its own Plan under `planning.md`, never a
-section of another Plan, even when the audience, topic, or files are the same.
+Plans are the exception to updating an existing owner: a plan's owner is its
+workstream. When proportional planning warrants a written plan, the design of
+an independent capability gets its own plan under `planning.md`, never a
+section of another plan, even when the audience, topic, or files are the same.
 
 Use status metadata only where lifecycle ambiguity creates real risk, such as
-decisions, incidents, verification snapshots, migrations, or deprecated pages.
-Do not stamp every timeless guide with volatile status fields.
+decisions, running plans, migrations, or deprecated pages. Do not stamp every
+timeless guide with volatile status fields.
 
 Raw logs, large captures, generated reports, and sensitive evidence stay in
-the project's designated evidence store. Versioned documentation keeps only a
-redacted summary, provenance, and retrieval instructions.
+the project's designated evidence store, by default the private host store
+`~/.local/share/workspace-meta/evidence/`. Versioned documentation keeps only a
+redacted summary and, where a later reader needs it, how to retrieve the
+evidence.
 
 ## Migrate Without Dual Authority
 
 Inventory existing sections by role and truth class, then migrate one coherent
 topic at a time. Establish the new canonical owner, replace the old normative
 section with a short compatibility pointer, update primary navigation, and run
-the relevant checks in the same change. Do not rewrite historical records to
-look current and do not maintain old and new copies as coequal sources.
+the relevant checks in the same change. Do not maintain old and new copies as
+coequal sources.
 
 During an incremental migration, label legacy locations and state which topics
-have moved. Exclude archived, superseded, incident, and verification material
-from the primary current-guidance path while keeping it discoverable.
+have moved. A record removed in the migration stays in Git history, and the
+removing commit's message maps each item it held to its new owner.
 
 Compatibility pointers are temporary migration artifacts, not a default
 permanent information architecture. Retain one only when a real external link
 or consumer contract requires the old path; name its owner and retirement
 condition. At full cutover, remove pointers that have no compatibility contract
-and preserve the old-to-new mapping in a migration record and Git history.
+and preserve the old-to-new mapping in the removing commit's message.
 
 ## Validate The Documentation Change
 
@@ -251,6 +259,7 @@ Check that:
 - current instructions include success checks and relevant recovery boundaries;
 - volatile claims identify their source, query, time, and scope;
 - no second canonical copy or mixed current/historical authority was introduced;
+- no current document links a removed record or a running plan;
 - generated or sensitive evidence remains outside versioned prose; and
 - mechanical formatting and link checks run in project CI when available.
 

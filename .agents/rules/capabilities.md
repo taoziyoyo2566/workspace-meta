@@ -159,7 +159,7 @@ quoted argument splits.
 
 Keep routine discovery attempts, failed capability attempts, and execution
 method changes in transient task context. Record the final capability choice in
-an existing outcome or handoff owner only when an observable event affects
+the commit message or the running plan only when an observable event affects
 reproducibility, for example when:
 
 - deferred discovery or a connected application was used;

@@ -28,6 +28,14 @@ RUNTIME_MODULES = {
     "codex-runtime.md": CODEX_ADAPTER,
 }
 DESIGN_MAP = "docs/architecture/design-map.md"
+BACKLOG = "docs/backlog.md"
+# Review records are temporary: none is tracked, and no current document
+# links one or a running plan (documentation.md Committed And Temporary
+# Records).
+RECORD_DIRECTORIES = ("docs/reviews", "docs/plans")
+# Current documents whose links are checked but whose dates are not: the evals
+# README keeps a labeled snapshot.
+LINK_CHECKED_DOCUMENTS = ("evals/rules/README.md", ".agents/env/README.md")
 REQUESTS_OWNER = ".agents/rules/requests.md"
 # The resident request-reading sentence both adapters carry above their
 # routing tables, and the phrases it shares with its owner.
@@ -62,13 +70,8 @@ def _current_documents(root: Path) -> list[Path]:
         "docs/standards",
     ):
         paths.extend(sorted((root / relative).rglob("*.md")))
+    paths.append(root / BACKLOG)
     return [path for path in paths if path.is_file()]
-
-
-def _all_documents(root: Path) -> list[Path]:
-    paths = _current_documents(root)
-    paths.extend(sorted((root / "docs/reviews").rglob("*.md")))
-    return list(dict.fromkeys(paths))
 
 
 def _anchor_slug(heading: str) -> str:
@@ -228,7 +231,7 @@ def _check_index(root: Path, errors: list[str]) -> None:
         DESIGN_MAP,
         "docs/runbooks/new-vps.md",
         "docs/standards/README.md",
-        "docs/reviews/",
+        BACKLOG,
         "feedback-register.md",
     ):
         if target not in readme:
@@ -282,7 +285,13 @@ def _check_request_sentence(root: Path, errors: list[str]) -> None:
 
 def _check_links(root: Path, errors: list[str]) -> None:
     anchor_cache: dict[Path, set[str]] = {}
-    for source in _all_documents(root):
+    sources = _current_documents(root)
+    sources.extend(
+        path
+        for path in (root / name for name in LINK_CHECKED_DOCUMENTS)
+        if path.is_file()
+    )
+    for source in sources:
         for _, raw_target in LINK_PATTERN.findall(_read(source)):
             target = raw_target.strip().strip("<>").split(maxsplit=1)[0]
             if target.startswith(("http://", "https://", "mailto:")):
@@ -295,6 +304,14 @@ def _check_links(root: Path, errors: list[str]) -> None:
             except ValueError:
                 continue
             if relative_destination.parts[:1] == ("projects",):
+                continue
+            if relative_destination.as_posix().startswith(
+                tuple(f"{directory}/" for directory in RECORD_DIRECTORIES)
+            ) or relative_destination.as_posix() in RECORD_DIRECTORIES:
+                errors.append(
+                    f"current document links a review record or running plan: "
+                    f"{source.relative_to(root)}: {raw_target}"
+                )
                 continue
             if not destination.exists():
                 errors.append(
@@ -311,14 +328,32 @@ def _check_links(root: Path, errors: list[str]) -> None:
 
 def _check_truth_lifecycle(root: Path, errors: list[str]) -> None:
     for path in _current_documents(root):
-        if path.name == "feedback-register.md":
+        # The register and the backlog record when decisions were made.
+        if path.name == "feedback-register.md" or path == root / BACKLOG:
             continue
         content = _visible_prose(_read(path))
         if DATE_PATTERN.search(content):
             errors.append(
-                f"dated observation belongs in docs/reviews or feedback-register: "
-                f"{path.relative_to(root)}"
+                f"dated observation belongs in the register, the backlog, a commit "
+                f"message, or the evidence store: {path.relative_to(root)}"
             )
+
+
+def _check_review_records(root: Path, errors: list[str]) -> None:
+    if not (root / ".git").exists():
+        return
+    result = subprocess.run(
+        ["git", "-C", str(root), "ls-files", "-z", "--", *RECORD_DIRECTORIES],
+        capture_output=True,
+        check=False,
+        text=True,
+    )
+    for tracked in filter(None, result.stdout.split("\0")):
+        # A tracked record deleted in the working tree leaves with the change
+        # that deletes it, as in scripts/verify_committed_copy.sh.
+        path = root / tracked
+        if path.exists() or path.is_symlink():
+            errors.append(f"review record or running plan is tracked: {tracked}")
 
 
 def _check_runbook(root: Path, errors: list[str]) -> None:
@@ -386,6 +421,7 @@ def check(root: Path = ROOT) -> list[str]:
     _check_truth_lifecycle(root, errors)
     _check_runbook(root, errors)
     _check_tracked_routes(root, errors)
+    _check_review_records(root, errors)
     return errors
 
 

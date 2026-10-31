@@ -1973,7 +1973,7 @@ class CodexConfigSyncTests(unittest.TestCase):
         self.assertIn("W-R39", owner_row)
         self.assertIn("W-R42", owner_row)
 
-    def test_plan_changelog_lifecycle_uses_frozen_contract_and_verified_closeout(
+    def test_plan_lifecycle_freezes_the_contract_and_removes_the_plan(
         self,
     ) -> None:
         planning = (self.rules_dir / "planning.md").read_text()
@@ -1984,13 +1984,16 @@ class CodexConfigSyncTests(unittest.TestCase):
         normalized_docs = " ".join(documentation.split())
         normalized_agents = " ".join(agents.split())
 
-        for state in ("`DRAFT`", "`APPROVED`", "`COMPLETE`"):
+        for state in ("`DRAFT`", "`APPROVED`"):
             self.assertIn(state, planning)
+        self.assertNotIn("`COMPLETE`", planning)
         for invariant in (
             "Plan at the level of a coherent workstream",
-            "Before creating a persistent Plan",
-            "same goal and scope",
-            "approved implementation intent and execution contract",
+            "Before creating a written plan, inspect the running plans and reuse "
+            "one that already covers the same goal and scope",
+            "A written plan is the approved implementation intent and execution "
+            "contract",
+            "at acceptance the plan is removed",
             "At `APPROVED`, stable Plan content freezes",
             "stay in transient task context",
             "conversational turns, implementation rounds",
@@ -1999,58 +2002,78 @@ class CodexConfigSyncTests(unittest.TestCase):
             "only after approval, amend",
             "resume within the amended approval",
             "File count and bug severity alone",
-            "Do not mark a Plan `COMPLETE` merely because one implementation or verification pass finished",
-            "still actively reviewing, testing, or refining the same goal and scope",
-            "final non-transaction-bound verification demonstrates acceptance",
-            "create the Changelog as the verified outcome",
-            "add a Changelog link as closeout metadata",
-            "A `COMPLETE` Plan is normally a historical record",
-            "Before its verified result enters durable Git history as a commit",
-            "restore that Plan to `APPROVED`",
-            "narrow pre-commit closeout-correction exception",
-            "Once the completed result has entered Git history, do not reopen its Plan",
-            "even when the commit has not been pushed",
-            "Treat later work as a follow-up coherent workstream",
-            "apply proportional planning independently",
-            "a narrow fix may need no persistent Plan",
+            "a deferral also enters the progress owner, which outlives the plan",
+            "A running plan that is not committed is visible only on its host",
+            "Do not close a plan because one implementation or verification pass "
+            "finished",
+            "still reviewing, testing, or refining the same goal and scope",
+            "At acceptance, move the plan's durable content to its owners",
+            "check that no current document cites the plan, and remove it",
+            "a private repository that committed it removes it in the change "
+            "that closes the workstream",
+            "The result review names each moved item and its new owner",
+            "Later work is a new workstream with its own proportional planning",
             "is not authorized by this lifecycle rule",
         ):
             self.assertIn(invariant, normalized_plan)
 
-        self.assertIn("## Separate Plan, Execution, And Changelog", documentation)
+        self.assertIn("## Committed And Temporary Records", documentation)
+        self.assertNotIn("Changelog", documentation)
         for invariant in (
-            "one coherent workstream's approved Goal",
-            "approval-time Current State",
-            "belong in transient task context",
-            "final verified outcome record for a coherent workstream",
-            "Normally one Plan produces one final Changelog",
-            "round-specific Changelogs",
-            "not a mechanical cardinality requirement",
-            "It is not a chronological interaction log",
-            "Git already owns exact history",
-            "lasting limitation or material final correction",
-            "Before the workstream result is committed",
-            "may revise the existing Changelog",
-            "Once the result is committed, preserve its Changelog",
-            "including between commit and push",
-            "only when proportional planning gives that workstream the persistent Plan/Changelog lifecycle",
-            "neither a new commit nor a routine fix creates one automatically",
+            "commits only durable content that concerns the whole project, kept "
+            "current and edited in place; Git is its history",
+            "Review content is temporary: running plans, reviews, investigation "
+            "notes, verification and operation records, and evaluation outputs",
+            "Each workstream has one, edited in place, without dated copies",
+            "a path the repository ignores",
+            "a public repository never commits it",
+            "a private repository commits it only when another machine or agent "
+            "needs it or the operator asks",
+            "a repository that declares none counts as public",
+            "Making a private repository public publishes every plan in its "
+            "history",
+            "the plan holds none of them",
+            "goes to its owner when it is confirmed",
+            "Before a plan is removed, the rest of its durable content moves",
+            "| deferrals, later stages, residual gaps | the progress owner |",
+            "is release notes, not a review record",
+            "commit the plan so the checkout stays clean",
+            "no current document links a removed record or a running plan",
+            "the removing commit's message maps each item it held to its new "
+            "owner",
         ):
             self.assertIn(invariant, normalized_docs)
 
         for invariant in (
-            "non-trivial coherent workstream",
-            "Before creating a Plan, reuse an existing active or approved Plan",
-            "same goal and scope",
-            "do not create additional Plans",
-            "not per implementation round",
-            "planning.md` and `documentation.md",
+            "This repository is public",
+            "A running plan lives at `docs/plans/<topic>.md` in the main "
+            "checkout, which the reverse whitelist ignores, and is never "
+            "committed",
+            "reuse a running plan covering the same goal and scope",
+            "routine feedback, repairs, refinements, and re-verification "
+            "create none",
+            "Deferrals, later stages, and residual gaps are kept in "
+            "`docs/backlog.md`",
         ):
             self.assertIn(invariant, normalized_agents)
         self.assertNotIn(
             "Non-trivial behavior or configuration changes require a plan", agents
         )
         self.assertNotIn("Create the round changelog", agents)
+        self.assertNotIn("docs/reviews", agents)
+
+        # The reverse whitelist admits the backlog and no record or plan.
+        for path, ignored in (
+            ("docs/backlog.md", False),
+            ("docs/reviews/topic/record.md", True),
+            ("docs/plans/topic.md", True),
+        ):
+            result = subprocess.run(
+                ["git", "-C", str(ROOT), "check-ignore", "-q", "--no-index", "--", path],
+                check=False,
+            )
+            self.assertIn(result.returncode, (0, 1), path)
+            self.assertEqual(result.returncode == 0, ignored, path)
 
     def test_git_modules_have_task_shaped_load_profiles(self) -> None:
         inspection = (self.rules_dir / "git.md").read_text()

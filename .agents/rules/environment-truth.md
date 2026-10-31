@@ -18,8 +18,8 @@ A “cannot run here” verdict cites current probe/registry evidence. Bare-host
 absence does not prove a project venv, container, Makefile, or adapter cannot
 run the check.
 
-Memory, prior plans/changelogs, and earlier user statements all age; none alone
-supports a current environment verdict.
+Memory, prior plans, Git history, and earlier user statements all age; none
+alone supports a current environment verdict.
 
 ## Contradiction
 

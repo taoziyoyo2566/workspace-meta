@@ -54,7 +54,7 @@ Related maps, not copied here:
 | A commit lands directly on the main branch, or a branch is created without a state report | [Change flow](#change-flow-branches-worktrees-and-stash) |
 | A commit carries an AI trailer or the wrong author, or one commit and push needs four confirmations | [Publication](#publication) |
 | Host or personal details are pushed to a remote nobody checked was public | [Publication](#publication) |
-| A commit proposed for each small step, or one that only records a routine operation or adds to a committed Changelog | [Publication](#publication), [Documentation and entry files](#documentation-and-project-entry-files) |
+| A commit proposed for each small step, or one that only records a routine operation or adds to a committed record | [Publication](#publication), [Documentation and entry files](#documentation-and-project-entry-files) |
 | A PR exists only to record a merge, or a branch is deleted while a server runs its commit | [Integration and retirement](#integration-and-retirement) |
 | A force push, `branch -D`, `--no-verify`, or an amend after a hook failure | [Recovery](#recovery-and-destructive-git) |
 | An invented version, a moved tag, or one-line release notes | [Releases and versions](#releases-and-versions) |
@@ -72,7 +72,7 @@ Related maps, not copied here:
 | A project has no entry file for the runtime in use, or a Claude session ignores its `AGENTS.md` | [Documentation and entry files](#documentation-and-project-entry-files), [SessionStart evaluator](#sessionstart-evaluator) |
 | `/init` output copies `AGENTS.md` or workspace rules into a second rulebook | [Documentation and entry files](#documentation-and-project-entry-files), [Claude runtime](#claude-runtime) |
 | Entry files written by a delegated or read-only agent, or tracked files added to someone else's clone | [Documentation and entry files](#documentation-and-project-entry-files), [Managed skills](#managed-skills) |
-| Current guidance carries dated incident history, or a new document duplicates an owner | [Documentation and entry files](#documentation-and-project-entry-files), [Documentation gate](#documentation-gate) |
+| Current guidance carries dated incident history, a new document duplicates an owner, or a review record or running plan is committed | [Documentation and entry files](#documentation-and-project-entry-files), [Documentation gate](#documentation-gate) |
 | A file called done is broken: duplicate keys, trailing spaces, a new warning ignored | [File checks](#file-checks) |
 | "Done" without functional proof, or a blocked check reported as passed | [Verification](#verification) |
 | A problem list holds planned work, unverified claims, or misread metrics | [Review and problem reports](#review-and-problem-reports) |
@@ -479,12 +479,13 @@ dependency changes, reviewable changes, and tests on contracts.
 ### Documentation And Project Entry Files
 
 Documents routed by their reader's task and truth class, one owner per fact,
-Plans, execution, and Changelogs kept apart, and agent entry files that the
-runtime in use actually loads, created when a project lacks them.
+review content kept temporary and running plans out of the committed tree, and
+agent entry files that the runtime in use actually loads, created when a
+project lacks them.
 
 - **Owner**: [`documentation.md`](../../.agents/rules/documentation.md):
   [Route Content By Role](../../.agents/rules/documentation.md#route-content-by-role),
-  [Separate Plan, Execution, And Changelog](../../.agents/rules/documentation.md#separate-plan-execution-and-changelog),
+  [Committed And Temporary Records](../../.agents/rules/documentation.md#committed-and-temporary-records),
   [Make Agent Instructions Loadable](../../.agents/rules/documentation.md#make-agent-instructions-loadable),
   [Project Bootstrap](../../.agents/rules/documentation.md#project-bootstrap),
   [Keep Truth Classes Explicit](../../.agents/rules/documentation.md#keep-truth-classes-explicit),
@@ -505,8 +506,10 @@ runtime in use actually loads, created when a project lacks them.
   [SessionStart evaluator](#sessionstart-evaluator)'s readiness warning; the
   `project-bootstrap` skill.
 - **Enforced by**: the [documentation gate](#documentation-gate) for
-  workspace-meta's own documents; the readiness check for Git projects under
-  `~/workspace/projects/`; each project's own gate for its adapter and import.
+  workspace-meta's own documents, including its check that no review record or
+  running plan is tracked or linked from a current document; the readiness
+  check for Git projects under `~/workspace/projects/`; each project's own gate
+  for its adapter and import.
 - **Project may add**: entry points, topic map, commands, domain constraints,
   and its own documentation gate.
 - **Symptoms**: a project with no entry file for the runtime in use; a Claude
@@ -515,7 +518,8 @@ runtime in use actually loads, created when a project lacks them.
   `AGENTS.md` or workspace rules; entry files written by a delegated or
   read-only agent, or tracked files added to someone else's clone; dated
   incident narrative in current guidance; a new document instead of an update
-  to its owner; a section added to a Changelog after it was committed.
+  to its owner; a review record or running plan committed, or a plan kept
+  after acceptance.
 
 ### File Checks
 
@@ -599,7 +603,7 @@ deferral gets an owner and a restart condition.
 - **Routed by**: its row in both adapters (proposing a procedure or practice,
   or reporting a handled problem).
 - **Enforced by**: route and ownership tests only.
-- **Project may add**: incident records and owners of deferred work.
+- **Project may add**: where incident findings go, and its progress owner.
 - **Symptoms**: "fixed" with only the result; a proposal contradicting a
   recorded decision; a lesson saved only to memory; heavy tooling after a
   first occurrence; a recurrence not linked to the earlier incident.
@@ -681,8 +685,8 @@ Claude Code mechanics only: where Claude reads instructions, settings, skills,
 and memory; its project entry files; how it asks the operator; how model,
 effort, and orchestration features are set; and how a long unattended run
 keeps going. Its facts name the Claude Code version they were verified
-against, with recheck conditions in the investigation record it links. It
-never redefines portable behavior.
+against and the features whose changes call for a recheck. It never redefines
+portable behavior.
 
 - **Owner**: [`claude-runtime.md`](../../.agents/rules/claude-runtime.md):
   [Configuration Layers](../../.agents/rules/claude-runtime.md#configuration-layers),
@@ -908,10 +912,13 @@ Mechanical checks on workspace-meta's own documents: the root allowlist,
 adapter routes (portable owners in both adapters, each runtime module only in
 its own), safety-floor binding, the README documentation map, that this map
 links every rule owner, links and anchors, no dated observations in current
-guidance, the runbook headings, and that routed files are tracked.
+guidance outside the register and the backlog, the runbook headings, that
+routed files are tracked, and that no review record or running plan is tracked
+or linked from a current document.
 
-- **Owner**: `scripts/check_documentation.py`; the truth classes it enforces:
-  [`documentation.md` Keep Truth Classes Explicit](../../.agents/rules/documentation.md#keep-truth-classes-explicit).
+- **Owner**: `scripts/check_documentation.py`; the rules it enforces:
+  [`documentation.md` Keep Truth Classes Explicit](../../.agents/rules/documentation.md#keep-truth-classes-explicit)
+  and [Committed And Temporary Records](../../.agents/rules/documentation.md#committed-and-temporary-records).
 - **Routed by**: `make docs-check`; `make test` runs it first;
   `make verify-committed` runs `make test` on a temporary copy in which every
   file the whitelist admits is committed, so the tracked-file check sees the
@@ -920,7 +927,8 @@ guidance, the runbook headings, and that routed files are tracked.
   each check rejects a broken fixture); `tests/test_verify_committed_copy.py`.
 - **Project may add**: its own gate.
 - **Symptoms**: a broken link or anchor merged; a dated incident in current
-  guidance; a new rule owner not routed or not mapped here.
+  guidance; a new rule owner not routed or not mapped here; a review record or
+  running plan committed or linked.
 
 ### Rule Evaluation Harness
 
@@ -930,10 +938,11 @@ versions, graded by checks and a voting judge, and compared.
 
 - **Owner**: `scripts/rule_eval.py`, the scenarios and fixtures with
   [`evals/rules/README.md`](../../evals/rules/README.md), and the `Makefile`
-  target `rule-eval`. Design and results:
-  [rule-evals Plan](../reviews/feature-rule-evals/plan-rule-evals-2026-10-16.md)
-  and its staged extension, the
-  [transcript-replay Plan](../reviews/feature-rule-evals/plan-transcript-replay-2026-10-16.md).
+  target `rule-eval`. It is its own harness because `claude plugin eval` loads
+  no `CLAUDE.md` and promptfoo needs a Node toolchain to load a chosen rules
+  version; recheck when either can. Limits: a one-decision replay cannot show
+  long-session habit or compaction, and several targets already pass at their
+  ceiling. Its later stages wait in the [backlog](../backlog.md).
 - **Routed by**: no rule routes an agent to it; the operator or a
   rule-changing session runs `make rule-eval`, which spends model usage, and
   the evals README explains the scenario format.
@@ -948,8 +957,8 @@ versions, graded by checks and a voting judge, and compared.
     rules and of this entry.
 
   The harness refuses an output directory that already holds anything, and
-  `compare` exits non-zero outside one window. Nothing checks how a record
-  reports or keeps a run.
+  `compare` exits non-zero outside one window. Nothing checks how a commit
+  message reports a run or how long the store keeps it.
 - **Project may add**: nothing; a project evaluates its own rules with its
   own tools.
 - **Symptoms**: a rule change judged only by its wording; a scenario that

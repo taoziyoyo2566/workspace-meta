@@ -160,6 +160,7 @@ workspace-meta 会管理 `~/.codex/AGENTS.md` 和 `~/.codex/config.toml` 中的
 |---|---|
 | `sandbox_mode` | `workspace-write` |
 | `approval_policy` | `on-request` |
+| 项目 trust | 逐个信任 `~/workspace/projects/` 下的项目，不信任整个 `~/workspace` |
 
 这允许工作区内的常规操作顺畅运行，在越过边界或需要额外权限时询问。若选择
 更严格的 `untrusted`，未知命令出现更多技术权限提示是预期行为，不表示本仓库

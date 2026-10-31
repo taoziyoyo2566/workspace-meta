@@ -10,10 +10,10 @@ This file owns release identity: version numbers, release tags and their
 notes, fixes to released versions, and the choice of a rollback target.
 `deployment.md` decides what runs; this file names what ran. `verification.md`
 owns the post-release checks, `planning.md` and `documentation.md` own the
-Plan and Changelog that the notes link, and `git-recovery.md` owns moving or
-deleting a tag. Projects own whether they release, the starting version and
-tag prefix, the compatibility surface, what "released" means for them, the
-status surface, the rollback procedure, and signing.
+documents the notes link, and `git-recovery.md` owns moving or deleting a tag.
+Projects own whether they release, the starting version and tag prefix, the
+compatibility surface, what "released" means for them, the status surface, the
+rollback procedure, and signing.
 
 Read `git.md` for the current state snapshot before tagging. Before asking the
 user to authorize or execute a tag, read `authorization.md` and present its
@@ -111,13 +111,13 @@ one line:
 2. why: the batch's goal, and the new modular feature or breaking change that
    set the number when there is one; for a fix released on its own, the
    problem and the release that introduced it;
-3. how: a short paragraph, or links to the Plan and Changelog where they exist,
-   without copying them;
+3. how: a short paragraph, or links to the owners the change updated, without
+   copying them;
 4. scope: the components and surfaces changed, the range `<previous>..<this>`
    with its commit count, and the other work in the range, with each carried
    fix and the release that introduced it;
 5. how to inspect: `git show`; `git log --oneline` and `git diff --stat` over
-   the range; the Plan and Changelog paths; the project's command that shows
+   the range; the owners' paths; the project's command that shows
    which version each part runs;
 6. verification: the post-release checks and their results, with gaps named;
 7. rollback: where to go back if this release's own changes are at fault
@@ -127,9 +127,9 @@ one line:
 
 The notes hold no secret values and are written to a file in the session
 scratch location (`temporary-files.md`). Each narrative has one copy: the
-Changelog keeps the verified workstream outcome written at closeout, and the
-notes keep the release facts and link to it. A project may publish a release
-history generated from its tags, never a hand-kept second copy.
+owners keep the current design and facts, and the notes keep the release facts
+and link to them. A project may publish a release history generated from its
+tags, never a hand-kept second copy.
 
 ## Tag Bundle
 

@@ -51,6 +51,10 @@ each listed Claude config dir, workspace-meta manages exactly:
 | project agent/governance files | project repository | project facts and deltas travel with that project; every runtime the project is operated with needs an entry file it loads, importing one canonical owner; a missing entry file is created as `documentation.md` Project Bootstrap describes |
 | `CLAUDE.local.md`, `.claude/settings.local.json` | project-local | stay out of Git; in a clone of a repository the operator does not own, the Claude entry file is a `CLAUDE.local.md` excluded through the clone's own exclude file |
 
+No user-level `CLAUDE.md` is installed in any config dir: the workspace
+`CLAUDE.md` already reaches every project as an ancestor, and a user-level file
+would also load outside `~/workspace` and repeat it.
+
 ## Portable Rule Owners
 
 The [design map](../../docs/architecture/design-map.md) is the one catalog of

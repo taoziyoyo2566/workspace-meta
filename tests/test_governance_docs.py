@@ -30,9 +30,9 @@ class GovernanceDocumentationTests(unittest.TestCase):
             "docs/architecture",
             "docs/runbooks",
             "docs/standards",
-            "docs/reviews",
         ):
             shutil.copytree(ROOT / relative, root / relative)
+        shutil.copy2(ROOT / DOCS.BACKLOG, root / DOCS.BACKLOG)
         return temporary, root
 
     def test_repository_documentation_passes(self) -> None:
@@ -132,8 +132,7 @@ class GovernanceDocumentationTests(unittest.TestCase):
     def test_rejects_dates_in_visible_inline_markdown(self) -> None:
         snippets = (
             "\nObserved in `2026-07-11`.\n",
-            "\n[2026-07-11 verification]"
-            "(../reviews/refactor-codex-sync/round1-2026-07-11.changelog.md)\n",
+            "\n[2026-07-11 verification](../runbooks/new-vps.md)\n",
         )
         for snippet in snippets:
             with self.subTest(snippet=snippet):
@@ -152,11 +151,42 @@ class GovernanceDocumentationTests(unittest.TestCase):
         architecture.write_text(
             architecture.read_text()
             + "\n```text\nObserved 2026-07-11.\n```\n"
-            + "[verification record](../reviews/refactor-codex-sync/round1-2026-07-11.changelog.md)\n"
+            + "[release notes](https://example.com/releases/2026-07-11)\n"
         )
         self.assertFalse(
             any("dated observation" in error for error in DOCS.check(root))
         )
+
+    def test_allows_dates_in_the_backlog(self) -> None:
+        temporary, root = self.fixture()
+        self.addCleanup(temporary.cleanup)
+        backlog = root / DOCS.BACKLOG
+        backlog.write_text(backlog.read_text() + "\nDeferred on 2026-07-11.\n")
+        self.assertFalse(
+            any("dated observation" in error for error in DOCS.check(root))
+        )
+
+    def test_rejects_a_link_to_a_review_record_or_running_plan(self) -> None:
+        architecture = "docs/architecture/codex-config-management.md"
+        for source, target in (
+            (architecture, "../reviews/topic/record.md"),
+            (architecture, "../plans/topic.md"),
+            (architecture, "../plans/"),
+            (DOCS.BACKLOG, "plans/topic.md"),
+            ("evals/rules/README.md", "../../docs/plans/topic.md"),
+        ):
+            with self.subTest(source=source, target=target):
+                temporary, root = self.fixture()
+                self.addCleanup(temporary.cleanup)
+                path = root / source
+                path.parent.mkdir(parents=True, exist_ok=True)
+                text = path.read_text() if path.exists() else "# Document\n"
+                path.write_text(text + f"\n[record]({target})\n")
+                self.assertIn(
+                    "current document links a review record or running plan: "
+                    f"{source}: {target}",
+                    DOCS.check(root),
+                )
 
     def test_checks_nested_current_documents(self) -> None:
         for directory in ("docs/architecture", "docs/standards"):
@@ -302,6 +332,7 @@ class GovernanceDocumentationTests(unittest.TestCase):
             "docs/runbooks/new-vps.md",
             "docs/standards/README.md",
             "docs/architecture/design-map.md",
+            "docs/backlog.md",
         ):
             with self.subTest(target=target):
                 temporary, root = self.fixture()
@@ -346,6 +377,39 @@ class GovernanceDocumentationTests(unittest.TestCase):
             DOCS._check_tracked_routes(root, errors)
         self.assertTrue(
             any("routed documentation is not tracked" in error for error in errors)
+        )
+
+    def test_rejects_a_tracked_review_record(self) -> None:
+        temporary, root = self.fixture()
+        self.addCleanup(temporary.cleanup)
+        (root / ".git").mkdir()
+        for relative in ("docs/reviews/topic/record.md", "docs/plans/topic.md"):
+            path = root / relative
+            path.parent.mkdir(parents=True)
+            path.write_text("# Record\n")
+        errors: list[str] = []
+        # gone.md is tracked but deleted in the working tree, so the change that
+        # deletes it removes it.
+        listed = (
+            "docs/reviews/topic/record.md\0docs/reviews/topic/gone.md\0"
+            "docs/plans/topic.md\0"
+        )
+        with mock.patch.object(
+            DOCS.subprocess,
+            "run",
+            return_value=mock.Mock(returncode=0, stdout=listed),
+        ) as run:
+            DOCS._check_review_records(root, errors)
+        command = run.call_args.args[0]
+        self.assertEqual(
+            command[command.index("--") + 1 :], ["docs/reviews", "docs/plans"]
+        )
+        self.assertEqual(
+            errors,
+            [
+                "review record or running plan is tracked: docs/reviews/topic/record.md",
+                "review record or running plan is tracked: docs/plans/topic.md",
+            ],
         )
 
 
