@@ -26,11 +26,12 @@ governance.
   feedback, repairs, refinements, and re-verification create none.
 - Deferrals, later stages, and residual gaps are kept in `docs/backlog.md`.
 - Working-tree changes in this repository need no separate confirmation: make
-  them and run their checks. Commit, push, `make sync`, and tags still need the
-  operator's approval: a commit and its push go in one change-flow bundle
-  (`git-publication.md`), `make sync` follows its own reviewed sync plan
-  (Commit And Sync), and a release tag waits until each host is verified
-  (`releases.md`).
+  them and run their checks. A review, audit, or diagnosis request stays
+  read-only all the same (`review.md`). Commit, push, `make sync`, and tags
+  still need the operator's approval: a commit and its push go in one
+  change-flow bundle (`git-publication.md`), `make sync` follows its own
+  reviewed sync plan (Commit And Sync), and a release tag waits until each
+  host is verified (`releases.md`).
 - Keep the reverse whitelist in `.gitignore` explicit. New tracked paths require
   a matching allow rule and a pre-commit verification.
 

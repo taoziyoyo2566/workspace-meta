@@ -144,6 +144,22 @@ Owner: workspace-meta. No rule states which documents are in which language
 (rules in English; architecture, runbooks, and the handbook in Chinese).
 Restart: a document in the wrong language, or a second copy in another one.
 
+## Rule Rollout
+
+Owner: workspace-meta for the rollout; each repository migrates in its own
+sessions, with the operator. On 2026-10-31 these repositories still tracked
+review records, and none ignored `docs/plans/` yet:
+
+- reality-ops: 72 files under `docs/reviews/`; its live sessions were told
+  the migration steps on 2026-10-31.
+- homepage: 5 files under `docs/reviews/`; the current design in its running
+  plans moves into its architecture document first.
+- parade-ops: 2 files under `docs/reviews/`; its plan becomes its
+  architecture document.
+
+Other repositories migrate at their next documentation change. A repository's
+item closes when it tracks no review record and ignores `docs/plans/`.
+
 ## Feedback Register
 
 Owner: workspace-meta.
