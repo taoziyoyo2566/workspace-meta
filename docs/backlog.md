@@ -72,6 +72,44 @@ drafts of version 0.1.2 are in commit `56bfc41`.
   from a stated goal and templates, and scripts only mechanical checks; no
   background or SessionStart writes; memory changes at task boundaries, never
   on every commit or only to refresh a timestamp; no automatic publication.
+  Their scope for a session-history plugin is decided under Session History.
+
+## Session History
+
+Owner: workspace-meta. A session-history plugin, claude-mem 15.8.0, is
+described as optional host-local recall since 2026-11-01
+([`claude-runtime.md` Memory](../.agents/rules/claude-runtime.md#memory) and
+the claude-mem step of the [new VPS runbook](runbooks/new-vps.md)); no host
+runs it yet.
+
+- Decided on 2026-11-01, the operator having left the call to the agent
+  ("decide by best practice"): the constraints of 2026-08-07 under Memory
+  Governance cover the workspace's memory records and what reaches a session,
+  not the plugin's own store. Its background capture is a derived,
+  non-authoritative log, like the transcripts Claude Code writes on every
+  turn, so it may run. What it pushes into a session falls under the
+  requirement that SessionStart only remind and report: start-of-session
+  context stays a short reminder, file history is not added before reads,
+  and nothing it writes reaches project files or another account. Its
+  marketplace's auto-update, which its installer turns on, stays off, so
+  every upgrade is reviewed against these settings first.
+- Unverified until the first install: per-config-dir stores through
+  `CLAUDE_MEM_DATA_DIR` and `CLAUDE_MEM_WORKER_PORT` in a config dir's
+  `settings.json` `env` (claude-mem documents that hooks receive that block);
+  and that `make rule-eval` runs, which pass `--setting-sources project`, load
+  no user plugin (the `init` event in a run log lists the plugins).
+- A managed skill run at a task boundary that searches the store for
+  corrections never routed, restart conditions in this file that have
+  occurred, and classes that recurred after their rule landed, and reports
+  them without writing anything, deferred. Restart: a host's store has held
+  its sessions for some weeks, or the operator asks for such a review.
+- A claude-mem mode with a note type for corrections, deferred. Restart: that
+  review finds corrections buried among ordinary notes.
+- Drawing rule-evaluation scenarios from the store, deferred: auditing real
+  sessions has pending work of its own, and both belong in one section of
+  [the evaluation guide](../evals/rules/README.md). Restart: that audit lands.
+- Codex: claude-mem also ships a Codex plugin, which `codex-runtime.md` does
+  not cover. Restart: the operator installs it for Codex.
 
 ## Feedback Intake
 

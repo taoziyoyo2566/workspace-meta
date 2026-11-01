@@ -52,7 +52,8 @@ In this order. A part may be one line, but none is left out:
 2. the cause chain, down to the class of problem, with each link labelled by
    its knowledge state (`reasoning.md`);
 3. why each existing safeguard missed it, and how it could be detected earlier;
-4. recurrence: whether it happened before, and where;
+4. recurrence: whether it happened before, and where, searched as `planning.md`
+   Before Planning says;
 5. proposals, ordered by necessity and then by stability and security. Each
    names its owner, its effect, its cost and risk, whether it needs approval,
    and how to tell that it worked;

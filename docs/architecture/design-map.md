@@ -67,6 +67,7 @@ Related maps, not copied here:
 | A floated idea is answered without what done would mean or how it would be used | [Understanding requests](#understanding-requests) |
 | A claim from memory, another session, or the operator stated as fact; "confirmed" after ruling out one cause | [Technical reasoning](#technical-reasoning) |
 | A decision lives only in chat or memory, or status from memory contradicts the Plan | [Planning and handoff](#planning-and-handoff), [Memory](#memory) |
+| A decision or correction kept only in a memory plugin's notes, or a file judged from the plugin's summary instead of the file | [Memory](#memory) |
 | Two sessions redo one investigation, or the operator relays instructions between sessions | [Planning and handoff](#planning-and-handoff) |
 | A duplicate implementation, history in comments, or policy hard-coded in logic | [Implementation shape](#implementation-shape) |
 | A project has no entry file for the runtime in use, or a Claude session ignores its `AGENTS.md` | [Documentation and entry files](#documentation-and-project-entry-files), [SessionStart evaluator](#sessionstart-evaluator) |
@@ -735,7 +736,8 @@ discovery, Codex's project entry files, and the configuration boundary.
 
 Auto memory is recall kept per config dir: lasting corrections, preferences,
 and pointers to owners, never the only record of a decision or of a
-workstream's state.
+workstream's state. A session-history plugin, where one is installed, adds
+searchable history on the same terms.
 
 - **Owner**: split by concern:
   [`CLAUDE.md` Claude Auto-Memory](../../CLAUDE.md#claude-auto-memory) for how
@@ -743,7 +745,9 @@ workstream's state.
   entries, the snapshot loaded at start);
   [`claude-runtime.md` Memory](../../.agents/rules/claude-runtime.md#memory)
   for Claude's mechanics (one store per config dir, what loads, what
-  subagents receive);
+  subagents receive, a session-history plugin's place beside auto memory);
+  [`planning.md` Before Planning](../../.agents/rules/planning.md#before-planning)
+  for searching session history with the other records;
   [`planning.md` Record Decisions When Made](../../.agents/rules/planning.md#record-decisions-when-made)
   for where decisions and status live;
   [`rule-authoring.md` Feedback Intake](../../.agents/rules/rule-authoring.md#feedback-intake)
@@ -752,15 +756,20 @@ workstream's state.
   for what a memory note may hold.
 - **Routed by**: the [Claude Auto-Memory](../../CLAUDE.md#claude-auto-memory)
   section resident in `CLAUDE.md`; its row for Claude Code mechanics, which
-  names memory loading; the runtime's own memory prompts.
+  names memory loading; the runtime's own memory prompts; for searching
+  session history, the planning row (an investigation).
 - **Enforced by**: memory phrase tests on `CLAUDE.md` in
-  `tests/test_sync_codex_config.py`; prose otherwise.
+  `tests/test_sync_codex_config.py`; a plugin's own settings and hook
+  switches, set by the runbook's claude-mem step; prose otherwise.
 - **Project may add**: nothing portable; a project's memory is a host-local
   store under each config dir.
 - **Symptoms**: a decision saved only to memory; a topic file without its
   `MEMORY.md` line; status reported from stale memory; a correction saved but
   not routed; a session under one config dir missing what another remembered;
-  a subagent assumed to know remembered facts.
+  a subagent assumed to know remembered facts; a plugin's notes or work list
+  treated as the record; a file judged from a plugin's note timeline; one
+  account's history showing in another account's sessions; a plugin upgraded
+  without its settings being checked again.
 
 ## Host Integration Mechanisms
 

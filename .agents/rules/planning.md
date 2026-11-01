@@ -38,7 +38,9 @@ triggers: the paths and components, settings or keys, external dependencies
 with versions, and features it will change or rely on. Search the project's
 owners of verified findings and decisions, its progress owner, and its running
 plans for them, including uncommitted documents, other worktrees, and unmerged
-branches; a record that was removed is a lead in Git history only. Read
+branches; a record that was removed is a lead in Git history only. Where the
+host keeps a searchable session history, such as a memory plugin's store,
+search it too; what it returns is a lead to check against those records. Read
 in full every document that matches a setting or dependency exactly, and
 enough of the others to judge whether they apply. Link what the new work
 builds on, depends on, supersedes, or contradicts.

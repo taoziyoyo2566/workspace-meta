@@ -14,6 +14,7 @@
 | Claude SessionStart、status line 和托管 skills（`env-sync`、`project-bootstrap`、`interview`） | `CLAUDE_CONFIG_DIRS`（冒号分隔）列出的每个 Claude 配置目录；未设置时自动发现 `~/.claude` 和每个含 `.claude.json` 的 `~/.claude-*`，跳过名称像副本或备份的目录 | 由 `bootstrap` 收敛，不直接提交 |
 | 凭据、登录、项目 trust、Hook trust、approval rules | `~/.codex/`、每个 Claude 配置目录 | 永不复制或提交 |
 | auto memory、模型/effort 默认值、permissions 与 auto mode、插件、MCP server | 每个 Claude 配置目录各自一份 | 否；属于该账号和主机 |
+| 会话历史插件的数据（例如 claude-mem 的 `~/.claude-mem/`） | 默认每个操作系统用户一份，所有 Claude 配置目录共用；见第 6 节末尾 | 否；永不复制或提交 |
 | 项目入口文件（`AGENTS.md` 和导入它的 `CLAUDE.md`） | `~/workspace/projects/<project>` | 项目各自的 Git；缺失时由 agent 创建，不由 bootstrap 生成 |
 | 本机能力快照 | `~/workspace/.agents/env/<hostname -s>.yml` | 否；本机生成并由 Git 忽略 |
 
@@ -258,6 +259,125 @@ make bootstrap CLAUDE_CONFIG_DIRS="$HOME/.claude:$HOME/.claude-<account>"
 每个 Claude 配置目录的托管区域都已收敛（`kept` 的 status line 和 skill 不算漂移）。
 这个步骤不会安装 Codex/Claude，不会登录，不会信任 Hook，也不会自动 pull、
 commit 或 push。
+
+### 可选：会话历史插件 claude-mem
+
+claude-mem 是第三方 Claude Code 插件：它的 hooks 把工具调用和 prompt 交给后台
+模型压缩成笔记，存进 `~/.claude-mem/`，会话启动时注入最近的笔记，并提供检索
+工具。它属于主机本地层，workspace-meta 不安装也不同步它；装不装、装进哪个配置
+目录由你决定。它和规则的分工见 `.agents/rules/claude-runtime.md` Memory：它只
+提供线索，纠正、偏好、决定和工作状态仍归各自的 owner；它可以在后台往自己的库里
+记录，带进会话的内容只保留启动时的简短提醒（取舍见 `docs/backlog.md` 的
+Session History）。下面的键名、默认值和命令核对自 claude-mem 15.8.0 的源码和
+文档，升级前先按本节末尾重新核对。
+
+几项默认开启的功能会和这些 owner 冲突，所以安装前先写好
+`~/.claude-mem/settings.json`。只写这些键即可，其余键取默认值；把 `<home>`
+换成本机 `$HOME` 的绝对路径：
+
+```json
+{
+  "CLAUDE_MEM_PROVIDER": "claude",
+  "CLAUDE_MEM_MEMORY_INSTRUCTIONS_ENABLED": "false",
+  "CLAUDE_MEM_WORK_STATE_ENABLED": "false",
+  "CLAUDE_MEM_CONTEXT_OBSERVATIONS": "10",
+  "CLAUDE_MEM_CONTEXT_SESSION_COUNT": "3",
+  "CLAUDE_MEM_FILE_READ_GATE_ENABLED": "false",
+  "CLAUDE_MEM_FOLDER_CLAUDEMD_ENABLED": "false",
+  "CLAUDE_MEM_DELIVERABLES_ENABLED": "false",
+  "CLAUDE_MEM_REDACT_ENABLED": "true",
+  "CLAUDE_MEM_REDACT_GENERIC_ENABLED": "true",
+  "CLAUDE_MEM_EXCLUDED_PROJECTS": "<home>/.cache/workspace-meta/**"
+}
+```
+
+| 键 | 为什么这样设 |
+|---|---|
+| `CLAUDE_MEM_PROVIDER` | 笔记由该账号的 Claude 订阅生成（默认模型 `haiku`，占用订阅额度），工具输出只发给 Anthropic，不发给托管 observer 等其他服务 |
+| `CLAUDE_MEM_MEMORY_INSTRUCTIONS_ENABLED` | 默认开启；注入的说明会让 agent 用 `save_memory` 记偏好、纠正和决定，形成第二个 owner |
+| `CLAUDE_MEM_WORK_STATE_ENABLED` | 默认开启；启动时注入工作状态并提供 `work_state_*` 工具，和计划、backlog 重复 |
+| `CLAUDE_MEM_CONTEXT_OBSERVATIONS`、`CLAUDE_MEM_CONTEXT_SESSION_COUNT` | 默认在启动时注入最多 50 条笔记和 10 个会话摘要，截到 hook 的 10,000 字符上限；降到 10 条和 3 个，只留简短提醒，其余靠检索。不要设成 0：那样注入的是 "No previous sessions found."，会让 agent 以为没有历史可查 |
+| `CLAUDE_MEM_FILE_READ_GATE_ENABLED` | 默认开启；主会话整文件读取 32 KB 以上、已有笔记且之后没改过的代码文件时，返回笔记时间线而不是文件内容 |
+| `CLAUDE_MEM_FOLDER_CLAUDEMD_ENABLED` | 默认关闭，保持关闭；打开后会往目录里写 `CLAUDE.md`，和项目入口文件冲突 |
+| `CLAUDE_MEM_DELIVERABLES_ENABLED` | 默认开启；每轮结束时把产出文件复制到 `~/.claude-mem/deliverables/`，在项目外多出副本 |
+| `CLAUDE_MEM_REDACT_ENABLED`、`CLAUDE_MEM_REDACT_GENERIC_ENABLED` | 默认关闭；工具输出会明文入库并发给笔记模型，打开后先替换常见的凭据格式 |
+| `CLAUDE_MEM_EXCLUDED_PROJECTS` | 不记录 rule-eval 在 `~/.cache/workspace-meta/` 下的运行 |
+
+读文件前注入该文件笔记历史的 hook 只能用环境变量关闭，它不读上面的设置文件。在
+选定配置目录的 `settings.json` 里，往 `env` 对象加一项（没有 `env` 就新建）：
+`"CLAUDE_MEM_DISABLE_FILE_CONTEXT": "1"`。Claude Code 把这个 `env` 传给每个
+hook；设了之后，读文件前不再注入历史，read gate 也不再拦截。`env` 不属于
+workspace-meta 的托管区域，`make sync` 会保留它，`make agent-sync-check` 会先
+校验这个文件仍是合法 JSON。
+
+默认只有一个 `~/.claude-mem/`，所有 Claude 配置目录共用，会把各账号的历史合进
+一个库，而 auto memory 是按配置目录分开的。二选一：
+
+- 只装进一个配置目录（推荐）：插件按配置目录启用，其他配置目录的会话不会被记录；
+- 每个配置目录各用一个库：在该配置目录 `settings.json` 的 `env` 里设置不同的
+  `CLAUDE_MEM_DATA_DIR`（例如 `~/.claude-mem-<account>`）和
+  `CLAUDE_MEM_WORKER_PORT`，并在那个数据目录里同样写好上面的设置文件。
+  claude-mem 支持用这两个环境变量覆盖设置，但 hooks 和 worker 是否都能拿到这里
+  的 `env` 还没有验证；装好后确认两个库各自只有自己账号的会话。
+
+无论哪种，都不要装进 rule-eval 用 `--claude-config-dir` 指定的配置目录。
+
+执行前说明（Protected-Action Request Brief）：
+
+- **What**：用 claude-mem 安装器把插件装进一个 Claude 配置目录，关闭 telemetry，
+  再关闭它的 marketplace 自动更新。
+- **Why now**：你决定在这台主机上保留会话历史。
+- **Target / effect**：`npx` 从 npm 下载 `claude-mem@15.8.0`；缺少时安装 Bun 和
+  uv；把插件放进该配置目录的 `plugins/`，在它的 `settings.json` 加入
+  `enabledPlugins` 条目，并把 `thedotmack` marketplace 登记为自动更新（第三方
+  marketplace 本来默认不自动更新）；之后会话启动时会拉起一个常驻、只监听
+  `127.0.0.1` 的 worker（端口为 37700 加 uid 除以 100 的余数，默认不会因空闲
+  退出）和本地向量库。workspace-meta 的托管区域不受影响。
+- **Risk / recovery**：工具输入输出和 prompt 会写进本机数据库，并发给笔记模型。
+  `npx claude-mem uninstall` 会移除插件和它在 `settings.json` 里的条目，但保留
+  数据目录；确认不再需要后再手动删除 `~/.claude-mem/`。
+- **Excluded**：不登录 cmem.ai，不启用托管 observer、Cloud Sync 或 TeamBrain，
+  不关闭 Claude Code 的 auto memory，不装进 rule-eval 用的配置目录，不改
+  workspace-meta 的文件。
+- **Checks / boundary**：先写好设置文件和 `env` 开关，并选定配置目录；本说明只
+  覆盖一个配置目录的一次安装、关闭自动更新和之后的只读检查。
+
+Exact operation:
+
+在你自己的新终端里运行（安装器是交互式的）。把 `<config dir>` 换成选定的配置
+目录；选 `~/.claude` 时去掉 `CLAUDE_CONFIG_DIR=...` 这一项：
+
+```bash
+DO_NOT_TRACK=1 CLAUDE_MEM_ONLINE_OPTIN=false CLAUDE_CONFIG_DIR="<config dir>" \
+  npx claude-mem@15.8.0 install --provider claude
+npx claude-mem telemetry disable
+```
+
+安装器问 `Disable Claude Code auto-memory?` 时选 `Leave enabled`；规则依赖
+auto memory，所以也不要加 `--disable-auto-memory`。
+
+装好后在该配置目录开一个 Claude Code 会话，运行 `/plugin`，到 **Marketplaces**
+选 `thedotmack`，再选 **Disable auto-update**。否则插件会在会话启动后自动更新到
+仓库的最新版本，上面固定的版本号和核对过的默认值都会失效。
+
+然后检查：
+
+```bash
+npx claude-mem doctor
+CLAUDE_CONFIG_DIR="<config dir>" claude plugin details claude-mem@thedotmack
+cd "$HOME/workspace" && make agent-sync-check
+```
+
+`claude plugin details` 列出插件的组件和每个会话固定增加的 token 数（选
+`~/.claude` 时同样去掉 `CLAUDE_CONFIG_DIR=...`）。`agent-sync-check` 仍返回 0，
+说明安装没有碰 workspace-meta 的托管区域。再在该配置目录开一个新会话做几步操作，然后在 worker
+的 viewer（`http://127.0.0.1:<端口>/viewer`）里确认出现了这次会话；如果用的是
+每个配置目录一个库，再确认另一个账号的会话没有进入这个库。
+
+升级时先读新版本的 release notes，按本节逐项核对键名和默认值，特别留意新增的
+默认开启功能；确认后在同一配置目录运行
+`claude plugin update claude-mem@thedotmack`，并通过 workspace-meta 的下一次
+改动把本节记录的版本号改成新版本。
 
 ## 7. 修改后如何让它生效
 

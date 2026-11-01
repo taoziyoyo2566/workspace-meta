@@ -25,7 +25,7 @@ number. Never renumber. Numbering accumulates; mark replacements rather than del
 | `.agents/rules/git-integration.md` | W-R21 and the accepted W-R32 terminal-evidence refinement, refined by W-R54, W-R57 and W-R58, pre-release channels W-R84 |
 | `.agents/rules/git-recovery.md` | W-R19–W-R20, refined by W-R57 and W-R58, pre-release channels W-R84 |
 | `.agents/rules/requests.md` | W-R63, moved from `planning.md`, extended by W-R71 |
-| `.agents/rules/planning.md` | W-R1–W-R7, W-R12, W-R18 and accepted W-R32 refinements, refined by W-R44, W-R46, W-R47, W-R50, W-R51, W-R56 and W-R57, exceptions to recorded decisions W-R67, remembered restrictions W-R70, routine operations stay transient W-R78, plans removed at acceptance W-R87 |
+| `.agents/rules/planning.md` | W-R1–W-R7, W-R12, W-R18 and accepted W-R32 refinements, refined by W-R44, W-R46, W-R47, W-R50, W-R51, W-R56 and W-R57, exceptions to recorded decisions W-R67, remembered restrictions W-R70, routine operations stay transient W-R78, plans removed at acceptance W-R87, session history searched as a lead W-R88 |
 | `.agents/rules/reasoning.md` | W-R43, refined by W-R63 |
 | `.agents/rules/implementation.md` | W-R37 refined by W-R44, W-R48 and W-R53 |
 | `.agents/rules/documentation.md` | W-R38 refined by W-R39, W-R41 entry-point loadability refined by W-R42, Plan/Changelog lifecycle refined by W-R44, W-R46 and W-R47, investigation records refined by W-R50, seams for W-R53 and W-R57, project bootstrap W-R73 restoring W-R11 in a narrower form, committed Changelogs not added to W-R78, committed and temporary records W-R87 |
@@ -34,10 +34,10 @@ number. Never renumber. Numbering accumulates; mark replacements rather than del
 | `.agents/rules/deployment.md` | W-R54 refined by W-R57, pre-release channels W-R84, verified rollback targets W-R85, older-line end W-R86 |
 | `.agents/rules/releases.md` | W-R57, pre-release channels W-R84, verified rollback targets W-R85, version numbers and fix tags W-R86 |
 | `.agents/rules/review.md` | W-R13, W-R20, W-R33 and accepted W-R32 refinements, refined by W-R56, problem reports W-R59 |
-| `.agents/rules/problem-follow-up.md` | W-R56 |
+| `.agents/rules/problem-follow-up.md` | W-R56, recurrence searched like earlier work W-R88 |
 | `.agents/rules/capabilities.md` | W-R18 and accepted W-R32 refinements, refined by W-R44, W-R52, W-R53 and W-R55, quality before speed W-R60, where the user runs a command W-R62, command length W-R65, delegation W-R72, opening the user's terminal W-R76 |
-| `.agents/rules/claude-runtime.md` | Claude mechanics for W-R71, W-R72 and W-R73 |
-| `.agents/host-templates/README-agents.md` | W-R28, W-R36, every agent config dir W-R74 |
+| `.agents/rules/claude-runtime.md` | Claude mechanics for W-R71, W-R72 and W-R73, session-history plugins W-R88 |
+| `.agents/host-templates/README-agents.md` | W-R28, W-R36, every agent config dir W-R74, plugin stores outside the config dirs W-R88 |
 | `.agents/rules/secrets.md` | W-R13, refined by W-R53 |
 | `.agents/rules/temporary-files.md` | W-R55, keeping reusable work W-R75 |
 | `.agents/rules/environment-truth.md` | W-R24 refined by W-R44 |
@@ -273,3 +273,5 @@ Distilled cross-project rules. Numbering accumulates — do not delete old rules
     - Source: 2026-10-21, reality-ops: a release of fixes and improvements inside the console was proposed as a MINOR version under the closed-batch rule.
 - **W-R87 (2026-10-30)** — **A repository commits only durable content that concerns the whole project, kept current and edited in place with Git as its history; review content is temporary, a workstream's one running plan lives in the ignored `docs/plans/` of the main checkout and is committed only by a private repository when another machine or agent needs it or the operator asks, and at acceptance its durable content moves to its owners and the plan is removed.**
     - Source: 2026-10-30, workspace-meta: dated plans, changelogs, and investigation records had piled up in the public repository as copies beside the current owners, and the operator asked that committed docs hold only durable project-wide content and one current plan, dropped once it is complete.
+- **W-R88 (2026-11-01)** — **A searchable session history, such as a memory plugin's store, is searched with the other records before an investigation and for a problem's recurrence, and what it returns is a lead; it never keeps what an owner holds, adds no more than a short reminder at session start, leaves full reads to the file, is kept to one config dir or split per config dir, and is upgraded only after review.**
+    - Source: 2026-11-01, workspace-meta: asked how claude-mem could complement the rules, the review found that its defaults would keep corrections, decisions, and work state in a second store, inject note history at start and before reads, answer full reads with note summaries, merge every account's history into one store, and turn on auto-update for its own marketplace.

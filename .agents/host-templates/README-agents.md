@@ -47,6 +47,7 @@ each listed Claude config dir, workspace-meta manages exactly:
 | `scripts/workspace_status.py` | workspace-meta | one ordered status policy used by both agents, including the project readiness check |
 | `scripts/claude_status_line.py` | workspace-meta | render Claude's command status line from documented stdin fields; Codex uses native `tui.status_line` items |
 | model/reasoning defaults, credentials, trust, permissions, auto mode, plugins, MCP servers, history data, auto memory, caches, and unlisted preferences | host/user, per config dir | never synchronized |
+| a plugin's own store outside the config dirs, such as claude-mem's `~/.claude-mem/` | host/user, one per OS user unless split | never synchronized or committed; kept to one config dir or split per config dir (`claude-runtime.md` Memory) |
 | `~/.codex/rules/*.rules` | host executable authorization | never synchronized |
 | project agent/governance files | project repository | project facts and deltas travel with that project; every runtime the project is operated with needs an entry file it loads, importing one canonical owner; a missing entry file is created as `documentation.md` Project Bootstrap describes |
 | `CLAUDE.local.md`, `.claude/settings.local.json` | project-local | stay out of Git; in a clone of a repository the operator does not own, the Claude entry file is a `CLAUDE.local.md` excluded through the clone's own exclude file |

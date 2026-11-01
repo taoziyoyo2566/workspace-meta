@@ -131,6 +131,28 @@ deliberately when a project needs them, never by the bootstrap.
   directory. An empty `.git` directory in a parent of several projects makes
   the non-Git directories under it share one memory directory and one trust
   entry (inferred from the code; recheck). Report one when you see it.
+- A session-history plugin such as claude-mem is a second recall store. Facts
+  from claude-mem 15.8.0, to recheck at its upgrades: its hooks pass tool calls
+  and prompts to a background model that condenses them into notes in
+  `~/.claude-mem/`, one store per OS user for every config dir; recent notes
+  are injected at session start, and its search tools return the rest. What it
+  returns is a lead (`problem-follow-up.md`): check it against the owner and
+  the current files before relying on it.
+- It never keeps what an owner holds: corrections and preferences go to auto
+  memory and Feedback Intake, decisions and work state to their records
+  (`planning.md`), even when its injected instructions or its tools, such as
+  `save_memory` and `work_state_write`, offer to keep them.
+- When a full `Read` returns the plugin's note timeline instead of the file
+  (claude-mem's file read gate), read the lines you need with `offset` and
+  `limit`, which pass, before relying on the file.
+- One store per OS user would undo the split per config dir above. Enable such
+  a plugin in one config dir only, or give each config dir its own store, and
+  never in a config dir that rule evaluation uses.
+- What it adds to a session stays a short reminder at start. Its injected
+  memory instructions, work-state tools, file history before reads, read gate,
+  folder `CLAUDE.md` files, and copies of a turn's files stay off, and so does
+  its marketplace's auto-update, so each upgrade is checked against these
+  settings first. The claude-mem step of `docs/runbooks/new-vps.md` sets them.
 
 ## Asking The Operator
 
