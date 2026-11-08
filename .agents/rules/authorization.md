@@ -103,7 +103,8 @@ host configuration, privilege changes, external API writes, deployments,
 service changes, and live infrastructure mutations. The trigger is the
 operation being proposed, not whether the request uses the word “approve”.
 
-The brief must state:
+The brief states, each in one line of plain words about what the user will see
+change:
 
 - **What will happen** — the concrete action, command, API request, or tool
   operation;
@@ -112,29 +113,32 @@ The brief must state:
   or other affected boundary;
 - **Expected effect** — the state change the user should expect after it runs;
 - **Risks and recovery** — material risk, reversibility, and recovery path when
-  applicable;
-- **Excluded actions** — what will not happen as part of this approval;
-- **Checks and gaps** — prerequisites, completed checks, and unresolved
-  uncertainty;
-- **Approval boundary** — whether approval covers one exact invocation, a
-  disclosed sequence, a bounded retry, or nothing beyond the named operation.
+  applicable.
 
-Use this shape when requesting consent:
+Add these only when they apply:
+
+- **Excluded actions** — what the user could expect to be included but will
+  not happen;
+- **Checks and gaps** — a check that failed, was skipped, or could not run,
+  and unresolved uncertainty; checks that passed are one line, not a list;
+- **Approval boundary** — when approval covers more than the exact operation
+  shown, such as a disclosed sequence or a bounded retry.
+
+The same holds for every brief or review that another module requires before
+an operation, such as the Git, deployment, and release modules: check each of
+its fields, list a field only when it is not what is expected, and leave out
+what does not apply. Use this shape when requesting consent:
 
 ```text
-Action summary
 What will happen: ...
 Why now: ...
 Target and scope: ...
 Expected effect: ...
 Risks and recovery: ...
-Excluded actions: ...
-Checks and gaps: ...
 
 Exact operation:
 <command, request, or tool operation>
 
-Approval boundary: ...
 Please confirm whether to proceed.
 ```
 

@@ -1737,6 +1737,55 @@ class CodexConfigSyncTests(unittest.TestCase):
         self.assertIn("ordinary read-only work", normalized)
         self.assertIn("already-authorized, in-scope working-tree edits", normalized)
 
+    def test_briefs_are_plain_and_probes_are_explained(self) -> None:
+        # A brief states five things in plain lines and lists another field
+        # only when its check finds it unexpected (W-R92); a probe for the
+        # operator says what it tells apart and what each result means (W-R91).
+        def normalized(name: str) -> str:
+            text = (self.rules_dir / name).read_text()
+            return " ".join(text.split()).lower()
+
+        authorization = normalized("authorization.md")
+        for invariant in (
+            "each in one line of plain words about what the user will see change",
+            "add these only when they apply",
+            "checks that passed are one line, not a list",
+            "the same holds for every brief or review that another module "
+            "requires before an operation",
+            "list a field only when it is not what is expected",
+        ):
+            self.assertIn(invariant, authorization)
+        self.assertNotIn("action summary", authorization)
+
+        publication = normalized("git-publication.md")
+        for invariant in (
+            "present in a few plain lines",
+            "whether the remote is public",
+            "check the rest before presenting the bundle",
+            "display one of them only when it is not what is expected",
+        ):
+            self.assertIn(invariant, publication)
+
+        self.assertIn(
+            "which open possibilities it tells apart, and what each result "
+            "would mean, with hypotheses marked as hypotheses",
+            normalized("reasoning.md"),
+        )
+
+        feedback = (ROOT / "feedback-register.md").read_text()
+        for entry, owners in (
+            ("W-R91", ("reasoning.md",)),
+            ("W-R92", ("authorization.md", "git-publication.md")),
+        ):
+            self.assertEqual(feedback.count(f"- **{entry} ("), 1)
+            for owner in owners:
+                row = next(
+                    line
+                    for line in feedback.splitlines()
+                    if line.startswith(f"| `.agents/rules/{owner}`")
+                )
+                self.assertIn(entry, row)
+
     def test_workspace_rule_modules_declare_unique_ownership(self) -> None:
         for name in (
             "authorization.md",

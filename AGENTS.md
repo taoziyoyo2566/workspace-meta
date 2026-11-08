@@ -92,9 +92,9 @@ governance.
   requires automatic same-round synchronization.
 - An authorized change-flow bundle may run through
   `scripts/change_flow_bundle.sh`: `check`, then `commit` (add, commit,
-  fast-forward), the push as its own command, then `retire`. The brief shows
-  the bundle directory's files, including the `TREE` and `MESSAGE_SHA256`
-  fingerprints that `check` prints. Removing any other worktree stays a
+  fast-forward), the push as its own command, then `retire`. The brief names
+  the bundle directory; `check` prints the `TREE` and `MESSAGE_SHA256`
+  fingerprints recorded there. Removing any other worktree stays a
   separately reviewed action (`git-recovery.md`).
 - After a reviewed sync plan, `make sync SYNC_EXPECT='label;label'` applies without
   a prompt only when no other area drifted.

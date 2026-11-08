@@ -40,12 +40,12 @@ commit the update now"; "one more quick bundle".
 
 ## Checkpoint A — Result Review
 
-After edits and validation, present:
+After edits and validation, present in a few plain lines:
 
-- changed paths and outcomes;
-- checks and gaps;
-- exclusions/follow-ups;
-- branch and dirty state.
+- what changed and what it does;
+- a check that failed, was skipped, or could not run, or else one line that
+  the checks passed;
+- an open follow-up, or a branch or dirty state other than expected.
 
 Present Checkpoint B after it in the same message, so that one approval
 accepts the content and authorizes the bundle. When the operator asks for a
@@ -61,11 +61,13 @@ applicable:
 - one `git push`;
 - one `gh pr create`.
 
-Also display branch; exact staged name/status/stat; full message; identity
-source/result; remote URL/name and whether the remote is public, and for a
-public remote the host or personal details the pushed content reveals;
-source/destination refs; exact range/count and divergence; force/upstream mode;
-checks/gaps; PR base/head/options.
+Also display the full message, the files, and where it goes: the remote, whether
+the remote is public, and for a public remote the host or personal details the
+pushed content reveals. Check the rest before presenting the bundle: branch,
+exact staged name/status/stat, identity source/result, source/destination
+refs, exact range/count and divergence, force/upstream mode, checks/gaps, and
+PR base/head/options. Display one of them only when it is not what is
+expected, as `authorization.md` Protected-Action Request Brief says.
 
 Never use `git add .`, `git add -A`, or a broad path containing unreviewed
 content. Review the complete staged diff.
@@ -102,8 +104,9 @@ deletion in step 5, run in a checkout of it; the bundle names that checkout,
 with its creation and removal when it is not a standing one. A fast-forward of
 the channel branch needs no checkout.
 
-The bundle shows the fields of Checkpoint B and of the integration review, and
-for step 5 the worktree's untracked and ignored files. It stops at the step
+The bundle shows the fields of Checkpoint B and of the integration review as
+Checkpoint B says, and for step 5 any untracked or ignored files the worktree
+holds. It stops at the step
 where anything drifts, including the main or channel tip moving after the
 brief; where a rebase or merge conflicts or cannot fast-forward; where a check
 fails; or where the worktree holds untracked or ignored files. Remote branch

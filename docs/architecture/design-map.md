@@ -45,6 +45,7 @@ Related maps, not copied here:
 | The agent asks to confirm a read, a search, or an in-scope edit | [Authorization](#authorization) |
 | A protected command is offered or run without its target, effect, and risk | [Authorization](#authorization) |
 | A permission prompt or auto-mode pass is treated as approval to commit, push, or deploy | [Authorization](#authorization), [Publication](#publication) |
+| A brief or commit proposal is so long that the operator asks what it does | [Authorization](#authorization), [Publication](#publication) |
 | A secret value appears in chat, a plan, or a diff, or remediation starts right after discovery | [Secrets](#secrets) |
 | Temporary space fills, scratch is left behind, or another session's files are removed | [Temporary files](#temporary-files) |
 | A script or scenario that will be needed again is deleted with the temporary files | [Temporary files](#temporary-files) |
@@ -66,6 +67,7 @@ Related maps, not copied here:
 | Work stops while the operator is away, or grows because nobody could object | [Understanding requests](#understanding-requests), [Claude runtime](#claude-runtime) |
 | A floated idea is answered without what done would mean or how it would be used | [Understanding requests](#understanding-requests) |
 | A claim from memory, another session, or the operator stated as fact; "confirmed" after ruling out one cause | [Technical reasoning](#technical-reasoning) |
+| A test for the operator comes without what it tells apart or what each result would mean | [Technical reasoning](#technical-reasoning) |
 | A decision lives only in chat or memory, or status from memory contradicts the Plan | [Planning and handoff](#planning-and-handoff), [Memory](#memory) |
 | A decision or correction kept only in a memory plugin's notes, or a file judged from the plugin's summary instead of the file | [Memory](#memory) |
 | Two sessions redo one investigation, or the operator relays instructions between sessions | [Planning and handoff](#planning-and-handoff) |
@@ -125,7 +127,9 @@ brief before it is proposed, run, or handed to the operator.
   stretched to a retry, another target, or a follow-up operation; a read run
   with `sudo` or as another account without asking; a denied command retried
   by another route; approval targets labelled with names that already meant
-  something, or a short reply acted on when it could select two target sets.
+  something, or a short reply acted on when it could select two target sets;
+  a brief that lists every field in jargon, so the operator asks what will
+  happen, why, and to what effect.
 
 ### Secrets
 
@@ -264,7 +268,8 @@ under the operator's identity and with no AI trailers.
   content review; separate confirmations for add, commit, push, and PR;
   `git add -A`; host or personal details pushed to a public remote whose
   visibility nobody checked; a commit proposed for each small step or routine
-  record; content accepted in one turn and its bundle approved in the next.
+  record; content accepted in one turn and its bundle approved in the next;
+  every checked field of the bundle listed although each was as expected.
 
 ### Integration And Retirement
 
@@ -422,7 +427,8 @@ proportion to what the decision needs.
 - **Symptoms**: a claim from memory, another session, or the operator stated
   as fact; "confirmed" after ruling out one cause; configuration changed on a
   guess before a read-only probe; a hypothesis table for a trivial issue;
-  uncertainty that would change the decision left unstated.
+  uncertainty that would change the decision left unstated; a test handed to
+  the operator without what it tells apart or what each result would mean.
 
 ### Planning And Handoff
 

@@ -75,6 +75,11 @@ diagnostic change. A persistent change may still be the appropriate
 discriminating test when safer methods cannot distinguish the causes and the
 change is authorized.
 
+When the operator is to run a probe or decide on one, tell them what is already
+known, which open possibilities it tells apart, and what each result would
+mean, with hypotheses marked as hypotheses, so that they can judge it rather
+than follow it.
+
 ## Calibrate Uncertainty And Stop
 
 Investigate only to the depth the decision warrants. Communicate uncertainty

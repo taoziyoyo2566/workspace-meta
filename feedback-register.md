@@ -18,15 +18,15 @@ number. Never renumber. Numbering accumulates; mark replacements rather than del
 
 | Canonical owner | Consolidated provenance |
 |---|---|
-| `.agents/rules/authorization.md` | W-R13 authorization boundary, W-R23, W-R29–W-R31, W-R34–W-R35, refined by W-R54, elevated reads W-R66, approval labels W-R68, runtime denials W-R69, standing bootstrap authority W-R73 |
+| `.agents/rules/authorization.md` | W-R13 authorization boundary, W-R23, W-R29–W-R31, W-R34–W-R35, refined by W-R54, elevated reads W-R66, approval labels W-R68, runtime denials W-R69, standing bootstrap authority W-R73, plain briefs W-R92 |
 | `.agents/rules/git.md` | W-R21 inspection/freshness, W-R23, refined by W-R57 |
 | `.agents/rules/git-branches.md` | W-R21–W-R22 and W-R32 branch-contract design refined by W-R40, change flow W-R58, pre-release channels W-R84, older-line fixes from a verified state W-R85 |
-| `.agents/rules/git-publication.md` | W-R25, W-R30 refined by W-R31, change-flow bundle W-R58, remote visibility W-R77, one proposal per result W-R78 refining W-R31, pre-release channels W-R84 |
+| `.agents/rules/git-publication.md` | W-R25, W-R30 refined by W-R31, change-flow bundle W-R58, remote visibility W-R77, one proposal per result W-R78 refining W-R31, pre-release channels W-R84, only unexpected fields shown W-R92 |
 | `.agents/rules/git-integration.md` | W-R21 and the accepted W-R32 terminal-evidence refinement, refined by W-R54, W-R57 and W-R58, pre-release channels W-R84 |
 | `.agents/rules/git-recovery.md` | W-R19–W-R20, refined by W-R57 and W-R58, pre-release channels W-R84 |
 | `.agents/rules/requests.md` | W-R63, moved from `planning.md`, extended by W-R71 |
 | `.agents/rules/planning.md` | W-R1–W-R7, W-R12, W-R18 and accepted W-R32 refinements, refined by W-R44, W-R46, W-R47, W-R50, W-R51, W-R56 and W-R57, exceptions to recorded decisions W-R67, remembered restrictions W-R70, routine operations stay transient W-R78, plans removed at acceptance W-R87, session history searched as a lead W-R88 |
-| `.agents/rules/reasoning.md` | W-R43, refined by W-R63 |
+| `.agents/rules/reasoning.md` | W-R43, refined by W-R63, probes explained to the operator W-R91 |
 | `.agents/rules/implementation.md` | W-R37 refined by W-R44, W-R48 and W-R53 |
 | `.agents/rules/documentation.md` | W-R38 refined by W-R39, W-R41 entry-point loadability refined by W-R42, Plan/Changelog lifecycle refined by W-R44, W-R46 and W-R47, investigation records refined by W-R50, seams for W-R53 and W-R57, project bootstrap W-R73 restoring W-R11 in a narrower form, committed Changelogs not added to W-R78, committed and temporary records W-R87 |
 | `.agents/rules/verification.md` | W-R15–W-R17, refined by W-R53 |
@@ -277,3 +277,7 @@ Distilled cross-project rules. Numbering accumulates — do not delete old rules
     - Source: 2026-11-01, workspace-meta: asked how claude-mem could complement the rules, the review found that its defaults would keep corrections, decisions, and work state in a second store, inject note history at start and before reads, answer full reads with note summaries, merge every account's history into one store, and turn on auto-update for its own marketplace.
 - **W-R90 (2026-11-08)** — **Feedback that asks for less constraint loosens or removes the text that imposes the constraint, and when no text imposes it nothing is written, the register included.**
     - Source: 2026-11-08, workspace-meta: a correction against tying an operator's test to one app was routed as a new rule section, and the operator answered that such feedback should not become a rule but should loosen an existing restriction.
+- **W-R91 (2026-11-08)** — **A probe the operator runs or decides on comes with what is already known, which open possibilities it tells apart, and what each result would mean, hypotheses marked as such, so that the operator judges it rather than follows it.**
+    - Source: 2026-11-07, reality-ops: two device tests were suggested with only a short note on reading their results, and the operator asked why each was needed, wanting to judge rather than follow.
+- **W-R92 (2026-11-08)** — **A brief or review before an operation states what will happen, why, the target, the effect, and the risk in one plain line each, adds exclusions, gaps, and a wider approval boundary only when they apply, and lists another field only when its check finds it not as expected.**
+    - Source: 2026-11-08, workspace-meta: after replies too long to follow (reality-ops, 2026-11-06), an eight-field brief and a full publication field list left the operator asking what had been done, why, and to what effect, and the operator had the briefs loosened.
