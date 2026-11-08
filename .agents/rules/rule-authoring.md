@@ -78,6 +78,7 @@ historical provenance.
 | wrong-shaped output | positive recipe describing required parts and order |
 | omitted element | required field/slot in the template already used |
 | condition-dependent behavior | conditional keyed to an observable predicate |
+| over-restriction: the operator asks for less constraint | loosen or remove the text that imposes it; when no text imposes it, write nothing, the register included |
 
 Do not default to prohibitions for shape or omission failures. Express a real
 exception as its own observable condition, not a vague exemption clause.

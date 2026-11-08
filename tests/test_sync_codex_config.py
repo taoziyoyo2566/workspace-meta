@@ -2174,6 +2174,14 @@ class CodexConfigSyncTests(unittest.TestCase):
         self.assertIn("only lasting guidance", normalized_authoring)
         self.assertIn("one line of source", normalized_authoring)
         self.assertNotIn("says where it was handed", normalized_authoring)
+        # Feedback asking for less constraint loosens what imposes it and
+        # adds no rule (W-R90).
+        self.assertIn(
+            "| over-restriction: the operator asks for less constraint | "
+            "loosen or remove the text that imposes it; when no text imposes "
+            "it, write nothing, the register included |",
+            normalized_authoring,
+        )
 
         claude = (ROOT / "CLAUDE.md").read_text()
         for adapter in (self.agents_template.read_text(), claude):
@@ -2214,6 +2222,7 @@ class CodexConfigSyncTests(unittest.TestCase):
             ("W-R63", "reasoning.md"),
             ("W-R71", "requests.md"),
             ("W-R64", "rule-authoring.md"),
+            ("W-R90", "rule-authoring.md"),
         ):
             self.assertEqual(feedback.count(f"- **{entry} ("), 1)
             row = next(

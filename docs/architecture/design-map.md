@@ -678,7 +678,8 @@ lasting content.
   in a project file, or the reverse; rule text growing with incident stories;
   a recurrence answered with louder wording instead of another rule form; a
   new rule duplicating another owner; a memory note that restricts agents
-  without naming its scope.
+  without naming its scope; a correction asking for less constraint answered
+  with a new rule.
 
 ### Claude Runtime
 

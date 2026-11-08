@@ -41,7 +41,7 @@ number. Never renumber. Numbering accumulates; mark replacements rather than del
 | `.agents/rules/secrets.md` | W-R13, refined by W-R53 |
 | `.agents/rules/temporary-files.md` | W-R55, keeping reusable work W-R75 |
 | `.agents/rules/environment-truth.md` | W-R24 refined by W-R44 |
-| `.agents/rules/rule-authoring.md` | W-R8–W-R14, W-R27–W-R28, W-R32, refined by W-R53 and W-R56, feedback intake W-R61, lasting content and one-line sources W-R64, scope of restricting notes W-R70 |
+| `.agents/rules/rule-authoring.md` | W-R8–W-R14, W-R27–W-R28, W-R32, refined by W-R53 and W-R56, feedback intake W-R61, lasting content and one-line sources W-R64, scope of restricting notes W-R70, loosening instead of adding W-R90 |
 
 Earlier entries intentionally retain incident-era terminology and recipes. When an earlier
 “How to apply” conflicts with a later disposition or a canonical module, the later disposition
@@ -275,3 +275,5 @@ Distilled cross-project rules. Numbering accumulates — do not delete old rules
     - Source: 2026-10-30, workspace-meta: dated plans, changelogs, and investigation records had piled up in the public repository as copies beside the current owners, and the operator asked that committed docs hold only durable project-wide content and one current plan, dropped once it is complete.
 - **W-R88 (2026-11-01)** — **A searchable session history, such as a memory plugin's store, is searched with the other records before an investigation and for a problem's recurrence, and what it returns is a lead; it never keeps what an owner holds, adds no more than a short reminder at session start, leaves full reads to the file, is kept to one config dir or split per config dir, and is upgraded only after review.**
     - Source: 2026-11-01, workspace-meta: asked how claude-mem could complement the rules, the review found that its defaults would keep corrections, decisions, and work state in a second store, inject note history at start and before reads, answer full reads with note summaries, merge every account's history into one store, and turn on auto-update for its own marketplace.
+- **W-R90 (2026-11-08)** — **Feedback that asks for less constraint loosens or removes the text that imposes the constraint, and when no text imposes it nothing is written, the register included.**
+    - Source: 2026-11-08, workspace-meta: a correction against tying an operator's test to one app was routed as a new rule section, and the operator answered that such feedback should not become a rule but should loosen an existing restriction.
