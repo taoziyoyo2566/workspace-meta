@@ -88,6 +88,7 @@ Related maps, not copied here:
 | A command for the operator is suggested for the agent's own prompt (`!`), breaks when copied, or comes without the steps to open a terminal | [Capabilities and delegation](#capabilities-and-delegation) |
 | A correction is saved to memory but never routed, or a rule lands in the wrong layer | [Rule authoring and feedback](#rule-authoring-and-feedback) |
 | A read runs with `sudo` without asking, or a denied command is retried another way | [Authorization](#authorization) |
+| An operation a project's committed standing grant covers still waits for approval, or a push or an unnamed target runs under a grant | [Authorization](#authorization), [Publication](#publication) |
 | A rule change is judged only by its wording, or an evaluation scenario quotes the rule it tests | [Rule evaluation harness](#rule-evaluation-harness) |
 | A recorded evaluation result reads higher than later runs, or the rules a cited run measured are gone | [Rule evaluation harness](#rule-evaluation-harness) |
 | Codex asks approval for each safe read, or broad allow rules appear | [Codex runtime](#codex-runtime) |
@@ -112,6 +113,7 @@ brief before it is proposed, run, or handed to the operator.
   [Work That Proceeds Without Another Confirmation](../../.agents/rules/authorization.md#work-that-proceeds-without-another-confirmation),
   [Protected Mutations](../../.agents/rules/authorization.md#protected-mutations),
   [Protected-Action Request Brief](../../.agents/rules/authorization.md#protected-action-request-brief),
+  [Standing Grants](../../.agents/rules/authorization.md#standing-grants),
   [Technical Permission Is Not Semantic Authority](../../.agents/rules/authorization.md#technical-permission-is-not-semantic-authority),
   [Uncertainty](../../.agents/rules/authorization.md#uncertainty).
 - **Routed by**: its row in both adapters (first write, permission or scope

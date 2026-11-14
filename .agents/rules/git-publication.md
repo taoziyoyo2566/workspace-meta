@@ -118,6 +118,12 @@ The user may authorize the unchanged bundle once in ordinary natural language,
 or run some/all commands personally and report completion. Never require
 generated confirmation wording.
 
+Under a standing grant for the change-flow bundle (`authorization.md` Standing
+Grants), its add, commit, fast-forward, and retirement run in the reply that
+shows the diff and the commands; the report names the commit, the main tip
+before and after, and how to undo it. The push still waits for its own
+approval.
+
 For agent execution, expected state transitions caused by earlier displayed
 commands do not invalidate later commands. Stop when paths, content, message,
 refs, range, checks, PR target, or commands drift; a hook changes/rejects

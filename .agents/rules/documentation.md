@@ -144,8 +144,11 @@ instruction or brief forbids writes, reports the missing entry file instead of
 creating it; the delegating session bootstraps before it hands out work in the
 project.
 
-At the first substantive work in a project, including read-only review, check
-the entry file for the runtime in use and create what is missing:
+At the first substantive work in a project, check the entry file for the
+runtime in use and create what is missing. Substantive work starts with the
+first reply that touches the project, whatever it was asked: a question about
+the project, a read-only review, or a change; that reply creates the missing
+files alongside its answer:
 
 1. The canonical owner of the project's agent facts is `AGENTS.md`, the one
    file every agent runtime in the workspace can be given. A project whose

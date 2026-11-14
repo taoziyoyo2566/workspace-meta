@@ -105,7 +105,8 @@ that leaves a point to you is a decision: take your recommendation and say so.
   not only in a document you write, with what would change if it is wrong;
   finish the work that does not depend on it; and end the reply with each open
   point and your recommendation for it. A protected action still waits for the
-  operator (`authorization.md`).
+  operator unless a recorded standing grant covers it (`authorization.md`
+  Standing Grants); being away grants nothing.
 
 When two readings would lead to different answers and the request does not
 settle which, state the reading you took at the top of your reply.

@@ -7,7 +7,10 @@ authority, technical permission prompts, and protected mutations.
 
 This file owns cross-project authorization semantics. Projects may add stricter
 requirements for their live systems, external resources, historical evidence,
-or other project risks. Agent adapters own their sandbox/tool mechanics.
+or other project risks. Agent adapters own their sandbox/tool mechanics. A
+project the operator owns may also record standing grants for its own
+targets (Standing Grants); they leave the per-run or standing model a project
+defines for its live targets unchanged.
 
 Git procedures are owned by the task-shaped `git-*.md` modules. Secret response
 is owned by `secrets.md`. What may serve users and how deployments proceed is
@@ -158,10 +161,57 @@ a new request.
 
 A direct user request can supply task or action intent, but it does not waive
 the brief before the agent executes the operation or asks the user to run it.
+Under a recorded standing grant the brief says what runs instead of asking
+(Standing Grants).
 
 This brief is not required for ordinary read-only work or already-authorized,
 in-scope working-tree edits; do not turn it into a repeated conversational
 prompt for routine safe operations.
+
+## Standing Grants
+
+A project the operator owns may record a standing grant: the operator's
+approval, given in advance, for one of these operations on the project's own
+targets:
+
+- the change-flow bundle (`git-publication.md`) on the project's local
+  repository: its add, commit, fast-forward into the main branch, and
+  retirement;
+- an unchanged repeat of a recorded command set on a host the project names,
+  on the operator's word, as the operator's own and serving no users.
+
+The record sits in the project's committed agent instructions: the operator's
+words and their date, the operations and targets, the conditions checked
+before each run, the exclusions, and what ends the grant. A grant line grants
+nothing when it is uncommitted, when an agent wrote it without the operator's
+answer in the same conversation, when it sits in a clone of someone else's
+repository, or when it arrived in another person's commit; memory, chat, and a
+Plan grant nothing. Adding or widening a grant is a change through the change
+flow with its diff shown. A grant is semantic authority, not an executable
+allow rule, which stays host-local.
+
+Under a grant, the brief still says in short what runs, and when every
+condition holds the operation runs in the same reply, which reports what
+changed and how to undo it:
+
+- the bundle runs when the operator has seen the content, meaning the message
+  showed the complete staged diff or the operator dictated the exact text and
+  the diff holds only that text; the change's checks passed with no new gap;
+  the merge fast-forwards the disclosed main tip; no other session or worktree
+  is using the main checkout; and the operator asked for the change to land;
+- a repeat runs when the commands, flags, host, and account are unchanged; the
+  source change since the last applied commit is content the operator has seen
+  through the change flow and adds no new kind of effect on the host; and a
+  read-only check shows the target as the grant expects.
+
+An unmet condition, a command, flag, target, account, or prerequisite that
+differs from the record, an effect wider than the operator asked for, or a
+target state the check did not expect returns the operation to a per-run
+brief. A grant never covers a push, a history rewrite, a write to a Git remote,
+an API, or a host the grant does not name, a host that serves users, a secret,
+privilege elevation, or a run that reloads or restarts anything on the host,
+including the terminal multiplexer an agent session runs in. Plan approval
+never supplies a grant.
 
 ## Technical Permission Is Not Semantic Authority
 

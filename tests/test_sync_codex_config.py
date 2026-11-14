@@ -2839,6 +2839,33 @@ class CodexConfigSyncTests(unittest.TestCase):
             self.design_map_entry("requests.md"),
         )
 
+    def test_standing_grants_are_recorded_bounded_and_routed(self) -> None:
+        # A standing grant replaces the per-run approval only for what a project
+        # records, under its conditions; it never covers a push, and each owner
+        # that meets it says so.
+        def norm(name: str) -> str:
+            return " ".join((self.rules_dir / name).read_text().split()).lower()
+
+        auth = norm("authorization.md")
+        for phrase in (
+            "## standing grants",
+            "a grant line grants nothing when it is uncommitted",
+            "memory, chat, and a plan grant nothing",
+            "a grant is semantic authority, not an executable allow rule",
+            "a grant never covers a push, a history rewrite",
+            "plan approval never supplies a grant",
+            "under a recorded standing grant the brief says what runs instead of asking",
+        ):
+            self.assertIn(phrase, auth)
+        self.assertIn("the push still waits for its own approval", norm("git-publication.md"))
+        self.assertIn("serving no users is host configuration", norm("deployment.md"))
+        self.assertIn("being away grants nothing", norm("requests.md"))
+        self.assertIn(
+            "substantive work starts with the first reply that touches the project",
+            norm("documentation.md"),
+        )
+        self.assertIn("a standing grant does not cover it", norm("git-branches.md"))
+
     def test_project_bootstrap_has_routed_owners(self) -> None:
         # Projects get their missing agent entry files without asking (W-R73).
         documentation = (self.rules_dir / "documentation.md").read_text()

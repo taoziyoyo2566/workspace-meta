@@ -20,6 +20,13 @@ Every deployment is a protected action. Present the `authorization.md`
 Protected-Action Request Brief before proposing it or asking the user to run
 it; a command-only confirmation is insufficient.
 
+Applying a project's content to a host the project records, on the operator's
+word, as the operator's own and serving no users is host configuration under
+`authorization.md`, not a deployment. A host's role is never inferred from an
+inventory, a hostname, or the absence of services; a host that starts serving
+users becomes a deployment target, and the first application to a host gets a
+per-run brief.
+
 ## Main Branch
 
 Anything that serves users, or can take over that role, runs a commit

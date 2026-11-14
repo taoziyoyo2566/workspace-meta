@@ -19,20 +19,20 @@ number. Never renumber. Numbering accumulates; mark replacements rather than del
 
 | Canonical owner | Consolidated provenance |
 |---|---|
-| `.agents/rules/authorization.md` | W-R13 authorization boundary, W-R23, W-R29–W-R31, W-R34–W-R35, refined by W-R54, elevated reads W-R66, approval labels W-R68, runtime denials W-R69, standing bootstrap authority W-R73, plain briefs W-R92 |
+| `.agents/rules/authorization.md` | W-R13 authorization boundary, W-R23, W-R29–W-R31, W-R34–W-R35, refined by W-R54, elevated reads W-R66, approval labels W-R68, runtime denials W-R69, standing bootstrap authority W-R73, plain briefs W-R92, standing grants W-R93 |
 | `.agents/rules/git.md` | W-R21 inspection/freshness, W-R23, refined by W-R57 |
-| `.agents/rules/git-branches.md` | W-R21–W-R22 and W-R32 branch-contract design refined by W-R40, change flow W-R58, pre-release channels W-R84, older-line fixes from a verified state W-R85 |
-| `.agents/rules/git-publication.md` | W-R25, W-R30 refined by W-R31, change-flow bundle W-R58, remote visibility W-R77, one proposal per result W-R78 refining W-R31, pre-release channels W-R84, only unexpected fields shown W-R92 |
+| `.agents/rules/git-branches.md` | W-R21–W-R22 and W-R32 branch-contract design refined by W-R40, change flow W-R58, pre-release channels W-R84, older-line fixes from a verified state W-R85, an in-place start approved in review W-R95 |
+| `.agents/rules/git-publication.md` | W-R25, W-R30 refined by W-R31, change-flow bundle W-R58, remote visibility W-R77, one proposal per result W-R78 refining W-R31, pre-release channels W-R84, only unexpected fields shown W-R92, the bundle under a standing grant W-R93 |
 | `.agents/rules/git-integration.md` | W-R21 and the accepted W-R32 terminal-evidence refinement, refined by W-R54, W-R57 and W-R58, pre-release channels W-R84 |
 | `.agents/rules/git-recovery.md` | W-R19–W-R20, refined by W-R57 and W-R58, pre-release channels W-R84 |
-| `.agents/rules/requests.md` | W-R63, moved from `planning.md`, extended by W-R71, investigated recommendations W-R83 |
+| `.agents/rules/requests.md` | W-R63, moved from `planning.md`, extended by W-R71, investigated recommendations W-R83, standing grants while away W-R93 |
 | `.agents/rules/planning.md` | W-R1–W-R7, W-R12, W-R18 and accepted W-R32 refinements, refined by W-R44, W-R46, W-R47, W-R50, W-R51, W-R56 and W-R57, exceptions to recorded decisions W-R67, remembered restrictions W-R70, routine operations stay transient W-R78, plans removed at acceptance W-R87, session history searched as a lead W-R88 |
 | `.agents/rules/reasoning.md` | W-R43, refined by W-R63, probes explained to the operator W-R91 |
 | `.agents/rules/implementation.md` | W-R37 refined by W-R44, W-R48 and W-R53 |
-| `.agents/rules/documentation.md` | W-R38 refined by W-R39, W-R41 entry-point loadability refined by W-R42, Plan/Changelog lifecycle refined by W-R44, W-R46 and W-R47, investigation records refined by W-R50, seams for W-R53 and W-R57, project bootstrap W-R73 restoring W-R11 in a narrower form, committed Changelogs not added to W-R78, committed and temporary records W-R87 |
+| `.agents/rules/documentation.md` | W-R38 refined by W-R39, W-R41 entry-point loadability refined by W-R42, Plan/Changelog lifecycle refined by W-R44, W-R46 and W-R47, investigation records refined by W-R50, seams for W-R53 and W-R57, project bootstrap W-R73 restoring W-R11 in a narrower form, committed Changelogs not added to W-R78, committed and temporary records W-R87, bootstrap at the first reply W-R94 |
 | `.agents/rules/verification.md` | W-R15–W-R17, refined by W-R53 |
 | `.agents/rules/file-checks.md` | W-R53 |
-| `.agents/rules/deployment.md` | W-R54 refined by W-R57, pre-release channels W-R84, verified rollback targets W-R85, older-line end W-R86 |
+| `.agents/rules/deployment.md` | W-R54 refined by W-R57, pre-release channels W-R84, verified rollback targets W-R85, older-line end W-R86, the operator's own hosts W-R93 |
 | `.agents/rules/releases.md` | W-R57, pre-release channels W-R84, verified rollback targets W-R85, version numbers and fix tags W-R86 |
 | `.agents/rules/review.md` | W-R13, W-R20, W-R33 and accepted W-R32 refinements, refined by W-R56, problem reports W-R59 |
 | `.agents/rules/problem-follow-up.md` | W-R56, recurrence searched like earlier work W-R88 |
@@ -226,3 +226,9 @@ number. Never renumber. Numbering accumulates; mark replacements rather than del
     - Source: 2026-11-07, reality-ops: tests for the operator to run were suggested with only a short note on reading their results, and the operator asked why each was needed, wanting to judge rather than follow.
 - **W-R92 (2026-11-08)** — **A brief or review before an operation states what will happen, why, the target, the effect, and the risk in one plain line each, adds exclusions, gaps, and a wider approval boundary only when they apply, and lists another field only when its check finds it not as expected.**
     - Source: 2026-11-08, workspace-meta: after replies too long to follow, a brief with many fixed fields and a full publication field list left the operator asking what had been done, why, and to what effect, and the operator had the briefs loosened.
+- **W-R93 (2026-10-20)** — **A project the operator owns may record standing grants in its committed agent instructions, for the change-flow bundle on its local repository and for an unchanged repeat of a recorded command set on the operator's own hosts that serve no users; a granted operation runs in the reply that says what runs once its recorded conditions hold, and a grant never covers a push, a history rewrite, remote or user-facing targets, secrets, privilege elevation, or restarts (refines W-R30, W-R31, and W-R54 for those operations).**
+    - Source: 2026-10-19, user-env: a small task took 42 operator turns because a one-line fix, a two-line README change, and an unchanged re-sync to the operator's own server each waited for a full brief and its own approval, and the operator chose standing grants recorded in the committed entry file.
+- **W-R94 (2026-10-20)** — **Substantive work in a project starts with the first reply that touches it, a question included, and that reply creates the project's missing entry files alongside its answer (refines W-R73).**
+    - Source: 2026-10-19, user-env: the start-of-session warning, the documentation rule, and the bootstrap skill disagreed on when to act, so the agent answered the question and only offered to add the missing entry files.
+- **W-R95 (2026-10-20)** — **An in-place branch start may be approved inside the review that shows the exact checkout and ref change and the dirty-state treatment, such as a change-flow bundle, and a standing grant never covers it.**
+    - Source: 2026-10-19, user-env: in a local repository every change paid a separate review for its branch action on top of its commit bundle, and the operator agreed that a start written into the bundle is approved with it.

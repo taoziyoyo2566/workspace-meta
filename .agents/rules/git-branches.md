@@ -140,8 +140,11 @@ checkout. Do not reuse, move, remove, or silently switch a worktree, and do not
 carry dirty changes unless the reviewed task is specifically preserving those
 changes on the new branch.
 
-An in-place branch action is allowed only when the user explicitly requests it
-and the review states the exact checkout/ref change and dirty-state treatment.
+An in-place branch action is allowed when the user explicitly requests it or
+approves it in a review that states the exact checkout/ref change and
+dirty-state treatment, such as a change-flow bundle whose first step starts the
+change's branch in place; the review also says that other sessions in the same
+checkout see the switch. A standing grant does not cover it.
 Afterward, verify both the branch/ref result and content non-interference.
 
 ## Stash
