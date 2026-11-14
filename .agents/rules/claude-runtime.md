@@ -39,7 +39,8 @@ features to watch:
 - the Agent tool's parameters, subagent frontmatter, the model lineup, prices,
   and the effort advice;
 - `/goal`, workflows, AskUserQuestion, and auto mode;
-- plugins, and a config dir's `remote-settings.json` once it is not `{}`.
+- plugins, including the facts the claude-mem runbook relies on (Memory), and a
+  config dir's `remote-settings.json` once it is not `{}`.
 
 ## Configuration Layers
 
@@ -146,13 +147,31 @@ deliberately when a project needs them, never by the bootstrap.
   (claude-mem's file read gate), read the lines you need with `offset` and
   `limit`, which pass, before relying on the file.
 - One store per OS user would undo the split per config dir above. Enable such
-  a plugin in one config dir only, or give each config dir its own store, and
-  never in a config dir that rule evaluation uses.
-- What it adds to a session stays a short reminder at start. Its injected
-  memory instructions, work-state tools, file history before reads, read gate,
-  folder `CLAUDE.md` files, and copies of a turn's files stay off, and so does
-  its marketplace's auto-update, so each upgrade is checked against these
-  settings first. The claude-mem step of `docs/runbooks/new-vps.md` sets them.
+  a plugin in one config dir only; one store per config dir is untested. Never
+  enable it in the config dir passed to rule evaluation as
+  `--claude-config-dir`, which stays a clean account.
+- What it adds to a session stays a short reminder at start, and besides its
+  tool-less note-taking model it runs no agent tasks in the background. Its
+  injected memory instructions and welcome hint,
+  work-state tools, file history before reads, read gate, folder `CLAUDE.md`
+  files, copies of a turn's files, and background agent runs stay off, and so
+  does its marketplace's auto-update, so each upgrade is checked against these
+  settings first.
+- Its bundled skills are denied when, by default, they take over work a
+  workspace owner governs (planning, executing, reviewing, handing off, or
+  releasing work; goals or progress), write to GitHub or another outside
+  service, install software, or read a whole repository into the session.
+  `docs/runbooks/claude-mem.md` applies all of this.
+- Claude Code facts that runbook relies on, verified on 2.1.316: a
+  `settings.json` `env` entry reaches the session's environment, which its
+  hooks inherit; a plugin skill ignores `skillOverrides`, and a
+  `Skill(<plugin>:<name>)` plus `Skill(<plugin>:<name> *)` pair in
+  `permissions.deny` blocks it without and with arguments, while its
+  description stays in the skill listing (read from the binary; recheck with
+  `/context`); a run with rule evaluation's `--setting-sources project` loads
+  no user plugin; plugin auto-update runs after a session's first message, for
+  marketplaces whose `autoUpdate` is on, which third-party ones are not until
+  an installer sets it.
 
 ## Asking The Operator
 

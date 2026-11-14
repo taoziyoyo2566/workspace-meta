@@ -70,6 +70,7 @@ Related maps, not copied here:
 | A test for the operator comes without what it tells apart or what each result would mean | [Technical reasoning](#technical-reasoning) |
 | A decision lives only in chat or memory, or status from memory contradicts the Plan | [Planning and handoff](#planning-and-handoff), [Memory](#memory) |
 | A decision or correction kept only in a memory plugin's notes, or a file judged from the plugin's summary instead of the file | [Memory](#memory) |
+| A memory plugin runs agent tasks in the background, or its own plan, release, or handoff skill runs in place of a workspace owner | [Memory](#memory) |
 | Two sessions redo one investigation, or the operator relays instructions between sessions | [Planning and handoff](#planning-and-handoff) |
 | A duplicate implementation, history in comments, or policy hard-coded in logic | [Implementation shape](#implementation-shape) |
 | A project has no entry file for the runtime in use, or a Claude session ignores its `AGENTS.md` | [Documentation and entry files](#documentation-and-project-entry-files), [SessionStart evaluator](#sessionstart-evaluator) |
@@ -766,8 +767,9 @@ searchable history on the same terms.
   names memory loading; the runtime's own memory prompts; for searching
   session history, the planning row (an investigation).
 - **Enforced by**: memory phrase tests on `CLAUDE.md` in
-  `tests/test_sync_codex_config.py`; a plugin's own settings and hook
-  switches, set by the runbook's claude-mem step; prose otherwise.
+  `tests/test_sync_codex_config.py`; a plugin's own settings, hook switches,
+  and `Skill` deny rules, set by the
+  [claude-mem runbook](../runbooks/claude-mem.md); prose otherwise.
 - **Project may add**: nothing portable; a project's memory is a host-local
   store under each config dir.
 - **Symptoms**: a decision saved only to memory; a topic file without its
@@ -776,7 +778,9 @@ searchable history on the same terms.
   a subagent assumed to know remembered facts; a plugin's notes or work list
   treated as the record; a file judged from a plugin's note timeline; one
   account's history showing in another account's sessions; a plugin upgraded
-  without its settings being checked again.
+  without its settings being checked again; a memory plugin running agent
+  tasks in the background, or its bundled plan, release, or handoff skill used
+  in place of a workspace owner.
 
 ## Host Integration Mechanisms
 

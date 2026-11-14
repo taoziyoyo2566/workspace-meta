@@ -79,8 +79,8 @@ drafts of version 0.1.2 are in commit `56bfc41`.
 Owner: workspace-meta. A session-history plugin, claude-mem 15.8.0, is
 described as optional host-local recall since 2026-11-01
 ([`claude-runtime.md` Memory](../.agents/rules/claude-runtime.md#memory) and
-the claude-mem step of the [new VPS runbook](runbooks/new-vps.md)); no host
-runs it yet.
+the [claude-mem runbook](runbooks/claude-mem.md)); one host runs it in one
+config dir since 2026-11-01.
 
 - Decided on 2026-11-01, the operator having left the call to the agent
   ("decide by best practice"): the constraints of 2026-08-07 under Memory
@@ -93,11 +93,15 @@ runs it yet.
   and nothing it writes reaches project files or another account. Its
   marketplace's auto-update, which its installer turns on, stays off, so
   every upgrade is reviewed against these settings first.
-- Unverified until the first install: per-config-dir stores through
-  `CLAUDE_MEM_DATA_DIR` and `CLAUDE_MEM_WORKER_PORT` in a config dir's
-  `settings.json` `env` (claude-mem documents that hooks receive that block);
-  and that `make rule-eval` runs, which pass `--setting-sources project`, load
-  no user plugin (the `init` event in a run log lists the plugins).
+- Unverified: one store per config dir through `CLAUDE_MEM_DATA_DIR`,
+  `CLAUDE_MEM_WORKER_PORT`, and a telemetry opt-out in each store; the runbook
+  supports one config dir only. Restart: a second config dir needs the plugin.
+- Waiting: hiding the descriptions of the denied claude-mem skills from every
+  session. A deny rule blocks only the call, and plugin skills ignore
+  `skillOverrides` (`claude-runtime.md` Memory), so the listing keeps them; the
+  runbook gives the counts. Restart: claude-mem marks those skills
+  `disable-model-invocation`, or Claude Code lets settings hide one plugin
+  skill.
 - A managed skill run at a task boundary that searches the store for
   corrections never routed, restart conditions in this file that have
   occurred, and classes that recurred after their rule landed, and reports
