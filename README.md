@@ -128,6 +128,9 @@ Provenance: `feedback-register.md` entry **W-R26**.
   recovery, and troubleshooting procedures.
 - [claude-mem runbook](docs/runbooks/claude-mem.md) owns installing, checking,
   upgrading, and rolling back the optional session-history plugin on a host.
+- [Cross-runtime review runbook](docs/runbooks/cross-runtime-review.md) holds
+  the request template and output schemas for a review by another vendor's
+  agent runtime.
 - [Feedback register](feedback-register.md) preserves rule provenance and
   historical dispositions; `.agents/rules/` contains the current behavior.
 - [Backlog](docs/backlog.md) holds deferred work, later stages, and residual

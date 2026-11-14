@@ -9,7 +9,8 @@ governs.
 This file owns Claude Code mechanics: where Claude reads instructions,
 settings, skills, and memory; its project entry files; how it asks the
 operator; how model, effort, and orchestration features are set; how its
-Bash tool runs commands; and how a long unattended run keeps going. Portable behavior stays with the shared
+Bash tool runs commands; how a long unattended run keeps going; and whether it
+can run as a read-only reviewer for another runtime's session. Portable behavior stays with the shared
 owners, chiefly `requests.md`, `capabilities.md`, `documentation.md`, and
 `planning.md`. The procedure for writing auto memory and the override of
 Claude Code's `!` suggestion stay in the always-loaded Claude adapter
@@ -24,8 +25,8 @@ memory, claude-directory, settings, settings-reference,
 server-managed-settings, permissions, permission-modes, hooks, skills,
 sub-agents, agent-teams, model-config, env-vars, commands, tools-reference,
 goal, workflows, worktrees, and changelog; on platform.claude.com pricing,
-effort, and the pages on choosing a model. The facts of Bash Tool were
-verified against 2.1.325. The evidence is kept in the host evidence store. Re-verify a fact a change relies on after `claude update`, and
+effort, and the pages on choosing a model. The facts of Bash Tool and
+Read-Only Review Runs were verified against 2.1.325. The evidence is kept in the host evidence store. Re-verify a fact a change relies on after `claude update`, and
 at once when the changelog names its feature, then update this file. The
 features to watch:
 
@@ -41,7 +42,9 @@ features to watch:
 - `/goal`, workflows, AskUserQuestion, and auto mode;
 - plugins, including the facts the claude-mem runbook relies on (Memory), and a
   config dir's `remote-settings.json` once it is not `{}`;
-- the Bash tool, and how it treats `set -e`.
+- the Bash tool, and how it treats `set -e`;
+- print-mode permission and tool options, such as `--permission-mode`,
+  `--permission-prompts`, `--tools`, and `--restricted`.
 
 ## Configuration Layers
 
@@ -264,6 +267,15 @@ it sets an effort.
   decision. To suggest one, check its components and token cost with
   `claude plugin details`, then propose the install with the
   `authorization.md` brief, naming each config dir it would go into.
+
+## Read-Only Review Runs
+
+No `claude -p` setup has yet been shown read-only: plan mode blocks edits,
+yet by default it lets the auto mode classifier approve shell commands when
+auto mode is available (`useAutoModeDuringPlan`). Until a logged run on the
+installed version shows a setup whose write attempts, shell commands included,
+are refused, Claude is not the reviewer `review.md` Independent Review calls
+for; record that setup here once one is shown.
 
 ## Long Unattended Runs
 

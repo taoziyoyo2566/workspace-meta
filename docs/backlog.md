@@ -43,6 +43,28 @@ Owner: workspace-meta.
   time on Claude Code 2.1.302 and 2.1.303. Recheck when `capabilities.md`
   Delegation or the pinned model changes, with at least six trials per version.
 
+## Cross-Runtime Review
+
+Owner: workspace-meta. The review by another vendor's runtime that
+[`review.md` Independent Review](../.agents/rules/review.md#independent-review)
+calls for, decided by the operator on 2026-11-14.
+
+- A script that fills the request template, runs the reviewer, and checks the
+  answer and the session record, deferred. Restart: the template has been used
+  two or three times, each use kept in the evidence store, or a manual step was
+  missed.
+- No `claude -p` setup has been shown to refuse writes (Claude Code 2.1.325),
+  so Claude cannot yet be the reviewer. Restart: work that needs Claude's
+  review. Start from a run with only reading tools (`--tools`), no MCP servers
+  (`--strict-mcp-config`), and no hooks, confirm the tool list in its init
+  event, and prove it with a logged write attempt.
+- Native diff review (`codex exec review`) is not used: it reviews a code diff
+  by its own criteria, not a plan or rule change against set questions.
+  Restart: with the script.
+- A rule-evaluation target and control pair for the trigger, deferred.
+  Restart: a review missed or run where none was needed, or the operator
+  approves evaluation usage in clean accounts (Rule Evaluation Stages).
+
 ## Request Intake
 
 Owner: workspace-meta.

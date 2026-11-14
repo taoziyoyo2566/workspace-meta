@@ -2467,6 +2467,137 @@ class CodexConfigSyncTests(unittest.TestCase):
             self.assertIn("rules/capabilities.md`", routes[0])
             self.assertIn(f"rules/{runtime_module}`", routes[0])
 
+    def test_cross_runtime_review_has_routed_owners(self) -> None:
+        # Another vendor's runtime reviews a plan, a shared-rule change, or
+        # content about its own behavior (W-R96): review.md says when and what
+        # the brief fixes, each runtime module how it runs read-only, and the
+        # runbook holds the request template and the output schemas.
+        def part(text: str, heading: str) -> str:
+            self.assertEqual(text.count(heading), 1, heading)
+            return text.split(heading, 1)[1].split("\n## ", 1)[0]
+
+        def flat(text: str) -> str:
+            return " ".join(text.split()).lower()
+
+        review = (self.rules_dir / "review.md").read_text()
+        independent = part(review, "## Independent Review")
+        for invariant in (
+            "have an agent of another vendor's runtime review, read-only",
+            "a written plan for cross-surface or multi-phase work",
+            "a change meant to alter the behavior of the shared rules or their "
+            "adapters",
+            "that runtime is the reviewer and checks it against its installed "
+            "version",
+            "the goal names the open decisions",
+            "reports only what would change a decision, a phase, a check, or a "
+            "fact the work relies on",
+            "up to a stated number of findings",
+            "each with the smallest fix",
+            "recorded operator decisions stand unless a fact under one is wrong",
+            "read-only review runs section of the reviewer's runtime module",
+            "ends after one targeted re-review",
+            "before approval or integration",
+        ):
+            self.assertIn(invariant, flat(independent))
+        named = re.findall(r"~/workspace/([\w./-]+[\w])", independent)
+        self.assertTrue(named)
+        for path in named:
+            self.assertTrue((ROOT / path).is_file(), path)
+
+        for name, heading in (
+            ("planning.md", "## Approval Scope"),
+            ("rule-authoring.md", "## Edit The Whole Relevant Owner"),
+        ):
+            self.assertIn(
+                "check whether `review.md` independent review calls for a "
+                "review by another vendor's runtime",
+                flat(part((self.rules_dir / name).read_text(), heading)),
+                name,
+            )
+
+        codex = (self.rules_dir / "codex-runtime.md").read_text()
+        runs = part(codex, "## Read-Only Review Runs")
+        self.assertRegex(runs, r"codex-cli \d+\.\d+\.\d+")
+        for invariant in (
+            "-s read-only",
+            'approvals_reviewer="user"',
+            "--ignore-rules",
+            "--disable hooks",
+            "--disable apps",
+            'sandbox_mode="read-only"',
+            "--approve-for-me",
+            "thread_settings_applied",
+        ):
+            self.assertIn(invariant, runs)
+        for invariant in (
+            "the jsonl events can leave out a command the sandbox refused",
+            "include no write tool that has not been checked",
+        ):
+            self.assertIn(invariant, flat(runs))
+        self.assertIn("read-only reviewer", flat(part(codex, "## Ownership")))
+        claude_runtime = (self.rules_dir / "claude-runtime.md").read_text()
+        self.assertIn(
+            "no `claude -p` setup has yet been shown read-only",
+            flat(part(claude_runtime, "## Read-Only Review Runs")),
+        )
+
+        def unique_keys(pairs: list[tuple[str, object]]) -> dict[str, object]:
+            keys = [key for key, _ in pairs]
+            self.assertEqual(len(keys), len(set(keys)), keys)
+            return dict(pairs)
+
+        def closed(node: object, where: str) -> None:
+            if isinstance(node, dict):
+                if node.get("type") == "object":
+                    self.assertIs(node.get("additionalProperties"), False, where)
+                    self.assertEqual(
+                        sorted(node["required"]), sorted(node["properties"]), where
+                    )
+                for key, value in node.items():
+                    closed(value, f"{where}/{key}")
+            elif isinstance(node, list):
+                for item in node:
+                    closed(item, where)
+
+        labels = re.findall(r"^- `(P\d)`", part(review, "## Severity"), re.M)
+        self.assertEqual(labels, ["P0", "P1", "P2"])
+        runbook_dir = ROOT / "docs" / "runbooks"
+        runbook = (runbook_dir / "cross-runtime-review.md").read_text()
+        for name, findings, expected in (
+            ("cross-runtime-review.schema.json", "findings", labels),
+            ("cross-runtime-recheck.schema.json", "new_findings", labels[:2]),
+        ):
+            schema = json.loads(
+                (runbook_dir / name).read_text(), object_pairs_hook=unique_keys
+            )
+            closed(schema, name)
+            self.assertIn(f"`{name}`", runbook)
+            for field in schema["properties"]:
+                self.assertIn(f"`{field}`", runbook, (name, field))
+            finding = schema["properties"][findings]["items"]["properties"]
+            self.assertEqual(finding["severity"]["enum"], expected, name)
+
+        self.assertIn("cross-runtime-review.md", self.design_map_entry("review.md"))
+        for module in ("codex-runtime.md", "claude-runtime.md"):
+            self.assertIn("#read-only-review-runs", self.design_map_entry(module))
+
+        register = (ROOT / "feedback-register.md").read_text()
+        self.assertEqual(register.count("- **W-R96 ("), 1)
+        for owner in (
+            "review.md",
+            "planning.md",
+            "rule-authoring.md",
+            "claude-runtime.md",
+            "codex-runtime.md",
+        ):
+            rows = [
+                line
+                for line in register.splitlines()
+                if line.startswith(f"| `.agents/rules/{owner}` |")
+            ]
+            self.assertEqual(len(rows), 1, owner)
+            self.assertIn("W-R96", rows[0])
+
     def test_commands_the_user_runs_have_routed_owners(self) -> None:
         # A command the user runs goes to a new terminal of their own (W-R62)
         # and stays short enough to copy as one line (W-R65); the Claude

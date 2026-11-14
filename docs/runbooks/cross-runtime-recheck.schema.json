@@ -1,0 +1,113 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "verdict",
+    "verdict_reason",
+    "resolutions",
+    "new_findings",
+    "notes"
+  ],
+  "properties": {
+    "verdict": {
+      "type": "string",
+      "enum": [
+        "review_closed",
+        "fix_needed"
+      ]
+    },
+    "verdict_reason": {
+      "type": "string"
+    },
+    "resolutions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "finding",
+          "status",
+          "evidence",
+          "remaining_gap"
+        ],
+        "properties": {
+          "finding": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "resolved",
+              "partially_resolved",
+              "not_resolved"
+            ]
+          },
+          "evidence": {
+            "type": "string"
+          },
+          "remaining_gap": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "new_findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "severity",
+          "location",
+          "claim",
+          "evidence",
+          "impact",
+          "suggestion",
+          "confidence"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "P0",
+              "P1"
+            ]
+          },
+          "location": {
+            "type": "string"
+          },
+          "claim": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "string"
+          },
+          "impact": {
+            "type": "string"
+          },
+          "suggestion": {
+            "type": "string"
+          },
+          "confidence": {
+            "type": "string",
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ]
+          }
+        }
+      }
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

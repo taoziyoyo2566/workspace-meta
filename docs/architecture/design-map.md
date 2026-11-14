@@ -81,6 +81,7 @@ Related maps, not copied here:
 | A file called done is broken: duplicate keys, trailing spaces, a new warning ignored | [File checks](#file-checks) |
 | "Done" without functional proof, or a blocked check reported as passed | [Verification](#verification) |
 | A problem list holds planned work, unverified claims, or misread metrics | [Review and problem reports](#review-and-problem-reports) |
+| A cross-surface or multi-phase plan, a behavior-changing shared-rule change, or content about another vendor's runtime reaches the operator without another vendor's review, or the reviewer could write | [Review and problem reports](#review-and-problem-reports), [Codex runtime](#codex-runtime), [Claude runtime](#claude-runtime) |
 | "Fixed" with no cause or prevention, or a proposal contradicts a recorded decision | [Proposals and follow-up](#proposals-and-problem-follow-up) |
 | Every agent of a workflow runs at the session model and effort, with no allocation shown | [Capabilities and delegation](#capabilities-and-delegation) |
 | A delegated agent breaks a workspace rule or lacks context the main session had | [Capabilities and delegation](#capabilities-and-delegation), [Claude runtime](#claude-runtime) |
@@ -583,23 +584,34 @@ instead of retry loops; gaps reported as gaps.
 
 Review and audit: a frozen scope, a review type and risk lenses,
 evidence-backed findings with severity, when an independent reviewer is
-needed, problem reports in a set form, and when to stop.
+needed, including another vendor's runtime reviewing a cross-surface or
+multi-phase plan, a behavior-changing shared-rule change, or content about its
+own behavior, problem reports in a set form, and when to stop.
 
 - **Owner**: [`review.md`](../../.agents/rules/review.md):
   [Review Shape](../../.agents/rules/review.md#review-shape),
   [Independent Review](../../.agents/rules/review.md#independent-review),
   [Severity](../../.agents/rules/review.md#severity),
   [Problem Reports](../../.agents/rules/review.md#problem-reports),
-  [Completion](../../.agents/rules/review.md#completion).
+  [Completion](../../.agents/rules/review.md#completion). Request template
+  and output schemas for a review by another vendor's runtime:
+  [cross-runtime review runbook](../runbooks/cross-runtime-review.md).
 - **Routed by**: its row in both adapters (review, audit, diagnosis,
-  remediation assessment, or reporting which problems exist).
-- **Enforced by**: problem-report phrase and route tests in
-  `tests/test_sync_codex_config.py`; prose otherwise.
+  remediation assessment, or reporting which problems exist); for another
+  vendor's review, also the pointers in
+  [`planning.md` Approval Scope](../../.agents/rules/planning.md#approval-scope)
+  and
+  [`rule-authoring.md` Edit The Whole Relevant Owner](../../.agents/rules/rule-authoring.md#edit-the-whole-relevant-owner).
+- **Enforced by**: problem-report and cross-runtime review phrase and route
+  tests in `tests/test_sync_codex_config.py`; during such a review, the
+  reviewer's sandbox and the output schema; prose otherwise.
 - **Project may add**: baseline, domain scenarios, severity refinements.
 - **Symptoms**: a problem list holding planned work, unverified claims, or
   misread metrics; a review that silently includes nested repositories or host
   configuration; edits made when only a review was asked; re-audits that only
-  polish wording.
+  polish wording; a cross-surface or multi-phase plan or a behavior-changing
+  shared-rule change put to the operator without another vendor's review; a
+  reviewer that could write or reopened a recorded decision.
 
 ### Proposals And Problem Follow-Up
 
@@ -700,7 +712,8 @@ lasting content.
 Claude Code mechanics only: where Claude reads instructions, settings, skills,
 and memory; its project entry files; how it asks the operator; how model,
 effort, and orchestration features are set; how its Bash tool runs commands;
-and how a long unattended run keeps going. Its facts name the Claude Code version they were verified
+how a long unattended run keeps going; and whether it can run as a read-only
+reviewer for another runtime's session. Its facts name the Claude Code version they were verified
 against and the features whose changes call for a recheck. It never redefines
 portable behavior.
 
@@ -711,12 +724,14 @@ portable behavior.
   [Memory](../../.agents/rules/claude-runtime.md#memory),
   [Asking The Operator](../../.agents/rules/claude-runtime.md#asking-the-operator),
   [Delegation](../../.agents/rules/claude-runtime.md#delegation),
+  [Read-Only Review Runs](../../.agents/rules/claude-runtime.md#read-only-review-runs),
   [Long Unattended Runs](../../.agents/rules/claude-runtime.md#long-unattended-runs).
 - **Routed by**: `CLAUDE.md` only: the row for delegation and Claude Code
   mechanics (instruction or memory loading, config dirs, asking the operator,
   model or effort, `/goal`), the documentation row for Claude's entry files,
   and the [Claude-Specific Runtime](../../CLAUDE.md#claude-specific-runtime)
-  section.
+  section; another runtime's session reads Read-Only Review Runs through
+  `review.md` Independent Review.
 - **Enforced by**: the gate's runtime-module routing check (routed by
   `CLAUDE.md`, never by the Codex adapter); section tests in
   `tests/test_sync_codex_config.py`.
@@ -725,28 +740,36 @@ portable behavior.
 - **Symptoms**: a Claude-only mechanism written into a portable owner; a
   runtime fact relied on after an upgrade changed it; a delegated agent given
   no model or effort; a question asked in plain text where the dialog was
-  available, or asked to a subagent that cannot answer.
+  available, or asked to a subagent that cannot answer; a Claude review run
+  trusted as read-only before a setup was shown to refuse writes.
 
 ### Codex Runtime
 
 Codex mechanics only: sandbox and escalation, execpolicy, deferred tool
-discovery, Codex's project entry files, and the configuration boundary.
+discovery, Codex's project entry files, the configuration boundary, and how
+Codex runs as a read-only reviewer for another runtime's session.
 
 - **Owner**: [`codex-runtime.md`](../../.agents/rules/codex-runtime.md):
   [Sandbox And Escalation](../../.agents/rules/codex-runtime.md#sandbox-and-escalation),
   [Capability Mechanics](../../.agents/rules/codex-runtime.md#capability-mechanics),
   [Project Entry Files](../../.agents/rules/codex-runtime.md#project-entry-files),
+  [Read-Only Review Runs](../../.agents/rules/codex-runtime.md#read-only-review-runs),
   [Configuration Boundary](../../.agents/rules/codex-runtime.md#configuration-boundary).
 - **Routed by**: the Codex adapter only: its capabilities and delegation rows
   when Codex mechanics are needed, its documentation row for Codex's entry
-  files, and its Codex-Specific Runtime section.
+  files, and its Codex-Specific Runtime section; another runtime's session
+  reads Read-Only Review Runs through `review.md` Independent Review.
 - **Enforced by**: the gate's runtime-module routing check; adapter route
-  tests in `tests/test_sync_codex_config.py`. Executable approvals stay
-  host-local in `~/.codex/rules/*.rules`.
+  tests in `tests/test_sync_codex_config.py`; the cross-runtime review test
+  checks Read-Only Review Runs. Executable approvals stay host-local in
+  `~/.codex/rules/*.rules`.
 - **Project may add**: project Codex configuration within the project layer.
 - **Symptoms**: Codex asking approval for each safe read; broad shell allow
   rules; `~/.codex/rules` content copied into a repository; model choices
-  pushed into managed configuration.
+  pushed into managed configuration; a Codex review run without the
+  read-only sandbox, the approvals override, `--ignore-rules`, or disabled
+  hooks and apps, or a resumed one without them; a Codex review answer trusted
+  without its session record.
 
 ### Memory
 

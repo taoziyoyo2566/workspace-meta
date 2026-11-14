@@ -65,11 +65,13 @@ only the layers and surfaces above, so no second ownership matrix exists to
 drift.
 
 `codex-runtime.md` owns only Codex sandbox, execpolicy, deferred discovery,
-project entry files, and configuration mechanics. `claude-runtime.md` owns only
-Claude Code mechanics:
+project entry files, configuration mechanics, and how Codex runs as a
+read-only reviewer. `claude-runtime.md` owns only Claude Code mechanics:
 configuration layers and config dirs, project entry files, memory, asking the
-operator, delegation, the Bash tool, and long unattended runs. Each is routed by its own
-agent's adapter only. Neither may redefine portable behavior.
+operator, delegation, the Bash tool, long unattended runs, and whether it can
+run as a read-only reviewer. Each is routed by its own agent's adapter only; a
+session of the other runtime reads its Read-Only Review Runs section through
+`review.md` Independent Review. Neither may redefine portable behavior.
 
 ## Adapter Rule
 

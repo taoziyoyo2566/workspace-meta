@@ -13,6 +13,9 @@
 !docs/runbooks/
 !docs/runbooks/new-vps.md
 !docs/runbooks/claude-mem.md
+!docs/runbooks/cross-runtime-review.md
+!docs/runbooks/cross-runtime-review.schema.json
+!docs/runbooks/cross-runtime-recheck.schema.json
 !docs/standards/
 !docs/standards/README.md
 !docs/standards/design.md

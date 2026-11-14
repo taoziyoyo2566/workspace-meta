@@ -67,6 +67,9 @@ When editing an agent rule, adapter, or instruction owner:
    simpler form;
 3. land one coherent in-scope change.
 
+Before proposing the change for commit, check whether `review.md` Independent
+Review calls for a review by another vendor's runtime.
+
 This is not authority for unrelated redesign. Preserve unrelated user work and
 historical provenance.
 

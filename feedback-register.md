@@ -26,7 +26,7 @@ number. Never renumber. Numbering accumulates; mark replacements rather than del
 | `.agents/rules/git-integration.md` | W-R21 and the accepted W-R32 terminal-evidence refinement, refined by W-R54, W-R57 and W-R58, pre-release channels W-R84 |
 | `.agents/rules/git-recovery.md` | W-R19–W-R20, refined by W-R57 and W-R58, pre-release channels W-R84 |
 | `.agents/rules/requests.md` | W-R63, moved from `planning.md`, extended by W-R71, investigated recommendations W-R83, standing grants while away W-R93 |
-| `.agents/rules/planning.md` | W-R1–W-R7, W-R12, W-R18 and accepted W-R32 refinements, refined by W-R44, W-R46, W-R47, W-R50, W-R51, W-R56 and W-R57, exceptions to recorded decisions W-R67, remembered restrictions W-R70, routine operations stay transient W-R78, plans removed at acceptance W-R87, session history searched as a lead W-R88 |
+| `.agents/rules/planning.md` | W-R1–W-R7, W-R12, W-R18 and accepted W-R32 refinements, refined by W-R44, W-R46, W-R47, W-R50, W-R51, W-R56 and W-R57, exceptions to recorded decisions W-R67, remembered restrictions W-R70, routine operations stay transient W-R78, plans removed at acceptance W-R87, session history searched as a lead W-R88, the check for another vendor's review W-R96 |
 | `.agents/rules/reasoning.md` | W-R43, refined by W-R63, probes explained to the operator W-R91 |
 | `.agents/rules/implementation.md` | W-R37 refined by W-R44, W-R48 and W-R53 |
 | `.agents/rules/documentation.md` | W-R38 refined by W-R39, W-R41 entry-point loadability refined by W-R42, Plan/Changelog lifecycle refined by W-R44, W-R46 and W-R47, investigation records refined by W-R50, seams for W-R53 and W-R57, project bootstrap W-R73 restoring W-R11 in a narrower form, committed Changelogs not added to W-R78, committed and temporary records W-R87, bootstrap at the first reply W-R94 |
@@ -34,15 +34,16 @@ number. Never renumber. Numbering accumulates; mark replacements rather than del
 | `.agents/rules/file-checks.md` | W-R53 |
 | `.agents/rules/deployment.md` | W-R54 refined by W-R57, pre-release channels W-R84, verified rollback targets W-R85, older-line end W-R86, the operator's own hosts W-R93 |
 | `.agents/rules/releases.md` | W-R57, pre-release channels W-R84, verified rollback targets W-R85, version numbers and fix tags W-R86 |
-| `.agents/rules/review.md` | W-R13, W-R20, W-R33 and accepted W-R32 refinements, refined by W-R56, problem reports W-R59 |
+| `.agents/rules/review.md` | W-R13, W-R20, W-R33 and accepted W-R32 refinements, refined by W-R56, problem reports W-R59, another vendor's review W-R96 |
 | `.agents/rules/problem-follow-up.md` | W-R56, recurrence searched like earlier work W-R88 |
 | `.agents/rules/capabilities.md` | W-R18 and accepted W-R32 refinements, refined by W-R44, W-R52, W-R53 and W-R55, quality before speed W-R60, where the user runs a command W-R62, command length W-R65, delegation W-R72, opening the user's terminal W-R76, recommending before a cut W-R83 |
-| `.agents/rules/claude-runtime.md` | Claude mechanics for W-R71, W-R72 and W-R73, session-history plugins W-R88 refined by W-R89, the scratch path's length W-R81 |
-| `.agents/host-templates/README-agents.md` | W-R28, W-R36, every agent config dir W-R74, plugin stores outside the config dirs W-R88 |
+| `.agents/rules/claude-runtime.md` | Claude mechanics for W-R71, W-R72 and W-R73, session-history plugins W-R88 refined by W-R89, the scratch path's length W-R81, the read-only reviewer gap W-R96 |
+| `.agents/rules/codex-runtime.md` | read-only review runs W-R96 |
+| `.agents/host-templates/README-agents.md` | W-R28, W-R36, every agent config dir W-R74, plugin stores outside the config dirs W-R88, runtime modules read across runtimes W-R96 |
 | `.agents/rules/secrets.md` | W-R13, refined by W-R53 |
 | `.agents/rules/temporary-files.md` | W-R55, keeping reusable work W-R75, path-length limits W-R81 |
 | `.agents/rules/environment-truth.md` | W-R24 refined by W-R44 |
-| `.agents/rules/rule-authoring.md` | W-R8–W-R14, W-R27–W-R28, W-R32, refined by W-R53 and W-R56, feedback intake W-R61, lasting content and one-line sources W-R64, scope of restricting notes W-R70, loosening instead of adding W-R90 |
+| `.agents/rules/rule-authoring.md` | W-R8–W-R14, W-R27–W-R28, W-R32, refined by W-R53 and W-R56, feedback intake W-R61, lasting content and one-line sources W-R64, scope of restricting notes W-R70, loosening instead of adding W-R90, the check for another vendor's review W-R96 |
 
 ---
 
@@ -232,3 +233,5 @@ number. Never renumber. Numbering accumulates; mark replacements rather than del
     - Source: 2026-10-19, user-env: the start-of-session warning, the documentation rule, and the bootstrap skill disagreed on when to act, so the agent answered the question and only offered to add the missing entry files.
 - **W-R95 (2026-10-20)** — **An in-place branch start may be approved inside the review that shows the exact checkout and ref change and the dirty-state treatment, such as a change-flow bundle, and a standing grant never covers it.**
     - Source: 2026-10-19, user-env: in a local repository every change paid a separate review for its branch action on top of its commit bundle, and the operator agreed that a start written into the bundle is approved with it.
+- **W-R96 (2026-11-14)** — **An agent of another vendor's runtime reviews read-only, before the operator decides, a written plan for cross-surface or multi-phase work, a change meant to alter the behavior of the shared rules or their adapters, and content that states how another vendor's runtime behaves, which that runtime checks on its installed version; its brief names the open decisions, sets a few questions in advance, and caps the findings at those that would change a decision, a phase, a check, or a relied-on fact, each with the smallest fix, with recorded decisions left standing.**
+    - Source: 2026-11-14, workspace-meta: a read-only review of a multi-phase plan by another vendor's agent found four material problems the authoring session had missed and checked that agent's own runtime facts on its installed version, and the operator made the practice standing for three situations.

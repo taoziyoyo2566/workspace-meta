@@ -133,6 +133,9 @@ conflicting implementation details; parent approval does not approve a
 conflicting child; implementation approval does not authorize Git publication,
 external writes, or live mutation. A pending child blocks only its named scope.
 
+Before asking the operator to approve a written plan, check whether
+`review.md` Independent Review calls for a review by another vendor's runtime.
+
 At `APPROVED`, stable Plan content freezes. Ordinary implementation progress,
 failed attempts, retries, routine repairs, intermediate hypotheses, command
 output, and intermediate verification stay in transient task context rather

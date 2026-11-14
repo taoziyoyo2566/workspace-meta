@@ -64,9 +64,28 @@ independent reviewer from observable blast radius, reversibility, recovery, and
 the review channels permitted by active instructions. Do not hard-code an
 agent/tool or treat self-review as categorically invalid.
 
+Have an agent of another vendor's runtime review, read-only, before the
+operator decides on:
+
+- a written plan for cross-surface or multi-phase work;
+- a change meant to alter the behavior of the shared rules or their adapters;
+- content that states how another vendor's runtime behaves; that runtime is
+  the reviewer and checks it against its installed version.
+
+Brief the reviewer as `capabilities.md` Delegation says, with these points
+fixed: the goal names the open decisions the review informs; a few questions
+are set in advance; it reports only what would change a decision, a phase, a
+check, or a fact the work relies on, up to a stated number of findings, each
+with the smallest fix; recorded operator decisions stand unless a fact under
+one is wrong. Run it as the Read-Only Review Runs section of the reviewer's
+runtime module in this directory says.
+`~/workspace/docs/runbooks/cross-runtime-review.md` holds a request template
+and output schemas to adapt. The review's findings count once checked
+(Problem Reports), and it ends after one targeted re-review (Completion).
+
 If independent review is required but unavailable, report the gap and require
-the applicable human review before integration. A waiver names its authority
-and residual risk.
+the applicable human review before approval or integration. A waiver names its
+authority and residual risk.
 
 ## Severity
 
