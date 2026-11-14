@@ -66,6 +66,7 @@ Related maps, not copied here:
 | Questions the repository could answer, several rounds of questions, or none on an ambiguous request | [Understanding requests](#understanding-requests), [Claude runtime](#claude-runtime) |
 | Work stops while the operator is away, or grows because nobody could object | [Understanding requests](#understanding-requests), [Claude runtime](#claude-runtime) |
 | A floated idea is answered without what done would mean or how it would be used | [Understanding requests](#understanding-requests) |
+| An idea or a "should we...?" question is carried out, or answered with an offer to follow the operator's preference, instead of a recommendation | [Understanding requests](#understanding-requests), [Capabilities and delegation](#capabilities-and-delegation) |
 | A claim from memory, another session, or the operator stated as fact; "confirmed" after ruling out one cause | [Technical reasoning](#technical-reasoning) |
 | A test for the operator comes without what it tells apart or what each result would mean | [Technical reasoning](#technical-reasoning) |
 | A decision lives only in chat or memory, or status from memory contradicts the Plan | [Planning and handoff](#planning-and-handoff), [Memory](#memory) |
@@ -404,7 +405,10 @@ stands for, and whether to ask the operator or proceed on stated assumptions.
   whole need or as constraints; one case fixed while identical ones go
   unlisted; questions the repository could answer, a second round, or none on
   an ambiguous request; work stopped while the operator is away; a floated
-  idea answered without what done would mean or its usage scenarios.
+  idea answered without what done would mean or its usage scenarios; an idea
+  or a "should we...?" question carried out, or answered with an offer to
+  follow the operator's preference, instead of an investigated recommendation;
+  a question about one step answered with a full brief.
 
 ### Technical Reasoning
 
@@ -653,7 +657,8 @@ reported), and where and how the operator runs a command handed to them.
 - **Symptoms**: every agent of a workflow at the session model and effort,
   with no allocation shown; a delegated agent working without the constraints
   the main session had; effort, agents, or verification cut to save time
-  without asking; a delegated result reported without checking its evidence;
+  without asking; a question about lowering a setting taken as the decision
+  to lower it; a delegated result reported without checking its evidence;
   a command for the operator suggested for the agent's own prompt, such as
   Claude Code's `!` prefix, where a passphrase prompt returns unanswered; a
   multi-line or overlong command handed over to paste; a command handed over

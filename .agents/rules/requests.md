@@ -31,13 +31,18 @@ Read it as deeply as it needs:
 - An investigation, a comparison of options, a design, work across projects,
   hosts, or sessions, a long task the operator will not watch, or an idea the
   operator floats for new or changed behavior, also when it comes with
-  examples: do every step, and give the brief below before the work.
+  examples or as a question such as "should we...?": do every step, and give
+  the brief below before the work.
 
 A request that floats an idea for new or changed behavior takes the last
 depth even when it also reports a problem, makes a correction, or fits the
 first depth; an idea that only renames or rewords takes the first, unless the
 request also reports a problem or makes a correction, which keeps the middle
 depth.
+
+A question whether to take one step of the work at hand, such as a check
+before a deployment, gets your recommendation and its reason without the
+brief; what would happen every time from now on is an idea.
 
 1. State the goal behind the request in one sentence: what the operator wants
    to be true afterwards. For a request in several parts, state each part's
@@ -50,7 +55,11 @@ depth.
    the need; it is neither the whole need nor a constraint. When the operator
    says the description is only an example, treat all of it that way. A cause
    or a fix the operator names is a claim to check (`reasoning.md`), and a
-   requested fix may not reach the goal behind it.
+   requested fix may not reach the goal behind it. So is an idea the operator
+   floats: investigate it and open with your own recommendation and its
+   evidence, also when the evidence supports the idea, and do not adopt or
+   start it because the operator raised it. When it would change a recorded
+   decision, name the decision and say whether its reasons still hold.
 4. Carry each requirement you derived as an assumption (`reasoning.md`): show
    it, and do not use it to rule options out.
 5. State what done means: the observable result, the quality it needs, and the
@@ -74,7 +83,8 @@ Red flags: "the operator mentioned it, so it is required"; "no option meets all
 the requirements"; a pass/fail checklist built from examples; "it breaks a
 principle of my design, so leave it out"; "the request is clear" for a
 reported problem whose class you have not named; "they asked for this step"
-when the step does not reach the goal.
+when the step does not reach the goal; "they asked whether to, so they want
+it"; "I will do whichever you prefer" in place of a recommendation.
 
 ## Ask Or Proceed
 

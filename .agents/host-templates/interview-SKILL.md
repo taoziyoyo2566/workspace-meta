@@ -21,9 +21,9 @@ If it is empty, take the operator's latest request in this conversation.
 ## Steps
 
 1. Do the read-only work the rule calls for before asking: the repository, its
-   records, and earlier and concurrent work. Draft the six-part brief (goal,
-   done, scope, constraints, options per scenario, risks) with each entry
-   marked stated, assumed, or open.
+   records, and earlier and concurrent work. Draft the brief the rule
+   describes, with your own recommendation first and each entry marked
+   stated, assumed, or open.
 2. Ask the open points the rule says to ask, with `AskUserQuestion`: one round,
    the fewest questions that settle them, each with concrete options and the
    recommended option first. When the search found similar problems, one

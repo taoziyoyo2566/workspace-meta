@@ -105,11 +105,13 @@ that cuts work short. Propose a change of method only when it also improves
 the result, and say how; narrowing each delegated task to the points that
 decide the question, for example, removes noise as well as time.
 
-When the operator asks how to go faster, state what each option costs in
-quality; the operator decides. Once the operator has raised speed or cost,
-the same holds for any cut in depth, agents, or verification: state its
-quality cost and let the operator decide before making it. Proportional depth
-(`reasoning.md`) is set by what the decision needs, not by time.
+When the operator asks how to go faster or use less, or whether to lower a
+setting, first recommend from the result's quality, with its evidence, then
+state what each option costs in quality; the operator decides. A question
+about a cut is not a decision to make it. Once the operator has raised speed
+or cost, the same holds for any cut in depth, agents, or verification: state
+its quality cost and let the operator decide before making it. Proportional
+depth (`reasoning.md`) is set by what the decision needs, not by time.
 
 ## Commands The User Runs
 

@@ -2337,6 +2337,8 @@ class CodexConfigSyncTests(unittest.TestCase):
                     "only when it also improves the result",
                     "the operator decides",
                     "let the operator decide before making it",
+                    "first recommend from the result's quality, with its evidence",
+                    "a question about a cut is not a decision to make it",
                 ),
                 ("slow or costly work",),
                 "quality before speed",
@@ -2805,6 +2807,16 @@ class CodexConfigSyncTests(unittest.TestCase):
         self.assertIn("an idea the operator floats for new or changed behavior, also "
                       "when it comes with examples", idea[0])
         self.assertIn("do every step, and give the brief below before the work", idea[0])
+        self.assertIn("or as a question such as", idea[0])
+        for phrase in (
+            "a question whether to take one step of the work at hand",
+            "gets your recommendation and its reason without the brief",
+            "so is an idea the operator floats: investigate it and open with "
+            "your own recommendation and its evidence",
+            "do not adopt or start it because the operator raised it",
+            "name the decision and say whether its reasons still hold",
+        ):
+            self.assertIn(phrase, whole)
         self.assertEqual([d for d in depths if "idea" in d], idea)
         middle = [d for d in depths if d.startswith("a reported problem")]
         self.assertEqual(len(middle), 1)
