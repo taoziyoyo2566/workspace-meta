@@ -33,7 +33,7 @@ mix with workspace-meta history.
 Before this repo, the middle layer belonged to no repository: an edit on one
 machine was invisible everywhere else, while the existing "multi-machine sync"
 rules only covered project-repo artifacts. This repo closes that gap.
-Full provenance: `feedback-register.md` entry **W-R26**.
+Provenance: `feedback-register.md` entry **W-R26**.
 
 ### Design decisions
 

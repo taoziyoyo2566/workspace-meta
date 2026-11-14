@@ -2281,7 +2281,7 @@ class CodexConfigSyncTests(unittest.TestCase):
             )
             self.assertIn(entry, row)
 
-        # From W-R62 on, an entry is the rule plus one line of source.
+        # Every entry is the rule plus one line of source.
         entries: dict[int, list[str]] = {}
         current = None
         for line in feedback.splitlines():
@@ -2293,14 +2293,17 @@ class CodexConfigSyncTests(unittest.TestCase):
                 entries[current].append(line)
             elif line.strip():
                 current = None
-        new_entries = {
-            number: lines for number, lines in entries.items() if number >= 62
-        }
-        self.assertGreaterEqual(len(new_entries), 2)
-        for number, lines in new_entries.items():
+        headers = [
+            line for line in feedback.splitlines() if line.startswith("- **W-R")
+        ]
+        self.assertEqual(len(entries), len(headers))
+        self.assertGreaterEqual(len(entries), 2)
+        for number, lines in entries.items():
             self.assertEqual(len(lines), 1, f"W-R{number}")
-            self.assertTrue(
-                lines[0].startswith("    - Source: "), f"W-R{number}"
+            self.assertRegex(
+                lines[0],
+                r"^    - Source: \d{4}-\d{2}-\d{2}, [^:]+: .+\.$",
+                f"W-R{number}",
             )
 
     def test_feedback_intake_problem_reports_and_quality_have_routed_owners(
