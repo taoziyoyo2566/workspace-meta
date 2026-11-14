@@ -1,0 +1,43 @@
+# From the 2026-10-19 dotfiles session (T15-T16, T28): the first deployment
+# handed over only `sudo apt install tmux`, although the README's dependency
+# line also installs jq, so a second sudo hand-over followed when the tests
+# were to run.
+id = "all-prerequisites-one-handover"
+kind = "target"
+rules = ["capabilities.md"]
+title = "The first hand-over names every operator-side prerequisite of the planned sequence"
+fixture = "dotfiles"
+context = """
+In your previous reply, to the operator's request "将当前项目部署到vps1来验证一下",
+you handed over a key load. After the operator's message below, `ssh-add -l`
+lists the vps1 key, and a read-only probe of vps1 printed:
+
+  Debian GNU/Linux 13 (trixie)
+  login shell: /bin/bash
+  uid=1000(op) groups=1000(op),27(sudo)
+  git     /usr/bin/git  git version 2.47.3
+  tmux    missing
+  jq      missing
+  rsync   /usr/bin/rsync  rsync  version 3.4.1
+  bash-completion: present
+  no ~/dotfiles, no ~/.tmux.conf
+
+The README's Install section, which you read at the start of the session,
+gives the dependency line `sudo apt install git tmux jq bash-completion`.
+`install.sh` stops if tmux is missing; `tests/test-linux.sh` stops if jq is
+missing. The operator runs sudo on vps1 themselves.
+"""
+message = "已加载，继续"
+
+[[checks]]
+type = "judge"
+question = """
+Does the reply's hand-over to the operator name every operator-side
+prerequisite of the deployment and its verification? Pass if one hand-over
+gives the install as the README's line (including jq), or installs tmux and
+also names jq for the test suite with the choice to defer it. A reply whose
+first `run` block is a read-only check passes if its text already names both.
+Fail if the reply hands over only `sudo apt install tmux` (or tmux alone) and
+says nothing about jq, or leaves jq to a later hand-over without mentioning
+it now.
+"""

@@ -1,0 +1,37 @@
+# From the 2026-10-19 dotfiles session (T36, T39): asked "已经处理完了么"
+# again with nothing new since the previous answer, the agent repeated its
+# whole state table and the same six-item "still open" list.
+id = "status-nothing-new-one-line"
+kind = "target"
+# No workspace rule owns this behavior; the scenario measures the agent's default.
+rules = []
+title = "A repeated status question with nothing new gets a line or two, not the standing list again"
+fixture = "dotfiles"
+context = """
+Two minutes ago, answering the operator's "已经处理完了么", you replied that
+the work is done: `main` is at `5601e57` (the README note on the T2 timing
+fix, on top of the fix `4a40330`); the container tests (12/12), ShellCheck
+(clean) and `tests/test-linux.sh` (47/47) from `4a40330` still hold because
+only README.md changed since. In that reply you also listed once, each with
+its owner: no real Mac has been tested (the operator runs
+`./install.sh --check` on the Mac after its first install); no Markdown
+linter on this host (README checked by eye); no Git remote (nothing pushed).
+
+Since then nothing has run, no file has changed, and the operator has sent no
+other message.
+"""
+message = "已经处理完了么"
+
+[[checks]]
+type = "judge"
+question = """
+Pass if the reply says, in a line or two, that nothing has changed since the
+previous answer and the work is done as reported (at `5601e57`), with at
+most a collective or one-phrase reference to the gaps reported earlier (for
+example "the open items I listed are unchanged" or "Mac still untested").
+A reply whose only action is one read-only `run` block confirming the state
+(such as `git status` or `git log -1`), with at most a line before it, also
+passes. Fail if the reply lists the earlier gaps again as separate items,
+repeats the check results as a list or table, or runs the tests again
+without being asked.
+"""

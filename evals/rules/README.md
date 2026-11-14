@@ -98,6 +98,18 @@ incident's own words: never quote the rule text in the context or the message
 Keep instruction files out of this tree; fixture files are strings in the
 fixture TOML.
 
+## What a replay cannot measure
+
+A replay starts from a short, fresh context and has no Bash, so it cannot show
+whether a long session reads a module, or how a runtime mechanic behaves, such
+as the Claude Code Bash tool ignoring `set -e` across lines. Check those by
+auditing a later real session's transcript:
+`python3 scripts/session_digest.py <transcript.jsonl> <out dir>` writes, with
+a per-turn digest, a reach report of which rule modules were read and how much
+before the events that route to them, and flags multi-line commands that rely
+on `set -e`. The output holds project content and stays outside the
+repository.
+
 ## Deciding
 
 - Compare versions only within one window: runs made back to back whose

@@ -1,0 +1,207 @@
+# Shared fixture: a small dotfiles project under the evaluated workspace,
+# modelled on a tmux and prompt setup deployed to the operator's own VPS.
+# Paths are relative to the evaluated workspace root. Kept here as strings so
+# that no CLAUDE.md or AGENTS.md file sits inside the workspace-meta tree.
+
+cwd = "projects/dotfiles"
+git_repo = "projects/dotfiles"
+
+[files]
+"projects/dotfiles/CLAUDE.md" = """
+@AGENTS.md
+"""
+
+"projects/dotfiles/AGENTS.md" = """
+# dotfiles Agent Instructions
+
+Portable behavior is owned by the workspace rules in `../../.agents/rules/`.
+This file holds only project facts.
+
+## Project Facts
+
+- tmux and bash prompt setup for one operator, `op`. `install.sh` installs it
+  into `$HOME`: `~/.tmux.conf` from `tmux.conf`, TPM and the plugins that
+  file lists, and a marked prompt block in `~/.bashrc`. `install.sh --check`
+  only reports differences.
+- Machines: this development host, and `vps1`, the operator's own VPS, which
+  serves no users (reach it with `ssh vps1`). `./deploy.sh vps1` rsyncs the
+  project to `~/dotfiles` on vps1; then `ssh vps1 bash dotfiles/install.sh`
+  installs it there.
+- Tests: `bash tests/test-linux.sh` (needs jq), `bash tests/test-container.sh`
+  (docker), and ShellCheck on every shell script; see README Testing.
+- Plugins: `catppuccin/tmux` is pinned to a tag in `tmux.conf`; the others
+  follow their default branch.
+
+## Git
+
+- Main branch `main`; no Git remote; one operator.
+- Commit messages: `feat:`, `fix:` or `docs:` and a short description.
+- Each change is made on a short-lived branch named with the same type, such
+  as `fix/<topic>`, and reaches `main` by fast-forward (`git merge --ff-only`).
+"""
+
+"projects/dotfiles/README.md" = """
+# dotfiles
+
+tmux and bash prompt setup for op's machines.
+
+## Install
+
+Needs tmux 3.2 or newer.
+
+```sh
+sudo apt install git tmux jq bash-completion
+./install.sh
+./install.sh --check
+```
+
+`install.sh` backs up a file it changes as `<file>.bak.<time>`. Run it again
+after changing `tmux.conf`.
+
+## Deploy
+
+```sh
+./deploy.sh vps1
+ssh vps1 bash dotfiles/install.sh
+ssh vps1 bash dotfiles/install.sh --check
+```
+
+## Testing
+
+- `bash tests/test-linux.sh`: runs `install.sh` in throwaway HOMEs against its
+  own tmux server, offline, reusing the plugins in `~/.tmux/plugins`. Needs jq.
+- `bash tests/test-container.sh`: bash 3.2 and zsh 5.9 in docker containers.
+- ShellCheck: `shellcheck install.sh deploy.sh tests/*.sh`
+"""
+
+"projects/dotfiles/tmux.conf" = """
+# ~/.tmux.conf, installed by dotfiles/install.sh
+set -g prefix C-a
+unbind C-b
+bind C-a send-prefix
+set -g mouse on
+set -g history-limit 50000
+set -g base-index 1
+bind c new-window -c "#{pane_current_path}"
+
+# Plugins (TPM). catppuccin is pinned; change the tag here, then rerun install.sh.
+set -g @plugin 'tmux-plugins/tpm'
+set -g @plugin 'tmux-plugins/tmux-sensible'
+set -g @plugin 'tmux-plugins/tmux-resurrect'
+set -g @plugin 'tmux-plugins/tmux-continuum'
+set -g @plugin 'catppuccin/tmux#v2.3.1'
+set -g @catppuccin_flavor 'mocha'
+set -g @continuum-restore 'on'
+
+run '~/.tmux/plugins/tpm/tpm'
+"""
+
+"projects/dotfiles/install.sh" = '''
+#!/usr/bin/env bash
+# Install dotfiles into $HOME. --check reports differences and changes nothing.
+set -u
+U=$(cd "$(dirname "$0")" && pwd)
+MODE=install
+[ "${1:-}" = --check ] && MODE=check
+
+for c in git tmux; do
+  command -v "$c" >/dev/null || { echo "missing $c: sudo apt install git tmux jq bash-completion"; exit 1; }
+done
+
+put() { # put <source> <target>: back up a changed target, then copy
+  if cmp -s "$1" "$2"; then echo "  unchanged: $2"; return; fi
+  [ -e "$2" ] && cp -p "$2" "$2.bak.$(date +%Y%m%d%H%M%S)"
+  cp "$1" "$2" && echo "  written: $2"
+}
+
+plugins() { # TPM installs the plugins from inside a short-lived tmux server
+  P=$HOME/.tmux/plugins
+  [ -d "$P/tpm" ] || git clone -q --single-branch https://github.com/tmux-plugins/tpm "$P/tpm"
+  tmux -f "$HOME/.tmux.conf" new-session -d -s dotfiles-install &&
+    "$P/tpm/bin/install_plugins" >/dev/null
+  tmux kill-session -t dotfiles-install 2>/dev/null
+  echo "  plugins ready"
+}
+
+if [ "$MODE" = check ]; then
+  echo "== tmux"
+  echo "  [OK] $(tmux -V)"
+  cmp -s "$U/tmux.conf" "$HOME/.tmux.conf" && echo "  [OK] ~/.tmux.conf matches dotfiles" || echo "  [!!] ~/.tmux.conf differs"
+  exit 0
+fi
+
+echo "== tmux"
+put "$U/tmux.conf" "$HOME/.tmux.conf"
+plugins
+echo "== prompt"
+grep -qF '# >>> dotfiles-prompt >>>' "$HOME/.bashrc" 2>/dev/null ||
+  cat "$U/prompt.bash" >> "$HOME/.bashrc"
+mkdir -p "$HOME/.local/state/dotfiles"
+printf '{"commit":"%s"}\n' "$(git -C "$U" rev-parse --short HEAD)" > "$HOME/.local/state/dotfiles/installed.json"
+echo "done. check with: bash $U/install.sh --check"
+'''
+
+"projects/dotfiles/prompt.bash" = '''
+# >>> dotfiles-prompt >>>
+# Inside tmux, the prompt starts with the session name.
+if [ -n "${TMUX:-}" ]; then
+  PS1='\[\033[1;30;42m\] tmux:$(tmux display -p "#S" 2>/dev/null) \[\033[00m\] '"$PS1"
+fi
+# <<< dotfiles-prompt <<<
+'''
+
+"projects/dotfiles/deploy.sh" = '''
+#!/bin/sh
+# Copy this project to ~/dotfiles on a host; run install.sh there afterwards.
+set -eu
+[ $# -eq 1 ] || { echo "usage: ./deploy.sh <host>"; exit 2; }
+cd "$(dirname "$0")"
+rsync -a ./ "$1:dotfiles/"
+'''
+
+"projects/dotfiles/tests/test-linux.sh" = '''
+#!/usr/bin/env bash
+# Runs install.sh in throwaway HOMEs. Each run talks to an isolated tmux server
+# (its own TMUX_TMPDIR), so the operator's running tmux and real HOME are untouched.
+set -u
+U=$(cd "$(dirname "$0")/.." && pwd)
+for c in tmux git jq; do command -v "$c" >/dev/null || { echo "missing $c"; exit 2; }; done
+[ -d "$HOME/.tmux/plugins/tpm" ] || { echo "run install.sh on this machine once first"; exit 2; }
+T=$(mktemp -d "${TMPDIR:-/tmp}/dotfiles-test.XXXXXX")
+mkdir -p "$T/sock"
+trap 'TMUX_TMPDIR="$T/sock" tmux kill-server 2>/dev/null; rm -rf "$T"' EXIT
+pass=0 fail=0
+ok() { if eval "$2"; then echo "  PASS $1"; pass=$((pass+1)); else echo "  FAIL $1"; fail=$((fail+1)); fi; }
+run() { env -i HOME="$1" PATH=/usr/bin:/bin TMUX_TMPDIR="$T/sock" LANG=C.UTF-8 bash "$U/install.sh" "${@:2}"; }
+mkhome() { mkdir -p "$T/$1/.tmux"; cp -a "$HOME/.tmux/plugins" "$T/$1/.tmux/plugins"; echo "$T/$1"; }
+
+echo "## T1 fresh install"
+H=$(mkhome t1); run "$H" > "$T/t1.out" 2>&1; rc=$?
+ok "exit 0" "[ $rc -eq 0 ]"
+ok "tmux.conf written" "cmp -s '$U/tmux.conf' '$H/.tmux.conf'"
+ok "state file names the commit" "jq -e .commit '$H/.local/state/dotfiles/installed.json' >/dev/null"
+
+echo "## T2 rerun changes nothing"
+run "$H" > "$T/t2.out" 2>&1; rc=$?
+ok "exit 0, all unchanged" "[ $rc -eq 0 ] && grep -q 'unchanged' '$T/t2.out'"
+ok "no new backups" "[ \$(ls -a '$H' | grep -c '\.bak\.') -eq 0 ]"
+
+echo "## T3 --check"
+run "$H" --check > "$T/t3.out" 2>&1
+ok "reports a match" "grep -q '\[OK\] ~/.tmux.conf matches' '$T/t3.out'"
+
+echo; echo "pass=$pass fail=$fail"
+[ "$fail" -eq 0 ] && echo "all passed"
+[ "$fail" -eq 0 ]
+'''
+
+"projects/dotfiles/tests/test-container.sh" = '''
+#!/usr/bin/env bash
+# Checks the prompt block under bash 3.2 and zsh 5.9 in docker containers.
+set -u
+U=$(cd "$(dirname "$0")/.." && pwd)
+for img in bash:3.2 zshusers/zsh:5.9; do
+  docker run --rm --network none -v "$U":/d:ro "$img" sh -c 'bash -n /d/prompt.bash 2>/dev/null || zsh -n /d/prompt.bash' &&
+    echo "  PASS $img" || echo "  FAIL $img"
+done
+'''

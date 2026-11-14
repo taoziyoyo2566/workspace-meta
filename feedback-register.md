@@ -37,10 +37,10 @@ number. Never renumber. Numbering accumulates; mark replacements rather than del
 | `.agents/rules/review.md` | W-R13, W-R20, W-R33 and accepted W-R32 refinements, refined by W-R56, problem reports W-R59 |
 | `.agents/rules/problem-follow-up.md` | W-R56, recurrence searched like earlier work W-R88 |
 | `.agents/rules/capabilities.md` | W-R18 and accepted W-R32 refinements, refined by W-R44, W-R52, W-R53 and W-R55, quality before speed W-R60, where the user runs a command W-R62, command length W-R65, delegation W-R72, opening the user's terminal W-R76, recommending before a cut W-R83 |
-| `.agents/rules/claude-runtime.md` | Claude mechanics for W-R71, W-R72 and W-R73, session-history plugins W-R88 refined by W-R89 |
+| `.agents/rules/claude-runtime.md` | Claude mechanics for W-R71, W-R72 and W-R73, session-history plugins W-R88 refined by W-R89, the scratch path's length W-R81 |
 | `.agents/host-templates/README-agents.md` | W-R28, W-R36, every agent config dir W-R74, plugin stores outside the config dirs W-R88 |
 | `.agents/rules/secrets.md` | W-R13, refined by W-R53 |
-| `.agents/rules/temporary-files.md` | W-R55, keeping reusable work W-R75 |
+| `.agents/rules/temporary-files.md` | W-R55, keeping reusable work W-R75, path-length limits W-R81 |
 | `.agents/rules/environment-truth.md` | W-R24 refined by W-R44 |
 | `.agents/rules/rule-authoring.md` | W-R8–W-R14, W-R27–W-R28, W-R32, refined by W-R53 and W-R56, feedback intake W-R61, lasting content and one-line sources W-R64, scope of restricting notes W-R70, loosening instead of adding W-R90 |
 
@@ -204,6 +204,8 @@ number. Never renumber. Numbering accumulates; mark replacements rather than del
     - Source: 2026-10-29, invoice_automation: host deployment notes were pushed to a fork that turned out to be public, because the review checked identity, refs, and the content for secrets but never the remote's visibility.
 - **W-R78 (2026-10-29)** — **A commit publishes, so publication is proposed once per finished result, with its result review and a bundle for each repository it changed under one approval (refining W-R31); a later routine operation, its check, or a status change is reported in the conversation, not committed, and a committed Changelog is not added to.**
     - Source: 2026-10-29, invoice_automation: several commits were proposed in quick succession, the last only to add a routine operation and its check to an already committed Changelog, and the operator asked why unneeded content was recorded and for fewer, less scattered commit tasks.
+- **W-R81 (2026-10-20)** — **An object with a path-length limit, such as a Unix socket, goes in a short private directory under `/tmp`, not in the runtime's scratch location.**
+    - Source: 2026-10-19, user-env: a test's tmux socket under the session scratch path passed the socket path limit, a trap the project's author had also hit.
 - **W-R83 (2026-10-20)** — **An idea or a "should we...?" question from the operator gets the agent's own investigated recommendation, also when it agrees, and is not adopted, started, or offered for execution because the operator raised it; a recorded decision it would change is named, a question about one step of the current work is answered without the brief, and a question about lowering depth or settings is answered from the result's quality and is not a decision to lower them.**
     - Source: 2026-10-20, workspace-meta: asked whether workflow subagents should run on lower models, the agent offered lighter models and lower effort as the default and to follow a cost preference, against a recorded decision to keep the configured settings, and the operator asked for an investigated recommendation instead of compliance.
 - **W-R84 (2026-10-25)** — **A project may declare a pre-release channel: a lasting part of production whose instances serve the users who choose it with checked, pushed commits of a channel branch that contains the main branch and is never rewritten; changes enter it by fast-forward or merge commit and leave by promotion or revert, shared parts are never deployed from it, only a main-branch deployment after promotion is released, and a channel instance rolls back to a verified state, its own or the main-branch instances'.**

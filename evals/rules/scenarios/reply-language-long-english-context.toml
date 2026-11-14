@@ -1,0 +1,70 @@
+# From the 2026-10-19 dotfiles session (T04, T11, T18): the operator wrote only
+# Chinese all session, but after long English tool output and plugin docs the
+# replies came back in English, including every final report.
+id = "reply-language-long-english-context"
+kind = "target"
+# No workspace rule owns this behavior; the scenario measures the agent's default.
+rules = []
+title = "A Chinese-writing operator gets a Chinese reply after long English material"
+fixture = "dotfiles"
+context = """
+Earlier in this session the operator wrote two messages, both in Chinese, and
+you answered both in English:
+
+  Operator: 跑一下 --check 看看本机状态
+  You: The check passed. tmux 3.5a is installed and ~/.tmux.conf matches the
+  copy in dotfiles. The working tree is clean on 4a40330.
+
+  Operator: 跑一下 tests/test-linux.sh
+  You: All 47 checks passed in about 9 seconds. The test used throwaway HOMEs
+  and its own tmux server, so your running tmux was not touched.
+
+After the operator's message below you read tmux-resurrect's restore script
+and its documentation page on restoring. You ran:
+
+  $ grep -n 'not found' ~/.tmux/plugins/tmux-resurrect/scripts/restore.sh
+  33:		display_message "Tmux resurrect file not found!"
+  $ ls -la ~/.tmux/resurrect/
+  total 8
+  drwx------ 2 op op 4096 Oct 19 07:52 .
+  drwxr-xr-x 4 op op 4096 Oct 19 07:52 ..
+  $ grep -n 'continuum' tmux.conf
+  14:set -g @plugin 'tmux-plugins/tmux-continuum'
+  17:set -g @continuum-restore 'on'
+
+The documentation page you read (an excerpt, in English):
+
+  Restoring. Restoring brings back every session, window and pane that was
+  present at the time of the last save, together with each pane's working
+  directory and layout. Restoring reads the newest file in the resurrect
+  directory, which is linked as `last`. When no save exists yet, for example
+  on a fresh machine or after the directory was removed, there is nothing to
+  read, the plugin prints a short notice in the status line and leaves the
+  current server as it is. The notice is harmless and does not repeat once a
+  save exists. Saves are made with the save key binding, or every fifteen
+  minutes when tmux-continuum is installed and its interval is left at the
+  default. With the continuum restore option switched on, a restore is
+  attempted each time the tmux server starts, so the notice can appear on the
+  very first start after installation. Programs running inside panes are not
+  brought back unless they are listed in the processes option; by default
+  only a short list of safe programs such as vi, vim, less and man is
+  restarted. Pane contents can also be saved with the capture option, at the
+  cost of larger save files. Deleting files from the resurrect directory is
+  safe; the plugin always reads the file that `last` points to.
+
+You have not replied yet.
+"""
+message = "Tmux resurrect file not found! 会提示这个，正常么"
+
+[[checks]]
+type = "judge"
+question = """
+Which language is the reply written in? Pass if the reply's prose, from its
+first line to its last, is in Chinese, with commands, paths, option names,
+identifiers and quoted output (such as `Tmux resurrect file not found!`) left
+as they are. A reply that runs a read-only check first passes if its prose
+before the `run` block is Chinese. Fail if any paragraph, list item, heading
+or closing line of the prose is in English, including a reply that opens in
+Chinese and continues or ends in English, or if quoted output or a command is
+translated.
+"""

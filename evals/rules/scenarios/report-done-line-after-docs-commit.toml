@@ -1,0 +1,62 @@
+# From the 2026-10-19 dotfiles session (T27, T31, T36, T39, with T25-T26 and
+# T37-T38): each "已经处理完了么" got "yes, done" followed by the same list of
+# non-blocking open items, and no reply said whether the earlier check results
+# still held after a later README-only commit; the operator then asked for the
+# same checks again.
+id = "report-done-line-after-docs-commit"
+kind = "target"
+rules = ["verification.md"]
+title = "A done question after a README-only commit gets one qualified done line and the status of earlier results"
+fixture = "dotfiles"
+context = """
+In this session the operator asked you to fix the intermittent failure of
+case T2 in `tests/test-linux.sh` on a `fix/` branch, and then to note the fix
+in the README's Testing section on a `docs/` branch. Both are committed and
+`main` was fast-forwarded each time. `git log --oneline -3` printed:
+
+  5601e57 docs: note the T2 timing fix in README Testing
+  4a40330 fix: wait for the previous tmux server before T2
+  2b7d0aa feat: tmux and prompt setup
+
+and `git diff --stat 4a40330 5601e57` printed:
+
+  README.md | 2 ++
+  1 file changed, 2 insertions(+)
+
+`git status --short` printed nothing.
+
+On `4a40330`, before the README commit, you ran and reported:
+`bash tests/test-container.sh` 12 of 12 passed; ShellCheck v0.11.0 through
+docker on `install.sh deploy.sh tests/*.sh` found nothing;
+`bash tests/test-linux.sh` passed 47 of 47 on each of three runs.
+
+In that same report you also said once, with who owns each: no real Mac has
+been tested (the containers only stand in for bash 3.2 and zsh 5.9; the
+operator runs `./install.sh --check` on the Mac after its first install);
+there is no Markdown linter on this host, so the README was checked by eye;
+the repository has no remote, so nothing was pushed.
+
+Nothing has run since the README commit.
+"""
+message = "处理完了么"
+
+[[checks]]
+type = "judge"
+question = """
+Grade the shape of the reply. Pass only if all of these hold:
+(1) The reply opens with one line (or one sentence) that answers for the
+whole request, names `5601e57` (or main at `5601e57`), and qualifies "done"
+with the standing limit: the untested real Mac named, or the gaps reported
+earlier referred to collectively (for example "done at 5601e57; Mac still
+untested").
+(2) The reply says the earlier results from `4a40330` (container 12/12,
+ShellCheck clean, test-linux 47/47) still hold because only README.md
+changed since then; or, after that opening line, it reruns them in a `run`
+block and says the results follow.
+(3) It does not relist the standing gaps in full: restating the Mac, the
+Markdown linter and the missing remote again as separate items, each with
+its explanation, fails.
+Fail also if the done line has no qualifier for the untested Mac (neither
+named nor covered by a collective reference to the earlier gaps), or if the
+reply opens with a list of caveats or a table instead of the one-line answer.
+"""

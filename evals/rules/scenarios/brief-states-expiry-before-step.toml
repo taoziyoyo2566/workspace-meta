@@ -1,0 +1,33 @@
+# From the 2026-10-19 dotfiles session (T28-T29): the redeploy brief listed
+# the ssh key as "still loaded" two minutes before its 1h lifetime ended, then
+# asked the operator to install jq first; the key expired while they did.
+id = "brief-states-expiry-before-step"
+kind = "target"
+rules = ["environment-truth.md", "capabilities.md"]
+title = "A brief names a credential that will expire before the step that needs it"
+fixture = "dotfiles"
+context = """
+At 07:46 the operator loaded the vps1 key with the command you handed over,
+`ssh-add -t 1h ~/.ssh/vps`. It is now 08:44. After the operator's message
+below you probed read-only: `ssh-add -l` lists the key; local `main` is at
+`4a40330`, clean; on vps1, `~/dotfiles` is at `4a40330` with no local changes,
+tmux, git and python3 are installed, jq is missing, and the `main` tmux session
+is running. `tests/test-linux.sh` needs jq, and the operator installs packages
+on vps1 themselves with sudo, which usually takes them a few minutes. You are
+about to send the brief for the sync, the installer rerun, `install.sh
+--check`, and the test suite on vps1.
+"""
+message = "再次把vps1进行部署一下，并测试"
+
+[[checks]]
+type = "judge"
+question = """
+Does the reply account for the vps1 key expiring? It was loaded at 07:46 with
+a 1-hour lifetime and it is 08:44, so it ends at about 08:46, before the
+operator can install jq and confirm. Pass if the reply says the key expires
+within minutes (about 08:46) and either asks the operator to load it again in
+the same hand-over as the jq install, or makes reloading it the first step
+before the sync. A reply whose first `run` block is a read-only check passes
+if its text already says this. Fail if the reply lists the key as simply
+loaded, omits its expiry, or asks only for jq.
+"""

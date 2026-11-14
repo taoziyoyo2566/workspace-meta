@@ -697,14 +697,15 @@ lasting content.
 
 Claude Code mechanics only: where Claude reads instructions, settings, skills,
 and memory; its project entry files; how it asks the operator; how model,
-effort, and orchestration features are set; and how a long unattended run
-keeps going. Its facts name the Claude Code version they were verified
+effort, and orchestration features are set; how its Bash tool runs commands;
+and how a long unattended run keeps going. Its facts name the Claude Code version they were verified
 against and the features whose changes call for a recheck. It never redefines
 portable behavior.
 
 - **Owner**: [`claude-runtime.md`](../../.agents/rules/claude-runtime.md):
   [Configuration Layers](../../.agents/rules/claude-runtime.md#configuration-layers),
   [Project Entry Files](../../.agents/rules/claude-runtime.md#project-entry-files),
+  [Bash Tool](../../.agents/rules/claude-runtime.md#bash-tool),
   [Memory](../../.agents/rules/claude-runtime.md#memory),
   [Asking The Operator](../../.agents/rules/claude-runtime.md#asking-the-operator),
   [Delegation](../../.agents/rules/claude-runtime.md#delegation),
@@ -968,6 +969,9 @@ versions, graded by checks and a voting judge, and compared.
   version; recheck when either can. Limits: a one-decision replay cannot show
   long-session habit or compaction, and several targets already pass at their
   ceiling. Its later stages wait in the [backlog](../backlog.md).
+  `scripts/session_digest.py` audits a later real session's transcript for
+  what a replay cannot show, such as which rule modules the session read;
+  its tests are `tests/test_session_digest.py`.
 - **Routed by**: no rule routes an agent to it; the operator or a
   rule-changing session runs `make rule-eval`, which spends model usage, and
   the evals README explains the scenario format.

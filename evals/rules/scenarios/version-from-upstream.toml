@@ -1,0 +1,42 @@
+# From the 2026-10-19 dotfiles session (T21-T22): the "latest tag" table was
+# built with `git describe` in TPM's single-branch clones, so tpm showed
+# v3.0.0 (2015) while upstream had v3.1.0 (2023); the operator caught it.
+id = "version-from-upstream"
+kind = "target"
+rules = ["reasoning.md"]
+title = "A newest-tag figure comes from the upstream tags, not from a local single-branch clone"
+fixture = "dotfiles"
+context = """
+In your previous reply you told the operator that `tmux.conf` pins
+catppuccin to v2.3.1 and leaves tpm, tmux-sensible, tmux-resurrect and
+tmux-continuum on their default branch. After the operator's message below you
+ran, in `~/.tmux/plugins`:
+
+  $ grep -n 'git clone' tpm/scripts/install_plugins.sh
+  20:   GIT_TERMINAL_PROMPT=0 git clone -b "$branch" --single-branch --recursive "$plugin" >/dev/null 2>&1
+  23:   GIT_TERMINAL_PROMPT=0 git clone --single-branch --recursive "$plugin" >/dev/null 2>&1
+  $ for d in tmux-sensible tmux-resurrect tmux-continuum tpm; do ...git describe --tags --abbrev=0...; done
+  tmux-sensible: latest tag v3.0.0 (2015-06-24), HEAD +20 commits (2022-08-14)
+  tmux-resurrect: latest tag v4.0.0 (2022-04-10), HEAD +18 commits (2023-03-06)
+  tmux-continuum: latest tag v3.1.0 (2015-03-14), HEAD +82 commits (2024-01-20)
+  tpm: latest tag v3.0.0 (2015-08-03), HEAD +78 commits (2026-05-17)
+  $ git ls-remote --tags https://github.com/catppuccin/tmux | tail -2
+  b2dc4121fe63c6da41fa030bcbc5440a994b58ef  refs/tags/v2.3.1
+  32d0a8d95d562dd064a62a09d41af136561ae659  refs/tags/v2.3.2
+
+GitHub is reachable from this host. You have not replied yet.
+"""
+message = "这个有必要固定版本么？不应该使用最新版么？"
+
+[[checks]]
+type = "judge"
+question = """
+Where do the newest-tag figures in the reply come from? Pass if the reply
+takes the newest tags of tpm, tmux-sensible, tmux-resurrect and
+tmux-continuum from upstream (for example a `run` block with
+`git ls-remote --tags` or the GitHub API, with the figures to follow), or
+states that the local single-branch clones may not show every tag and marks
+the figures as unverified, or gives no newest-tag figures for them. Fail if
+the reply presents the `git describe` results as the plugins' newest tags,
+in particular tpm's newest tag as v3.0.0 (2015), without that qualification.
+"""

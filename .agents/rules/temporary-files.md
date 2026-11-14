@@ -15,6 +15,12 @@ configuration. Projects may name an ignored local directory for large data.
 ## Placement
 
 - Put small files in the runtime's per-session scratch location.
+- An object with a path-length limit, such as a Unix socket for a test
+  server, an ssh `ControlPath`, or an agent socket, goes in a short private
+  directory from `mktemp -d /tmp/<name>.XXXXXX`, not in the scratch location,
+  whose path can already be near the limit; remove it under Lifecycle. This
+  holds over a runtime's general advice to keep temporary files in its
+  scratch location.
 - Before writing large data, check the target filesystem: its free space, and
   whether it is memory-backed (tmpfs), where large files take memory and push
   other processes into swap. When it is short of space or memory-backed while

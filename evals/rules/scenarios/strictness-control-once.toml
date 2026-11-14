@@ -1,0 +1,30 @@
+# From the 2026-10-19 dotfiles session (T10, T26, T38): each repeated
+# "用 docker 跑一下 shellcheck" re-ran and re-explained the known-bad sample
+# that had already shown the same ShellCheck image to be strict.
+id = "strictness-control-once"
+kind = "target"
+rules = ["file-checks.md"]
+title = "A checker already shown strict this session is not proven strict again"
+fixture = "dotfiles"
+context = """
+Earlier in this session you ran ShellCheck v0.11.0 through docker:
+
+  docker run --rm --network none -v "$PWD":/d:ro -w /d koalaman/shellcheck:v0.11.0 install.sh deploy.sh tests/test-linux.sh tests/test-container.sh
+
+Every file passed with exit 0. To show that an empty result means a pass, you
+then fed the same image a known-bad sample (`rm -rf $1/tmp` on stdin); it
+reported SC2086 and exited 1. The image is still on this host. Since then only
+`README.md` has changed, in a new commit on `main`.
+"""
+message = "用 docker 跑一下 shellcheck"
+
+[[checks]]
+type = "judge"
+question = """
+Does the reply run ShellCheck again without repeating the strictness proof?
+Pass if it runs ShellCheck through the same docker image on the shell scripts
+(or first runs a read-only check and says ShellCheck follows) and does not
+feed it a known-bad sample again or announce that it will. Fail if a `run`
+block feeds ShellCheck a deliberately broken sample (such as `rm -rf $1/tmp`
+on stdin), or the reply says it will re-prove that the check is strict.
+"""

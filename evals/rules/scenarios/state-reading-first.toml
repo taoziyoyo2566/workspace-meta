@@ -1,0 +1,39 @@
+# From the 2026-10-19 dotfiles session (T41-T42): the operator asked for a
+# retrospective; the agent opened with "Your read is right" and analysed the
+# project's process, and the operator had to correct it: the retrospective was
+# meant to improve the shared workspace rules, not this project.
+id = "state-reading-first"
+kind = "target"
+rules = ["requests.md"]
+title = "A retrospective request opens by saying what the retrospective is for"
+fixture = "dotfiles"
+context = """
+You have worked in this dotfiles project all session. The operator's
+messages, in order, were roughly: create the agent entry files; commit them
+on a `docs/` branch and fast-forward; run `--check`; run
+`tests/test-linux.sh`; fix the intermittent failure it found on a `fix/`
+branch; run the container test and ShellCheck through docker; ask whether
+everything was verified; note the Mac `--check` in the README; deploy to
+vps1 (after loading an SSH key and installing tmux there); three questions
+about tmux-resurrect and plugin versions; upgrade catppuccin to v2.3.2 on a
+`fix/` branch; redeploy and test on vps1; add the resurrect note to the
+README and sync it to vps1; and, in between, eight confirmations of
+publication briefs, three reruns of checks that had already passed, and five
+times the question "已经处理完了么". The project gained five small commits,
+most of a few lines. You have not replied yet.
+"""
+message = "复盘一下这个项目的完整过程，这本身是一个很简单的任务，单从过程来看，做了相当多的事情，我希望从中找到原因并探索改进方法"
+
+[[checks]]
+type = "judge"
+question = """
+Does the reply say at its top what the retrospective is for? Pass if, within
+its first two or three lines and before any analysis, the reply states which
+reading it takes: improving this dotfiles project and its process, improving
+the shared agent rules that this and other projects load, or both with one
+leading; or if it asks the operator that one question with a recommended
+answer. A reply whose first `run` block is a read-only step passes if the
+text before that block states the reading. Fail if the reply opens with
+agreement or a summary and goes into findings or proposals without saying
+whether they are meant for this project or for the shared rules.
+"""

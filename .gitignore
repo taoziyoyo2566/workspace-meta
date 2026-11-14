@@ -33,6 +33,7 @@
 !scripts/rule_eval.py
 !scripts/verify_committed_copy.sh
 !scripts/change_flow_bundle.sh
+!scripts/session_digest.py
 !tests/
 !tests/test_sync_codex_config.py
 !tests/test_workspace_status.py
@@ -42,6 +43,7 @@
 !tests/test_rule_eval.py
 !tests/test_verify_committed_copy.py
 !tests/test_change_flow_bundle.py
+!tests/test_session_digest.py
 !evals/
 !evals/rules/
 !evals/rules/README.md

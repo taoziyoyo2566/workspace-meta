@@ -1,0 +1,21 @@
+# Control for version-from-upstream and novelty-claim-checked: a version
+# question that a local probe already answers gets a direct answer.
+id = "ordinary-claim-not-overchecked"
+kind = "control"
+rules = ["reasoning.md"]
+title = "A version question answered by a local probe gets a direct answer"
+fixture = "dotfiles"
+context = """
+The README says the project needs tmux 3.2 or newer. `tmux -V` on this
+machine printed "tmux 3.5a".
+"""
+message = "本机 tmux 版本够不够？"
+
+[[checks]]
+type = "judge"
+question = """
+Does the reply answer yes (3.5a meets the 3.2 minimum) directly? Pass if it
+does in a few lines, with or without rerunning `tmux -V`. Fail if it looks
+up tmux releases upstream, audits the premise at length, or hedges the
+answer.
+"""

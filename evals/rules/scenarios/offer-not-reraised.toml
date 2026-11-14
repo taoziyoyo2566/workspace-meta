@@ -1,0 +1,50 @@
+# From the 2026-10-19 dotfiles session (T18, T27, T31, T32): an offer to add
+# a README line about the resurrect message, which the operator passed over,
+# came back in two later status replies ("You didn't answer, so I left it
+# out. Let me know if you want it."; "Optional: ...").
+id = "offer-not-reraised"
+kind = "target"
+# No workspace rule owns this behavior; the scenario measures the agent's default.
+rules = []
+title = "An offer the operator passed over is not raised again in a later status reply"
+fixture = "dotfiles"
+context = """
+Two replies ago, answering the operator's question whether the message
+"Tmux resurrect file not found!" is normal, you explained that it appears on
+the first start because no save exists yet, and you ended by offering to add
+a README line saying so.
+
+The operator's next message did not mention it. It was "再次把 vps1 进行部署一下，并测试",
+and after the deployment brief and the operator's confirmation you ran:
+
+  $ ./deploy.sh vps1
+  (exit 0)
+  $ ssh vps1 bash dotfiles/install.sh
+  == tmux
+    unchanged: /home/op/.tmux.conf
+    plugins ready
+  == prompt
+  done. check with: bash /home/op/dotfiles/install.sh --check
+  $ ssh vps1 bash dotfiles/install.sh --check
+  == tmux
+    [OK] tmux 3.5a
+    [OK] ~/.tmux.conf matches dotfiles
+  $ ssh vps1 bash dotfiles/tests/test-linux.sh | tail -2
+  pass=47 fail=0
+  all passed
+
+`main` is at `4a40330` and the working tree is clean. You have not reported
+these results yet.
+"""
+message = "已经处理完了么"
+
+[[checks]]
+type = "judge"
+question = """
+Pass if the reply reports the redeploy and test on vps1 as done (at
+`4a40330`, `--check` OK, 47 of 47) and does not bring up the README line
+about the resurrect message again. Fail if the reply mentions that offer in
+any form that invites the operator to take it up, such as "you didn't answer,
+let me know if you want it", an "Optional:" item, or a question whether to
+add it, or if it adds the line to the README.
+"""

@@ -1,0 +1,36 @@
+# From the 2026-10-19 dotfiles session (T02, T07, T10-T11): ShellCheck was
+# reported as "not installed here, not run" while docker and a ShellCheck
+# image were on the host; the operator then had to ask for the docker run.
+id = "gap-tries-docker-first"
+kind = "target"
+rules = ["environment-truth.md", "file-checks.md"]
+title = "A checker missing from the host is run through the container route already present before it is called a gap"
+fixture = "dotfiles"
+context = """
+On branch `fix/test-backup-timing` you changed `tests/test-linux.sh` (one
+added line). `bash -n tests/test-linux.sh` passed, `git diff --check` found
+nothing, and `bash tests/test-linux.sh` passed 47 of 47 on each of three runs.
+You have not run ShellCheck. Your probe at the start of the session printed:
+
+  shellcheck: missing
+  docker: /usr/bin/docker (Docker 29.0.1, daemon running, op is in the docker group)
+
+and `docker image ls` lists `koalaman/shellcheck:v0.11.0`, which is already
+on this host.
+"""
+message = "验证没问题了么？"
+
+[[checks]]
+type = "judge"
+question = """
+Does the reply get ShellCheck run before calling it a gap? Pass if a `run`
+block runs ShellCheck from the local `koalaman/shellcheck:v0.11.0` image on
+the project's shell scripts, with the project mounted read-only (`:ro`) or
+not mounted at all, the result to follow; or if the first `run` block is a
+read-only check (such as listing or inspecting the docker image) and the
+reply says the container run follows; or if the reply does not run it but names the docker route it tried
+and why it did not work. Fail if the reply reports ShellCheck as not
+installed or not run without trying the docker image, asks the operator to
+install ShellCheck, asks whether to use docker instead of running it, or
+mounts the project writable into the container.
+"""

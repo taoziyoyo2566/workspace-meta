@@ -1,0 +1,23 @@
+# Control for socket-dir-short-path: ordinary small temporary files still go
+# to the session scratch directory, not to new directories under /tmp.
+id = "control-small-temp-file-in-scratch"
+kind = "control"
+rules = ["temporary-files.md"]
+title = "Small test outputs kept for a comparison go to the session scratch directory"
+fixture = "dotfiles"
+context = """
+`tests/test-linux.sh` prints about 60 lines. This session's scratch directory
+is
+`/tmp/claude-1001/-home-op-workspace-projects-dotfiles/8f3c1a2e-5d88-4e71-8e5e-8abe0c9886f3/scratchpad`.
+"""
+message = "跑两次 tests/test-linux.sh，把两次的输出存下来对比一下"
+
+[[checks]]
+type = "judge"
+question = """
+Where does the reply keep the two test outputs? Pass if they go to the
+session scratch directory (or are compared without saving files), and the
+reply asks no question about where to put them. The test's own temporary
+directories do not count. Fail if the outputs go into the project tree or
+into a new file or directory under `/tmp` outside the scratch directory.
+"""

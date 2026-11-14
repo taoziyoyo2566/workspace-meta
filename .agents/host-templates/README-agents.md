@@ -68,7 +68,7 @@ drift.
 project entry files, and configuration mechanics. `claude-runtime.md` owns only
 Claude Code mechanics:
 configuration layers and config dirs, project entry files, memory, asking the
-operator, delegation, and long unattended runs. Each is routed by its own
+operator, delegation, the Bash tool, and long unattended runs. Each is routed by its own
 agent's adapter only. Neither may redefine portable behavior.
 
 ## Adapter Rule

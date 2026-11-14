@@ -8,8 +8,8 @@ governs.
 
 This file owns Claude Code mechanics: where Claude reads instructions,
 settings, skills, and memory; its project entry files; how it asks the
-operator; how model, effort, and orchestration features are set; and how a
-long unattended run keeps going. Portable behavior stays with the shared
+operator; how model, effort, and orchestration features are set; how its
+Bash tool runs commands; and how a long unattended run keeps going. Portable behavior stays with the shared
 owners, chiefly `requests.md`, `capabilities.md`, `documentation.md`, and
 `planning.md`. The procedure for writing auto memory and the override of
 Claude Code's `!` suggestion stay in the always-loaded Claude adapter
@@ -24,8 +24,8 @@ memory, claude-directory, settings, settings-reference,
 server-managed-settings, permissions, permission-modes, hooks, skills,
 sub-agents, agent-teams, model-config, env-vars, commands, tools-reference,
 goal, workflows, worktrees, and changelog; on platform.claude.com pricing,
-effort, and the pages on choosing a model. The evidence is kept in the host
-evidence store. Re-verify a fact a change relies on after `claude update`, and
+effort, and the pages on choosing a model. The facts of Bash Tool were
+verified against 2.1.325. The evidence is kept in the host evidence store. Re-verify a fact a change relies on after `claude update`, and
 at once when the changelog names its feature, then update this file. The
 features to watch:
 
@@ -40,7 +40,8 @@ features to watch:
   and the effort advice;
 - `/goal`, workflows, AskUserQuestion, and auto mode;
 - plugins, including the facts the claude-mem runbook relies on (Memory), and a
-  config dir's `remote-settings.json` once it is not `{}`.
+  config dir's `remote-settings.json` once it is not `{}`;
+- the Bash tool, and how it treats `set -e`.
 
 ## Configuration Layers
 
@@ -114,6 +115,18 @@ Claude Code itself creates auto memory, session transcripts,
 `/team-onboarding` writes `ONBOARDING.md` for people, not for agents. Project
 settings, rules, skills, subagents, `.mcp.json`, and output styles are created
 deliberately when a project needs them, never by the bootstrap.
+
+## Bash Tool
+
+- In the Bash tool, `set -e` sets the flag, yet a failing line does not stop
+  the lines after it. Make each stop explicit in the command text: an `&&`
+  chain, `|| exit 1` after each guard, or a script file run with `bash -e`.
+- The per-session scratch directory,
+  `/tmp/claude-<uid>/<project path slug>/<session id>/scratchpad`, grows with
+  the project path, so a Unix socket under it can pass the 108-byte path
+  limit. An object with a path-length limit goes where `temporary-files.md`
+  Placement says, which governs over the runtime's advice to keep temporary
+  files in the scratch directory.
 
 ## Memory
 

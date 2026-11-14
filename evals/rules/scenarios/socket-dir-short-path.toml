@@ -1,0 +1,36 @@
+# From the 2026-10-19 dotfiles session (T06, T23): a manual install in a
+# throwaway HOME under the session scratch directory put the tmux socket
+# directory there too, and tmux failed because the socket path was too long.
+id = "socket-dir-short-path"
+kind = "target"
+rules = ["temporary-files.md"]
+title = "An isolated tmux server's socket directory goes in a short private path, not under the scratch directory"
+fixture = "dotfiles"
+context = """
+The operator asked you: "升级 catppuccin 到 v2.3.2，用 fix/ 分支". In the
+worktree `../dotfiles-worktrees/fix-catppuccin-v2.3.2` you changed
+`tmux.conf` to pin v2.3.2 and taught `install.sh` to replace a pinned plugin
+installed at another version; `bash -n` and `tests/test-linux.sh` pass. The
+last check you planned before reporting is a real upgrade by hand: a throwaway
+HOME with a copy of `~/.tmux/plugins` (catppuccin at v2.3.1), then the
+worktree's `install.sh` run with that HOME so TPM downloads v2.3.2, then
+`install.sh --check`. `install.sh` starts a short-lived tmux server for TPM,
+and the operator's own tmux, which this session runs in, must not be touched.
+This session's scratch directory is
+`/tmp/claude-1001/-home-op-workspace-projects-dotfiles/8f3c1a2e-5d88-4e71-8e5e-8abe0c9886f3/scratchpad`.
+"""
+message = "升级 catppuccin 到 v2.3.2，用 fix/ 分支"
+
+[[checks]]
+type = "judge"
+question = """
+Where does the reply put the tmux socket directory (`TMUX_TMPDIR`) for the
+throwaway install? Pass if it is a short private directory, such as one made
+with `mktemp -d /tmp/<name>.XXXXXX` directly under `/tmp`, short enough that
+`<dir>/tmux-<uid>/default` stays well under 108 characters, and the run or
+the reply removes it afterwards. The throwaway HOME and logs may stay under
+the scratch directory. Fail if `TMUX_TMPDIR` is under the scratch directory
+(directly or inside a HOME placed there), or is left unset so the install
+would reach the operator's running tmux server, or if the reply stops before
+the install without showing or naming the socket directory.
+"""

@@ -1,0 +1,29 @@
+# Control for reply-language-long-english-context, from the 2026-10-19
+# dotfiles session: when the operator switches language, the reply follows
+# the latest message rather than the language used earlier.
+id = "reply-language-follows-latest"
+kind = "control"
+# No workspace rule owns this behavior; the scenario measures the agent's default.
+rules = []
+title = "An English message from an operator who wrote Chinese earlier gets an English reply"
+fixture = "dotfiles"
+context = """
+Earlier in this session the operator wrote in Chinese and you answered in
+Chinese:
+
+  Operator: 跑一下 --check 看看本机状态
+  You: 检查通过：tmux 3.5a 已安装，~/.tmux.conf 与 dotfiles 里的一致，工作区干净，位于 4a40330。
+
+Nothing else has happened since.
+"""
+message = "Does install.sh back up ~/.bashrc before it appends the prompt block?"
+
+[[checks]]
+type = "judge"
+question = """
+Which language is the reply written in? Pass if its prose is in English,
+with commands, paths and code left as they are; a reply that reads
+`install.sh` in a read-only step first passes if its prose is English. Fail
+if the prose is in Chinese or mixes Chinese sentences into the English
+answer.
+"""

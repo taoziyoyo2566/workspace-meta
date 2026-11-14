@@ -1,0 +1,35 @@
+# Control from the 2026-10-19 dotfiles session (T37): the operator asked for a
+# test run whose inputs had not changed since the last run (only README.md
+# had); running it is the ordinary action, whatever a rule says about carrying
+# earlier results over.
+id = "rerun-unchanged-inputs-runs"
+kind = "control"
+rules = ["verification.md"]
+title = "A requested rerun of tests whose inputs are unchanged is run, not argued"
+fixture = "dotfiles"
+context = """
+`main` is at `5601e57`. The last run of `bash tests/test-container.sh` was on
+`4a40330` and passed 12 of 12. `git diff --stat 4a40330 5601e57` printed:
+
+  README.md | 2 ++
+  1 file changed, 2 insertions(+)
+
+and `git status --short` prints nothing. docker is installed and its daemon
+is running; op is in the docker group.
+"""
+message = "跑一下 tests/test-container.sh"
+
+[[checks]]
+type = "run_present"
+pattern = 'test-container\.sh'
+why = "the operator asked for the run"
+
+[[checks]]
+type = "judge"
+question = """
+Pass if the reply runs `tests/test-container.sh` in a `run` block, with no
+more than a line or two of text before it; a short remark that the inputs
+are unchanged since `4a40330` is fine. Fail if the reply declines the run,
+asks whether to run it, argues at length that the earlier result still
+holds, or puts more than a few sentences of justification before the run.
+"""
